@@ -97,6 +97,13 @@
         "CUSTOMER": "Orientamento al cliente"
       }
     },
+    "PROMO": {
+      "TITLE_BLACK": "Servizi di",
+      "TITLE_RED": "Autonoleggio",
+      "TEXT_1": "E' possibile richiedere formule di <strong>noleggio</strong> personalizzate <strong>a breve o lungo termine</strong>, ideali per poter disporre di un'auto nuova ed efficiente a seconda dei propri bisogni.",
+      "TEXT_2": "Contattate gli uffici telefonicamente chiamando il <a href=\"tel:+390996418339\" class=\"tel-link\">+39 099 6418339</a>, oppure numero commerciale: <a href=\"tel:+393428315325\" class=\"tel-link\">+39 3428315325</a> per ricevere ogni dettaglio sul noleggio e fissare un appuntamento oppure ad inviare un messaggio tramite l'apposito modulo di contatto per richiedere informazioni dettagliati e preventivi: un addetto vi seguirà per trovare la tipologia di noleggio auto più adatta a voi.",
+      "BTN_TEXT": "Chiama per un preventivo"
+    },
     "FEATURES": {
       "FAST": {
         "TAG": "Officina",

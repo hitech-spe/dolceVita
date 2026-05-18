@@ -93,27 +93,33 @@
     }
   }
 }
-
 .back-to-top {
   position: fixed;
   bottom: 2.5rem;
-  right: 2.5rem; // Posizionato a destra
+  right: 2.5rem;
   z-index: 999;
   width: 50px;
   height: 50px;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-white);
-  color: var(--primary);
+  border-radius: 50%; /* Cerchio perfetto, stile Premium */
+
+  /* Effetto Dark Glassmorphism per richiamare Footer e Login */
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  color: white;
   font-size: 1.2rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+
+  /* Stato iniziale invisibile */
   opacity: 0;
   transform: translateY(20px);
   pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
   &.visible {
@@ -123,14 +129,352 @@
   }
 
   &:hover {
-    background: var(--primary);
+    background: var(--accent); /* Il rosso del tuo brand */
+    border-color: var(--accent);
     color: white;
-    border-color: var(--primary);
     transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(195, 30, 35, 0.4); /* Glow rosso */
   }
 
-  &::after {
-    content: '↑';
-    font-weight: 400;
+  /* Animazione morbida sull'icona interna */
+  i {
+    transition: transform 0.3s ease;
+  }
+
+  &:hover i {
+    transform: translateY(-2px); /* La freccia sale leggermente all'hover */
   }
 }
+
+/* =========================================
+   RECENSIONI / TESTIMONIALS
+========================================= */
+.testimonials-section {
+  padding: 6rem 0;
+  background-color: var(--bg-light); /* Uno sfondo leggermente grigio per staccare */
+
+  .section-header {
+    margin-bottom: 4rem;
+
+    .title {
+      font-size: 1.2rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 1.5rem;
+    }
+
+    .red-divider {
+      width: 60px;
+      height: 4px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+  }
+
+  .reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem;
+    align-items: stretch; /* Fa in modo che le card siano tutte alte uguali */
+  }
+
+  .review-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+    border: 1px solid rgba(0,0,0,0.03);
+
+    &:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.08) !important;
+
+      .quote-icon {
+        color: var(--accent);
+        transform: scale(1.1);
+      }
+    }
+
+    .quote-icon {
+      position: absolute;
+      top: 1.5rem;
+      right: 2rem;
+      font-size: 2rem;
+      color: #f1f5f9; /* Grigio chiarissimo di base */
+      transition: all 0.3s ease;
+    }
+
+    .review-content {
+      flex-grow: 1; /* Spinge il footer in basso */
+      margin-bottom: 2rem;
+      margin-top: 1rem;
+
+      height: 180px; /* Diamo un'altezza fissa all'area del testo */
+      overflow-y: auto; /* Abilitiamo lo scroll verticale se serve */
+      padding-right: 10px; /* Spazio per non far toccare il testo al bordo se si scende */
+
+      /* Trucco CSS per nascondere la barra di scorrimento su tutti i browser */
+      &::-webkit-scrollbar { display: none; } /* Safari / Chrome */
+      -ms-overflow-style: none;  /* IE / Edge */
+      scrollbar-width: none;  /* Firefox */
+
+      .review-text {
+        font-size: 1rem;
+        line-height: 1.7;
+        color: var(--text-muted);
+        font-style: italic;
+        margin: 0;
+      }
+    }
+
+    .review-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 1.5rem;
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .user-avatar {
+          width: 45px;
+          height: 45px;
+          background: #e2e8f0;
+          color: var(--text-main);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 1.2rem;
+        }
+
+        .user-details {
+          .user-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            color: var(--text-main);
+            text-transform: capitalize;
+          }
+
+          .review-source {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+
+            .google-icon {
+              color: #4285F4; /* Colore blu di Google */
+            }
+          }
+        }
+      }
+
+      .stars {
+        color: #fbbf24; /* Giallo stelle */
+        font-size: 0.9rem;
+        display: flex;
+        gap: 2px;
+      }
+    }
+  }
+}
+
+/* =========================================
+   SEZIONE PROMO AUTONOLEGGIO
+========================================= */
+.rental-promo-section {
+  padding: 6rem 0;
+  overflow: hidden; /* Evita scroll orizzontale con le animazioni */
+
+  .promo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+
+  /* --- Testo Sinistra --- */
+  .promo-text {
+    h2 {
+      font-size: clamp(2rem, 3vw, 2.8rem);
+      font-weight: 800;
+      color: var(--text-main);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      letter-spacing: 0.02em;
+    }
+
+    /* Il divisore modernizzato puntini/linea */
+    .modern-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 2rem;
+
+      .dots {
+        width: 30px;
+        height: 3px;
+        border-bottom: 3px dotted var(--accent);
+      }
+      .line {
+        width: 60px;
+        height: 4px;
+        background-color: #0f172a; /* Nero/Blu scuro */
+      }
+    }
+
+    .description {
+      p {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: var(--text-muted);
+        margin: 0;
+      }
+
+      /* Stile per i link dei numeri di telefono generati dall'innerHTML */
+      ::ng-deep a.tel-link {
+        color: var(--accent);
+        font-weight: 700;
+        text-decoration: none;
+        transition: color 0.3s;
+        &:hover { color: #b3161a; text-decoration: underline; }
+      }
+    }
+
+    .btn-lg {
+      padding: 1.2rem 2.5rem;
+      font-size: 1.1rem;
+      border-radius: 50px;
+    }
+  }
+
+  /* --- Immagine Destra --- */
+  .promo-image {
+    position: relative;
+
+    .image-wrapper {
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      background: #f1f5f9; /* Sfondo temporaneo mentre caricano le foto */
+
+      /* FONDAMENTALE: Dà forma al contenitore visto che le immagini sono assolute */
+      aspect-ratio: 4 / 3;
+      width: 100%;
+
+      .carousel-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0; /* Invisibili di default */
+        /* Effetto dissolvenza morbidissimo */
+        transition: opacity 1s ease-in-out, transform 6s linear;
+        transform: scale(1);
+        z-index: 1;
+
+        &.active {
+          opacity: 1; /* Appare solo quella attiva */
+          transform: scale(1.05); /* Effetto zoom lento in stile premium */
+          z-index: 2;
+        }
+      }
+
+      &:hover .carousel-img.active {
+        transform: scale(1.1); /* Accelera lo zoom se l'utente ci passa sopra */
+      }
+
+      /* Badge galleggiante in stile Glassmorphism */
+      .glass-badge {
+        position: absolute;
+        bottom: 2rem;
+        left: -2rem; /* Sborda leggermente a sinistra per profondità */
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        border: 1px solid rgba(255,255,255,0.5);
+        font-weight: 700;
+        color: var(--text-main);
+        z-index: 10; /* Assicurati che stia sopra le immagini */
+
+        i {
+          color: var(--accent);
+          font-size: 1.5rem;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 1024px) {
+  .testimonials-section .reviews-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* =========================================
+   RESPONSIVE (Mobile)
+========================================= */
+@media (max-width: 768px) {
+  .back-to-top {
+    bottom: 1.5rem;
+    right: 1.5rem; /* Un po' più vicino ai bordi sugli schermi piccoli */
+    width: 45px;
+    height: 45px;
+    font-size: 1rem;
+  }
+
+  .testimonials-section {
+    padding: 4rem 0;
+
+    .section-header .subtitle { font-size: 2rem; }
+
+    .reviews-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .rental-promo-section {
+    padding: 4rem 0;
+
+    .promo-grid {
+      grid-template-columns: 1fr; /* Mette l'immagine sotto al testo */
+      gap: 3rem;
+    }
+
+    .promo-image .image-wrapper .glass-badge {
+      left: 1rem; /* Riporta il badge dentro i bordi dello schermo */
+      bottom: 1rem;
+      font-size: 0.9rem; /* Leggermente più piccolo su mobile */
+    }
+  }
+}
+
+
