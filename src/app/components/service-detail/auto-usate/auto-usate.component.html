@@ -5,7 +5,7 @@
 
         <button class="btn-back" (click)="goBack()">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
-            Torna ai Servizi
+            {{ 'SERVICE_DETAIL.BACK_BUTTON' | translate }}
         </button>
 
         <div class="hero-content reveal-on-scroll">
@@ -29,7 +29,7 @@
             <div class="floating-cards-wrapper grid-staggered">
 
                 <div class="card-image reveal-on-scroll reveal-left">
-                    <img [src]="infoImage" alt="Auto Usate Selezionate">
+                    <img [src]="infoImage" [alt]="'SERVICE_DETAIL.auto_usate.IMG_ALT' | translate">
                 </div>
 
                 <div class="card-text reveal-on-scroll reveal-right">
@@ -55,7 +55,9 @@
                     <div class="red-divider"></div>
                     <p class="description" [innerHTML]="'SERVICE_DETAIL.auto_usate.CONSULTATION_TEXT' | translate"></p>
                     <div class="cta-box mt-4">
-                        <a routerLink="/contatti" class="btn btn-accent"><i class="fa fa-phone mr-2"></i> Chiama per un preventivo</a>
+                        <a routerLink="/contact" class="btn btn-accent">
+                            <!--i class="fa fa-phone mr-2"></i--> {{ 'SERVICE_DETAIL.auto_usate.CTA_BUTTON' | translate }}
+                        </a>
                     </div>
                 </div>
 
@@ -64,12 +66,12 @@
                         <div class="social-icon-wrapper">
                             <i class="fa-brands fa-facebook"></i>
                         </div>
-                        <h4>Scopri le occasioni in Tempo Reale</h4>
-                        <p>Pubblichiamo i nuovi arrivi e le offerte speciali direttamente sulla nostra pagina. Unisciti alla nostra community!</p>
+                        <h4>{{ 'SERVICE_DETAIL.auto_usate.SOCIAL_TITLE' | translate }}</h4>
+                        <p>{{ 'SERVICE_DETAIL.auto_usate.SOCIAL_DESC' | translate }}</p>
 
                         <a href="https://www.facebook.com/share/14f975YcdLX/?mibextid=wwXIfr" target="_blank" class="btn-social">
                             <i class="fa-brands fa-facebook"></i>
-                            Seguici su Facebook
+                            {{ 'SERVICE_DETAIL.auto_usate.SOCIAL_BTN' | translate }}
                         </a>
                     </div>
                 </div>

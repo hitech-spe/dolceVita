@@ -166,6 +166,7 @@
     "DISCLAIMER_TEXT": "I testi, le informazioni e gli altri dati pubblicati in questo sito nonché i link ad altri siti presenti sul web hanno esclusivamente scopo informativo e non assumono alcun carattere di ufficialità.<br><br>La Dolce Vita S.r.l. non assume alcuna responsabilità per eventuali errori od omissioni di qualsiasi tipo e per qualunque tipo di danno diretto, indiretto o accidentale derivante dalla lettura o dall'impiego delle informazioni pubblicate, o di qualsiasi forma di contenuto presente nel sito o per l'accesso o l'uso del materiale contenuto in altri siti."
   },
   "SERVICE_DETAIL": {
+    "BACK_BUTTON": "Torna ai Servizi",
     "autonoleggio": {
       "HERO_TITLE": "Noleggio Auto in Puglia",
       "HERO_SUBTITLE": "Autonoleggio Senza Conducente",
@@ -173,6 +174,7 @@
       "INTRO_TEXT": "La Dolce Vita è l'agenzia di autonoleggio di riferimento a Mottola e in provincia di Taranto, una società attenta e professionale in grado di rispondere a qualsiasi richiesta della clientela con la massima accuratezza. Disponendo di un ampio parco auto, la società riesce a venire incontro alle diverse esigenze proponendo mezzi adatti a singoli viaggiatori e famiglie, gruppi turistici e aziende, sempre garantendo i massimi standard qualitativi del servizio. Non mancano inoltre auto per noleggio a breve termine, dai modelli più classici alle auto sportive e di lusso, ideali per rendere ancora più indimenticabili i vostri momenti più importanti.",
       "SPLIT_TITLE_BLACK": "Autonoleggio ",
       "SPLIT_TITLE_RED": "Senza Conducente",
+      "BUTTON_TEXT": "Richiedi Preventivo",
       "SPLIT_TEXT": "Se desiderate noleggiare un automobile a breve termine o piuttosto, volete disporre di un veicolo esclusivo per una serata di gala o un addio al nubilato o al celibato, La Dolce Vita è l'operatore giusto a cui affidarvi. La ditta di autonoleggio di Mottola, in provincia di Taranto, vanta un ampio parco di auto di lusso, sportive e classiche, pronte a esaltare il vostro carattere e la vostra personalità durante le occasioni più importanti.\n\nPer conoscere l'intero parco di auto per eventi, non esitate a contattare il personale in sede e a richiedere un preventivo dettagliato, ritagliato su misura per voi. Nell'ambito del noleggio auto a breve termine, La Dolce Vita propone una vasta gamma di modelli sia classici, come le ammiraglie delle case automobilistiche più prestigiose, che sportive. In base allo stile del vostro evento e alla vostra personalità, potrete dunque scegliere la tipologia di veicolo più adatta e sorprendere così tutti mostrandovi a bordo di un veicolo unico ed esclusivo."
     },
     "veicoli_commerciali": {
@@ -184,6 +186,7 @@
       "ADVANTAGES_TEXT": "Il noleggio auto è un'opportunità particolarmente vantaggiosa per le aziende, in quanto consente di disporre di mezzi sempre efficienti senza dover sopportare costi elevati per l'acquisto e la gestione degli stessi. Con le formule di noleggio veicoli commerciali, è infatti possibile stipulare contratti a breve termine su auto, furgoni, van e ogni altra tipologia di veicolo, a condizioni estremamente vantaggiose e flessibili.",
       "PICKUP_TITLE_RED": "Ritiro Immediato",
       "PICKUP_TITLE_BLACK": "in Sede",
+      "BUTTON_TEXT": "Richiedi Preventivo Aziendale",
       "PICKUP_TEXT": "Per venire incontro alle esigenze dei propri clienti, la società di autonoleggio La Dolce Vita di Mottola ha predisposto formule di noleggio studiate per le diverse necessità dei richiedenti. Dal noleggio van per attività commerciali al noleggio di auto di rappresentanza per le aziende, la società tarantina garantisce numerosi vantaggi, come la possibilità di ritiro immediato del veicolo in sede e la prenotazione online: chiamate la sede per conoscere tutti i dettagli della proposta."
     },
     "lungo_termine": {
@@ -201,6 +204,7 @@
       "HERO_TITLE": "Parco Mezzi",
       "HERO_SUBTITLE": "L'auto perfetta per ogni tua esigenza",
       "INTRO_TITLE": "Parco auto",
+      "BUTTON_TEXT": "Richiedi Preventivo",
       "INTRO_TEXT": "Desiderate disporre di un'auto nuova e confortevole per un periodo di tempo più o meno lungo?<br> Siete in vacanza nel tarantino e volete usufruire di una vettura per tutti i vostri spostamenti?<br> La Dolce Vita Noleggio Auto è l'operatore giusto a cui rivolgervi per prenotare un mezzo nuovo e in ottime condizioni a tariffe estremamente vantaggiose. Con un'offerta ampia e variegata, la società di affitto di veicoli con sede a Mottola è pronta a soddisfare ogni vostra necessità con la massima attenzione e professionalità: non esitate a chiamare per un preventivo."
     },
     "auto_usate": {
@@ -212,7 +216,12 @@
       "ADVANTAGES_TEXT": "La trasparenza è uno dei valori fondamentali dell'azienda: ogni veicolo viene fornito con una storia completa e dettagliata, inclusi i chilometri percorsi, le manutenzioni effettuate e qualsiasi incidente pregresso. Questo approccio permette ai clienti di acquistare con fiducia, sapendo esattamente cosa stanno comprando.\n\nAutonoleggio La Dolce Vita offre anche soluzioni di finanziamento flessibili, rendendo l'acquisto di un'auto usata accessibile a una vasta gamma di budget.",
       "CONSULTATION_TITLE_RED": "Consulenze",
       "CONSULTATION_TITLE_BLACK": "Personalizzate",
-      "CONSULTATION_TEXT": " Il team di professionisti dell'azienda è sempre disponibile per fornire consulenza personalizzata e aiutare i clienti a trovare il veicolo perfetto per le loro esigenze.\n\nCon un impegno costante verso la soddisfazione del cliente e un'attenzione particolare alla qualità, Auonoleggio La Dolce Vita rappresenta una scelta eccellente per chi cerca un'auto usata affidabile e conveniente."
+      "CONSULTATION_TEXT": " Il team di professionisti dell'azienda è sempre disponibile per fornire consulenza personalizzata e aiutare i clienti a trovare il veicolo perfetto per le loro esigenze.\n\nCon un impegno costante verso la soddisfazione del cliente e un'attenzione particolare alla qualità, Auonoleggio La Dolce Vita rappresenta una scelta eccellente per chi cerca un'auto usata affidabile e conveniente.",
+      "IMG_ALT": "Auto Usate Selezionate",
+      "CTA_BUTTON": "Contattaci per un preventivo",
+      "SOCIAL_TITLE": "Scopri le occasioni in Tempo Reale",
+      "SOCIAL_DESC": "Pubblichiamo i nuovi arrivi e le offerte speciali direttamente sulla nostra pagina. Unisciti alla nostra community!",
+      "SOCIAL_BTN": "Seguici su Facebook"
     },
     "lavaggio": {
       "HERO_TITLE": "Lavaggio Auto",
@@ -224,7 +233,11 @@
       "CLEAN_TITLE_RED": "Pulizia Auto",
       "CLEAN_TITLE_BLACK": "Completa",
       "CLEAN_TEXT": "Grazie a tecniche avanzate e all'impiego di detergenti specifici, La Dolce Vita è in grado di rimuovere anche le macchie più ostinate, assicurando un risultato impeccabile. Il team di professionisti esperti è dedicato a offrire un servizio eccellente, rendendo ogni esperienza di noleggio o pulizia un vero piacere per i clienti. Affidarsi ad Autonoleggio La Dolce Vita significa scegliere qualità, cura e professionalità.\n\n",
-      "CTA_BUTTON": "Prenota il tuo lavaggio"
+      "CTA_BUTTON": "Prenota il tuo lavaggio",
+      "IMG_ALT": "Prezzi Lavaggio Auto",
+      "SOCIAL_TITLE": "Le nostre ultime lavorazioni",
+      "SOCIAL_DESC": "Segui la nostra pagina per vedere i risultati dei nostri trattamenti e restare aggiornato sulle promozioni.",
+      "SOCIAL_BTN": "Seguici su Facebook"
     }
   },
   "PRIVACY_POLICY": {

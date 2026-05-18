@@ -28,10 +28,34 @@
                 </li>
 
                 <li><a [routerLink]="['/contact']" (click)="closeMenu()">{{ 'HEADER.CONTACT' | translate }}</a></li>
+
+                @if (user$ | async; as user) {
+                    <li class="user-menu-container">
+                        <div class="user-avatar" (click)="toggleUserMenu($event)">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+
+                        @if (isUserMenuOpen) {
+                            <div class="user-dropdown glass-card fade-in shadow-lg">
+                                <div class="user-details">
+                                    <p class="full-name">Admin La Dolce Vita</p>
+                                    <span class="badge-admin">Amministratore</span>
+                                </div>
+
+                                <div class="dropdown-divider"></div>
+
+                                <button (click)="logout()" class="dropdown-item logout">
+                                    <i class="fa-solid fa-arrow-right-from-bracket"></i> {{ 'AUTH.LOGOUT' | translate }}
+                                </button>
+                            </div>
+                        }
+                    </li>
+                }
+
             </ul>
 
             <div class="mobile-only-content">
-                <a routerLink="/prenota" class="btn btn-accent mobile-book-btn" (click)="closeMenu()">
+                <a routerLink="/contact" class="btn btn-accent mobile-book-btn" (click)="closeMenu()">
                     {{ 'HEADER.BOOK_NOW' | translate }}
                 </a>
 
@@ -43,6 +67,7 @@
             </div>
         </nav>
 
+
         <div class="header-actions">
             <div class="lang-switcher">
                 <button (click)="changeLang('it')" [class.active]="currentLang === 'it'">IT</button>
@@ -50,7 +75,7 @@
                 <button (click)="changeLang('en')" [class.active]="currentLang === 'en'">EN</button>
             </div>
 
-            <a routerLink="/prenota" class="btn btn-accent book-btn">{{ 'HEADER.BOOK_NOW' | translate }}</a>
+            <a routerLink="/contact" class="btn btn-accent book-btn">{{ 'HEADER.BOOK_NOW' | translate }}</a>
 
             <button class="mobile-toggle" (click)="toggleMenu()" [class.active]="isMenuOpen">
                 <span></span><span></span><span></span>

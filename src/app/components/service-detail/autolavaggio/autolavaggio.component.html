@@ -5,7 +5,7 @@
 
         <button class="btn-back" (click)="goBack()">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
-            Torna ai Servizi
+            {{ 'SERVICE_DETAIL.BACK_BUTTON' | translate }}
         </button>
 
         <div class="hero-content reveal-on-scroll">
@@ -29,7 +29,7 @@
             <div class="floating-cards-wrapper grid-staggered">
 
                 <div class="card-image reveal-on-scroll reveal-left">
-                    <img [src]="infoImage" alt="Prezzi Lavaggio Auto">
+                    <img [src]="infoImage" [alt]="'SERVICE_DETAIL.lavaggio.IMG_ALT' | translate">
                 </div>
 
                 <div class="card-text reveal-on-scroll reveal-right">
@@ -56,7 +56,7 @@
                     <p class="description" [innerHTML]="'SERVICE_DETAIL.lavaggio.CLEAN_TEXT' | translate"></p>
                     <div class="cta-box mt-4">
                         <a href="tel:+393428315325" class="btn btn-accent">
-                            <i class="fa-solid fa-calendar-check mr-2" style="padding-right: 8px"></i> Prenota il tuo lavaggio
+                            <i class="fa-solid fa-calendar-check mr-2" style="padding-right: 8px"></i> {{ 'SERVICE_DETAIL.lavaggio.CTA_BUTTON' | translate }}
                         </a>
                     </div>
                 </div>
@@ -66,12 +66,12 @@
                         <div class="social-icon-wrapper">
                             <i class="fab fa-facebook-f"></i>
                         </div>
-                        <h4>Le nostre ultime lavorazioni</h4>
-                        <p>Segui la nostra pagina per vedere i risultati dei nostri trattamenti e restare aggiornato sulle promozioni.</p>
+                        <h4>{{ 'SERVICE_DETAIL.lavaggio.SOCIAL_TITLE' | translate }}</h4>
+                        <p>{{ 'SERVICE_DETAIL.lavaggio.SOCIAL_DESC' | translate }}</p>
 
                         <a href="https://www.facebook.com/NoleggioAutoMottola" target="_blank" class="btn-social">
                             <i class="fab fa-facebook-f"></i>
-                            Seguici su Facebook
+                            {{ 'SERVICE_DETAIL.lavaggio.SOCIAL_BTN' | translate }}
                         </a>
                     </div>
                 </div>

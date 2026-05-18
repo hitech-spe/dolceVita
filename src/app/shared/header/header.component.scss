@@ -62,6 +62,111 @@
     }
   }
 
+  /* =========================================
+     USER MENU (Admin)
+  ========================================= */
+  .user-menu-container {
+    position: relative;
+    margin-left: 1rem;
+    display: flex;
+    align-items: center;
+    list-style: none; // Evita pallini strani
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      background: var(--accent);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 10px rgba(195, 30, 35, 0.3);
+
+      &:hover {
+        transform: scale(1.05);
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+    }
+
+    .user-dropdown {
+      position: absolute;
+      top: 55px; /* Distanza dall'avatar */
+      right: 0;
+      min-width: 220px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      padding: 1rem;
+      z-index: 1000;
+      transform-origin: top right;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+
+      .user-details {
+        padding: 0.5rem;
+        text-align: center;
+
+        .full-name {
+          margin: 0;
+          font-weight: 700;
+          color: var(--text-main);
+          font-size: 1.05rem;
+        }
+
+        .badge-admin {
+          display: inline-block;
+          background: #f1f5f9;
+          color: var(--text-muted);
+          font-size: 0.75rem;
+          padding: 2px 8px;
+          border-radius: 50px;
+          margin-top: 5px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+      }
+
+      .dropdown-divider {
+        height: 1px;
+        background: rgba(0, 0, 0, 0.08);
+        margin: 1rem 0;
+      }
+
+      .dropdown-item {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: transparent;
+        border: none;
+        padding: 0.8rem 1rem;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-main);
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        i { font-size: 1.1rem; }
+
+        &.logout {
+          color: #ef4444;
+          &:hover {
+            background: #fef2f2;
+            color: #dc2626;
+          }
+        }
+      }
+    }
+  }
+
   .header-actions {
     display: flex; align-items: center; gap: 1.5rem;
     .lang-switcher {
@@ -124,6 +229,34 @@
         }
       }
 
+      /* Adattamento Menu Utente su Mobile */
+      .user-menu-container {
+        margin-left: 0;
+        margin-top: 1rem;
+        width: 100%;
+
+        .user-dropdown {
+          position: relative; /* Invece di essere un popup assoluto, spinge il menu verso il basso */
+          top: 15px;
+          right: auto;
+          width: 100%;
+          background: rgba(255,255,255,0.05); /* Vetro scuro per mobile */
+          box-shadow: none;
+          border: 1px solid rgba(255,255,255,0.1);
+
+          .user-details .full-name { color: white; }
+          .dropdown-divider { background: rgba(255,255,255,0.1); }
+          .dropdown-item {
+            color: rgba(255,255,255,0.8);
+            &:hover { background: rgba(255,255,255,0.1); color: white; }
+            &.logout {
+              color: #fca5a5;
+              &:hover { background: rgba(239,68,68,0.2); color: white; }
+            }
+          }
+        }
+      }
+
       /* Contenuto speciale mobile (Prenota e Lingua) */
       .mobile-only-content {
         display: flex; flex-direction: column; gap: 2rem; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1);
@@ -141,4 +274,16 @@
       }
     }
   }
+}
+
+/* =========================================
+   ANIMAZIONI (FUORI DALLA CLASSE HEADER)
+========================================= */
+.fade-in {
+  animation: fadeInDropdown 0.2s ease-out forwards;
+}
+
+@keyframes fadeInDropdown {
+  from { opacity: 0; transform: translateY(-10px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }

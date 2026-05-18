@@ -13,7 +13,6 @@ import {
 import {Observable, firstValueFrom} from "rxjs";
 import {Announcement} from "../models/announcement.model";
 import {HttpClient} from "@angular/common/http";
-import {Functions, httpsCallable} from "@angular/fire/functions";
 
 interface CloudinaryUploadResponse {
     secure_url: string;
@@ -27,7 +26,6 @@ export class FirestoreService {
 
     private firestore = inject(Firestore);
     private http = inject(HttpClient);
-    private functions = inject(Functions);
 
     private readonly cloudinaryCloudName = 'dbtwfuplj';
     private readonly cloudinaryUploadPreset = 'ml_default';

@@ -29,26 +29,27 @@ export class ParcoAutoComponent implements AfterViewInit, OnDestroy {
     {
       title: 'Segmento A',
       cars: [
-        { name: 'Fiat Panda', imageUrl: 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fd?q=80&w=800&auto=format&fit=crop' },
-        { name: 'Renault Twingo', imageUrl: 'https://images.unsplash.com/photo-1541899481282-d53bffe3c3ea?q=80&w=800&auto=format&fit=crop' },
-        { name: 'Hyundai i10', imageUrl: 'https://images.unsplash.com/photo-1629897048514-3dd7414dbbba?q=80&w=800&auto=format&fit=crop' },
-        { name: 'Fiat 500', imageUrl: 'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?q=80&w=800&auto=format&fit=crop' }
+        { name: 'Fiat Panda', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/panda-1600w.jpeg' },
+        { name: 'Renault Twingo', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/tWINGO-1600w.jpg' },
+        { name: 'Hyundai i10', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/7683bb8001554e8686f667376c308bde-1600w.jpg' },
+        { name: 'Fiat 500', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/fiat-500-berlina-2v-ha-1-1600w.webp' }
       ]
     },
     {
       title: 'Segmento B',
       cars: [
-        { name: 'Fiat Punto', imageUrl: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?q=80&w=800&auto=format&fit=crop' },
-        { name: 'Fiat Tipo', imageUrl: 'https://images.unsplash.com/photo-1619682817481-e994891cd1f5?q=80&w=800&auto=format&fit=crop' },
-        { name: 'Fiat 500L', imageUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=800&auto=format&fit=crop' }
+        { name: 'Fiat Punto', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/FIAT-PUNTO-METANO-1920w.jpg' },
+        { name: 'Fiat Tipo', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/190225_Fiat_Tipo-Sport_01-1920w.jpg' },
+        { name: 'Fiat 500L', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/nuova-500L-1920w.webp' }
       ]
     },
     {
       title: 'Segmento C',
       cars: [
-        { name: 'Opel Astra', imageUrl: 'https://images.unsplash.com/photo-1609521263047-f8f205293f24?q=80&w=800&auto=format&fit=crop' },
-        { name: 'Renault Clio', imageUrl: 'https://images.unsplash.com/photo-1612825173281-9a193378527e?q=80&w=800&auto=format&fit=crop' },
-        { name: 'Kia Sportage', imageUrl: 'https://images.unsplash.com/photo-1563720223185-11003d516935?q=80&w=800&auto=format&fit=crop' }
+        { name: 'Opel Mokka', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/nuova-500L-1920w.webp' },
+        { name: 'Fiat 500 X', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/fiat-500x-urban-look-nuove-teverola-casapesenna-1920w.jpg' },
+        { name: 'DR 4.0', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/DR-3.0-1920w.webp' },
+        { name: 'JEEP RENEGADE', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/jeep-renegade-limited-ice-alpine-white-br-565x330-1920w.png' }
       ]
     }
   ];

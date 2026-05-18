@@ -1,24 +1,49 @@
-import { Component, HostListener, inject } from '@angular/core';
+import { Component, HostListener, inject, ElementRef } from '@angular/core';
 import { TranslateService, TranslateModule } from '@ngx-translate/core';
 import { RouterLink } from '@angular/router';
-import { NgOptimizedImage } from '@angular/common';
+import { NgOptimizedImage, AsyncPipe } from '@angular/common'; // <-- Aggiunto AsyncPipe
+import { AuthService } from "../../services/auth.service";
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [TranslateModule, RouterLink, NgOptimizedImage],
+  imports: [TranslateModule, RouterLink, NgOptimizedImage, AsyncPipe], // <-- Aggiunto qui
   templateUrl: './header.component.html',
   styleUrls: ['./header.component.scss']
 })
 export class HeaderComponent {
   private translate = inject(TranslateService);
+  private authService = inject(AuthService);
+  private eRef = inject(ElementRef); // <-- Serve per chiudere il menu cliccando fuori
 
   isScrolled = false;
   isMenuOpen = false;
-  isServicesOpenMobile = false; // Per l'accordion mobile
+  isServicesOpenMobile = false;
+  isUserMenuOpen = false; // <-- Nuova variabile
+
+  user$ = this.authService.user$;
 
   get currentLang(): string {
     return this.translate.currentLang || 'it';
+  }
+
+  logout() {
+    this.authService.logout();
+    this.closeMenu();
+    this.isUserMenuOpen = false; // <-- Assicurati di chiuderlo al logout
+  }
+
+  toggleUserMenu(event: Event) {
+    event.stopPropagation(); // Evita che il click chiuda subito il menu
+    this.isUserMenuOpen = !this.isUserMenuOpen;
+  }
+
+  // Chiude il menu utente se si clicca fuori
+  @HostListener('document:click', ['$event'])
+  clickout(event: Event) {
+    if (this.isUserMenuOpen && !this.eRef.nativeElement.contains(event.target)) {
+      this.isUserMenuOpen = false;
+    }
   }
 
   @HostListener('window:scroll')

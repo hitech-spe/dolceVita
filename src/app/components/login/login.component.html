@@ -1,6 +1,13 @@
 <section class="auth-section fade-in">
-    <div class="auth-container">
-        <div class="glass-card auth-card">
+    <div class="auth-overlay"></div>
+
+    <div class="auth-container relative z-10">
+        <div class="glass-card auth-card shadow-lg">
+
+            <div class="auth-icon-wrapper">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+
             <h2 class="text-gradient">
                 {{ (isLoginMode ? 'AUTH.LOGIN_TITLE' : 'AUTH.REGISTER_TITLE') | translate }}
             </h2>
@@ -10,63 +17,60 @@
 
             <form (ngSubmit)="onSubmit()" class="auth-form">
                 @if (!isLoginMode) {
-                    <div class="form-group">
-                        <label for="firstName">{{ 'AUTH.FIRST_NAME' | translate }}</label>
-                        <input type="text" id="firstName" name="firstName" [(ngModel)]="firstName" required
-                               placeholder="{{ 'AUTH.FIRST_NAME_PLACEHOLDER' | translate }}">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="lastName">{{ 'AUTH.LAST_NAME' | translate }}</label>
-                        <input type="text" id="lastName" name="lastName" [(ngModel)]="lastName" required
-                               placeholder="{{ 'AUTH.LAST_NAME_PLACEHOLDER' | translate }}">
+                    <div class="form-group input-row">
+                        <div class="input-col">
+                            <label for="firstName">{{ 'AUTH.FIRST_NAME' | translate }}</label>
+                            <input type="text" id="firstName" name="firstName" [(ngModel)]="firstName" required
+                                   placeholder="{{ 'AUTH.FIRST_NAME_PLACEHOLDER' | translate }}">
+                        </div>
+                        <div class="input-col">
+                            <label for="lastName">{{ 'AUTH.LAST_NAME' | translate }}</label>
+                            <input type="text" id="lastName" name="lastName" [(ngModel)]="lastName" required
+                                   placeholder="{{ 'AUTH.LAST_NAME_PLACEHOLDER' | translate }}">
+                        </div>
                     </div>
                 }
 
                 <div class="form-group">
                     <label for="email">{{ 'AUTH.EMAIL' | translate }}</label>
-                    <input type="email" id="email" name="email" [(ngModel)]="email" required placeholder="example@email.com">
+                    <input type="email" id="email" name="email" [(ngModel)]="email" required placeholder="admin@dolcevita.it">
                 </div>
 
                 <div class="form-group">
                     <label for="password">{{ 'AUTH.PASSWORD' | translate }}</label>
-                    <input type="password" id="password" name="password" [(ngModel)]="password" required placeholder="********">
+                    <input type="password" id="password" name="password" [(ngModel)]="password" required placeholder="••••••••">
                 </div>
 
                 @if (!isLoginMode) {
                     <div class="form-group">
                         <label for="confirmPassword">{{ 'AUTH.CONFIRM_PASSWORD' | translate }}</label>
                         <input type="password" id="confirmPassword" name="confirmPassword" [(ngModel)]="confirmPassword" required
-                               placeholder="********">
+                               placeholder="••••••••">
                     </div>
                 }
 
                 @if (error) {
                     <div class="status-message error">
-                        {{ (error.startsWith('AUTH.') ? (error | translate) : error) }}
+                        <i class="fa-solid fa-triangle-exclamation"></i> {{ (error.startsWith('AUTH.') ? (error | translate) : error) }}
                     </div>
                 }
 
                 @if (success) {
                     <div class="status-message success">
-                        {{ success | translate }}
+                        <i class="fa-solid fa-circle-check"></i> {{ success | translate }}
                     </div>
                 }
 
-
-                <button type="submit" class="btn btn-primary w-100" [disabled]="isLoading">
-                    <span>{{ (isLoginMode ? 'AUTH.LOGIN_BTN' : 'AUTH.REGISTER_BTN') | translate }}</span>
+                <button type="submit" class="btn btn-accent btn-submit" [disabled]="isLoading">
+                    @if (!isLoading) {
+                        <span>{{ (isLoginMode ? 'AUTH.LOGIN_BTN' : 'AUTH.REGISTER_BTN') | translate }}</span>
+                    }
                     @if (isLoading) {
-                        <span class="spinner"></span>
+                        <span class="spinner"></span> <span>Accesso in corso...</span>
                     }
                 </button>
             </form>
 
-            <!--div class="auth-footer">
-                <button (click)="toggleMode()" class="btn-link">
-                    {{ (isLoginMode ? 'AUTH.GO_TO_REGISTER' : 'AUTH.GO_TO_LOGIN') | translate }}
-                </button>
-            </div-->
         </div>
     </div>
 </section>

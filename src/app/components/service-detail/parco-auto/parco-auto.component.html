@@ -5,7 +5,7 @@
 
         <button class="btn-back" (click)="goBack()">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
-            Torna ai Servizi
+            {{ 'SERVICE_DETAIL.BACK_BUTTON' | translate }}
         </button>
 
         <div class="hero-content reveal-on-scroll">
@@ -25,28 +25,36 @@
     <section class="fleet-section">
         <div class="container">
 
-            <div *ngFor="let segment of fleetData; let i = index" class="fleet-segment">
+            @for (segment of fleetData; track $index) {
+                <div class="fleet-segment">
 
-                <div class="segment-header reveal-on-scroll">
-                    <h3>{{ segment.title }}</h3>
-                    <div class="line"></div>
-                </div>
-
-                <div class="fleet-grid">
-                    <div *ngFor="let car of segment.cars" class="car-card reveal-on-scroll">
-                        <div class="car-image-wrapper">
-                            <img [src]="car.imageUrl" [alt]="car.name">
-                            <div class="car-overlay">
-                                <a routerLink="/prenota" class="btn btn-accent btn-sm">Preventivo</a>
-                            </div>
-                        </div>
-                        <div class="car-info">
-                            <h4>{{ car.name }}</h4>
-                        </div>
+                    <div class="segment-header reveal-on-scroll">
+                        <h3>{{ segment.title }}</h3>
+                        <div class="line"></div>
                     </div>
-                </div>
 
-            </div>
+                    <div class="fleet-grid">
+
+                        @for (car of segment.cars; track car.name) {
+                            <div class="car-card reveal-on-scroll">
+                                <div class="car-image-wrapper">
+                                    <img [src]="car.imageUrl" [alt]="car.name">
+                                    <div class="car-overlay">
+                                        <a routerLink="/contact" class="btn btn-accent btn-sm">
+                                            {{ 'SERVICE_DETAIL.parco_auto.BUTTON_TEXT' | translate }}
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="car-info">
+                                    <h4>{{ car.name }}</h4>
+                                </div>
+                            </div>
+                        }
+
+                    </div>
+
+                </div>
+            }
 
         </div>
     </section>
