@@ -15,6 +15,7 @@ import {AutolavaggioComponent} from "./components/service-detail/autolavaggio/au
 import {AutonoleggioComponent} from "./components/service-detail/autonoleggio/autonoleggio.component";
 import {InformativaPrivacyComponent} from "./components/informativa-privacy/informativa-privacy.component";
 import {InformazioniLegaliComponent} from "./components/informazioni-legali/informazioni-legali.component";
+import {AdminDashboardComponent} from "./components/admin/admin-dashboard/admin-dashboard.component";
 
 export const routes: Routes = [
     {path: '', redirectTo: '/home', pathMatch: 'full'},
@@ -42,5 +43,6 @@ export const routes: Routes = [
     {path: 'contact', component: ContactComponent},
     {path: 'login', component: LoginComponent},
     {path: 'annunci', component: AnnouncementsComponent},
+    {path: 'admin/dashboard', component: AdminDashboardComponent},
     {path: '**', redirectTo: '/home'}
 ];

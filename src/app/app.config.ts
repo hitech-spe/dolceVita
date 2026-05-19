@@ -7,7 +7,6 @@ import { routes } from './app.routes';
 import { getFirestore, provideFirestore } from "@angular/fire/firestore";
 import { getAuth, provideAuth } from "@angular/fire/auth";
 import { initializeApp, provideFirebaseApp } from "@angular/fire/app";
-import { getFunctions, provideFunctions } from "@angular/fire/functions"; // <-- Importa le funzioni
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, './assets/i18n/', '.json');

@@ -1,0 +1,111 @@
+import { Injectable, inject } from '@angular/core';
+import {
+  Firestore,
+  collection,
+  collectionData,
+  addDoc,
+  query,
+  where,
+  doc,
+  updateDoc,
+  deleteDoc,
+  Timestamp,
+  orderBy
+} from '@angular/fire/firestore';
+import { Observable } from 'rxjs';
+
+// --- INTERFACCE ---
+export interface Vehicle {
+  id?: string;
+  brand: string;
+  model: string;
+  plate: string;
+  location: 'Mottola' | 'Massafra' | 'Grottaglie';
+  category: string; // es. 'Segmento A', 'Furgoni', ecc.
+  status: 'Attivo' | 'Manutenzione' | 'Venduto';
+}
+
+export interface Rental {
+  id?: string;
+  vehicleId: string;      // Riferimento all'auto
+  vehiclePlate?: string;  // Utile da salvare per ricerche veloci
+  customerName: string;
+  customerPhone?: string;
+  startDate: Timestamp;   // Usiamo sempre Timestamp di Firebase
+  endDate: Timestamp;
+  location: 'Mottola' | 'Massafra' | 'Grottaglie';
+  status: 'Prenotato' | 'In Corso' | 'Concluso' | 'Cancellato';
+  totalPrice?: number;
+  notes?: string;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class RentalService {
+  private firestore = inject(Firestore);
+
+  // ==========================================
+  // GESTIONE VEICOLI (IL PARCO MEZZI)
+  // ==========================================
+
+  /** Recupera tutti i veicoli (con filtro opzionale per sede) */
+  getVehicles(location?: string): Observable<Vehicle[]> {
+    const vehiclesRef = collection(this.firestore, 'vehicles');
+    let q = query(vehiclesRef, orderBy('brand')); // Ordina alfabeticamente
+
+    if (location) {
+      q = query(vehiclesRef, where('location', '==', location), orderBy('brand'));
+    }
+
+    return collectionData(q, { idField: 'id' }) as Observable<Vehicle[]>;
+  }
+
+  /** Aggiunge una nuova auto */
+  async addVehicle(vehicle: Vehicle) {
+    const vehiclesRef = collection(this.firestore, 'vehicles');
+    return addDoc(vehiclesRef, vehicle);
+  }
+
+  /** Modifica un'auto (es. cambio stato in Manutenzione) */
+  async updateVehicle(id: string, data: Partial<Vehicle>) {
+    const docRef = doc(this.firestore, `vehicles/${id}`);
+    return updateDoc(docRef, data);
+  }
+
+  // ==========================================
+  // GESTIONE NOLEGGI (IL "FOGLIO EXCEL")
+  // ==========================================
+
+  /** * Recupera i noleggi. Questo è fondamentale per visualizzare il "foglio" della sede.
+   * Restituirà i noleggi ordinati per data di inizio.
+   */
+  getRentals(location?: string): Observable<Rental[]> {
+    const rentalsRef = collection(this.firestore, 'rentals');
+    let q = query(rentalsRef, orderBy('startDate', 'desc'));
+
+    if (location) {
+      q = query(rentalsRef, where('location', '==', location), orderBy('startDate', 'desc'));
+    }
+
+    return collectionData(q, { idField: 'id' }) as Observable<Rental[]>;
+  }
+
+  /** Registra un nuovo noleggio */
+  async createRental(rental: Rental) {
+    const rentalsRef = collection(this.firestore, 'rentals');
+    return addDoc(rentalsRef, rental);
+  }
+
+  /** Modifica un noleggio (es. se il cliente allunga i giorni o annulla) */
+  async updateRental(id: string, data: Partial<Rental>) {
+    const docRef = doc(this.firestore, `rentals/${id}`);
+    return updateDoc(docRef, data);
+  }
+
+  /** Elimina un noleggio (se inserito per sbaglio) */
+  async deleteRental(id: string) {
+    const docRef = doc(this.firestore, `rentals/${id}`);
+    return deleteDoc(docRef);
+  }
+}

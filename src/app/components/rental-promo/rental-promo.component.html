@@ -1,0 +1,41 @@
+<section class="rental-promo-section bg-white">
+    <div class="container">
+        <div class="promo-grid align-items-center">
+
+            <div class="promo-text reveal-on-scroll reveal-left">
+                <h2>
+                    {{ 'HOME.PROMO.TITLE_BLACK' | translate }}
+                    <span class="text-accent">{{ 'HOME.PROMO.TITLE_RED' | translate }}</span>
+                </h2>
+
+                <div class="modern-divider">
+                    <div class="dots"></div>
+                    <div class="line"></div>
+                </div>
+
+                <div class="description">
+                    <p [innerHTML]="'HOME.PROMO.TEXT_1' | translate"></p>
+                    <p [innerHTML]="'HOME.PROMO.TEXT_2' | translate" class="mt-3"></p>
+                </div>
+
+                <div style="margin-top: 15px" class="cta-box mt-4">
+                    <a href="tel:+393428315325" class="btn btn-accent btn-lg shadow-lg">
+                        <i class="fa-solid fa-phone-volume mr-2" style="padding-right: 8px;"></i>
+                        {{ 'HOME.PROMO.BTN_TEXT' | translate }}
+                    </a>
+                </div>
+            </div>
+
+            <div class="promo-image reveal-on-scroll reveal-right">
+                <div class="image-wrapper shadow-2xl">
+                    @for (img of promoImages; track $index) {
+                        <img [src]="img" alt="Auto della flotta"
+                             class="carousel-img"
+                             [class.active]="currentPromoIndex === $index">
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>

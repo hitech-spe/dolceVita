@@ -1,0 +1,204 @@
+/* =========================================
+   ANIMAZIONI
+========================================= */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+
+  &.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.review-card.reveal-on-scroll {
+  @for $i from 1 through 4 {
+    &:nth-child(#{$i}) {
+      transition-delay: #{$i * 0.15}s;
+    }
+  }
+}
+
+/* =========================================
+   RECENSIONI / TESTIMONIALS
+========================================= */
+.testimonials-section {
+  padding: 6rem 0;
+  background-color: var(--bg-light); /* Uno sfondo leggermente grigio per staccare */
+
+  .section-header {
+    margin-bottom: 4rem;
+
+    .title {
+      font-size: 1.2rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 1.5rem;
+    }
+
+    .red-divider {
+      width: 60px;
+      height: 4px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+  }
+
+  .reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem;
+    align-items: stretch; /* Fa in modo che le card siano tutte alte uguali */
+  }
+
+  .review-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+
+    &:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08) !important;
+
+      .quote-icon {
+        color: var(--accent);
+        transform: scale(1.1);
+      }
+    }
+
+    .quote-icon {
+      position: absolute;
+      top: 1.5rem;
+      right: 2rem;
+      font-size: 2rem;
+      color: #f1f5f9; /* Grigio chiarissimo di base */
+      transition: all 0.3s ease;
+    }
+
+    .review-content {
+      flex-grow: 1; /* Spinge il footer in basso */
+      margin-bottom: 2rem;
+      margin-top: 1rem;
+
+      height: 180px; /* Diamo un'altezza fissa all'area del testo */
+      overflow-y: auto; /* Abilitiamo lo scroll verticale se serve */
+      padding-right: 10px; /* Spazio per non far toccare il testo al bordo se si scende */
+
+      /* Trucco CSS per nascondere la barra di scorrimento su tutti i browser */
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* Safari / Chrome */
+      -ms-overflow-style: none; /* IE / Edge */
+      scrollbar-width: none; /* Firefox */
+
+      .review-text {
+        font-size: 1rem;
+        line-height: 1.7;
+        color: var(--text-muted);
+        font-style: italic;
+        margin: 0;
+      }
+    }
+
+    .review-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 1.5rem;
+
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .user-avatar {
+          width: 45px;
+          height: 45px;
+          background: #e2e8f0;
+          color: var(--text-main);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 1.2rem;
+        }
+
+        .user-details {
+          .user-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            color: var(--text-main);
+            text-transform: capitalize;
+          }
+
+          .review-source {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+
+            .google-logo {
+              width: 16px;
+              height: 16px;
+              flex-shrink: 0; /* Impedisce che il logo si deformi */
+            }
+          }
+        }
+      }
+
+      .stars {
+        color: #fbbf24; /* Giallo stelle */
+        font-size: 0.9rem;
+        display: flex;
+        gap: 2px;
+      }
+    }
+  }
+}
+
+
+@media (max-width: 768px) {
+  .testimonials-section {
+    padding: 4rem 0;
+
+    .section-header .subtitle {
+      font-size: 2rem;
+    }
+
+    .reviews-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .testimonials-section {
+    padding: 4rem 0;
+
+    .section-header .subtitle {
+      font-size: 2rem;
+    }
+
+    .reviews-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+}

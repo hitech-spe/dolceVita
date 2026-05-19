@@ -1,0 +1,182 @@
+/* =========================================
+   ANIMAZIONI A SCOMPARSA
+========================================= */
+.reveal-on-scroll {
+  opacity: 0;
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+
+  &.reveal-left {
+    transform: translateX(-50px);
+  }
+
+  &.reveal-right {
+    transform: translateX(50px);
+  }
+
+  &.is-visible {
+    opacity: 1;
+    transform: translate(0, 0) !important;
+  }
+}
+
+/* =========================================
+   SEZIONE PROMO AUTONOLEGGIO
+========================================= */
+.rental-promo-section {
+  padding: 6rem 0;
+  overflow: hidden; /* Evita scroll orizzontale con le animazioni */
+
+  .promo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+
+  /* --- Testo Sinistra --- */
+  .promo-text {
+    h2 {
+      font-size: clamp(2rem, 3vw, 2.8rem);
+      font-weight: 800;
+      color: var(--text-main);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      letter-spacing: 0.02em;
+    }
+
+    /* Il divisore modernizzato puntini/linea */
+    .modern-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 2rem;
+
+      .dots {
+        width: 30px;
+        height: 3px;
+        border-bottom: 3px dotted var(--accent);
+      }
+
+      .line {
+        width: 60px;
+        height: 4px;
+        background-color: #0f172a; /* Nero/Blu scuro */
+      }
+    }
+
+    .description {
+      p {
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: var(--text-muted);
+        margin: 0;
+      }
+
+      /* Stile per i link dei numeri di telefono generati dall'innerHTML */
+      ::ng-deep a.tel-link {
+        color: var(--accent);
+        font-weight: 700;
+        text-decoration: none;
+        transition: color 0.3s;
+
+        &:hover {
+          color: #b3161a;
+          text-decoration: underline;
+        }
+      }
+    }
+
+    .btn-lg {
+      padding: 1.2rem 2.5rem;
+      font-size: 1.1rem;
+      border-radius: 50px;
+    }
+  }
+
+  /* --- Immagine Destra --- */
+  .promo-image {
+    position: relative;
+
+    .image-wrapper {
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      background: #f1f5f9; /* Sfondo temporaneo mentre caricano le foto */
+
+      /* FONDAMENTALE: Dà forma al contenitore visto che le immagini sono assolute */
+      aspect-ratio: 4 / 3;
+      width: 100%;
+
+      .carousel-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0; /* Invisibili di default */
+        /* Effetto dissolvenza morbidissimo */
+        transition: opacity 1s ease-in-out, transform 6s linear;
+        transform: scale(1);
+        z-index: 1;
+
+        &.active {
+          opacity: 1; /* Appare solo quella attiva */
+          transform: scale(1.05); /* Effetto zoom lento in stile premium */
+          z-index: 2;
+        }
+      }
+
+      &:hover .carousel-img.active {
+        transform: scale(1.1); /* Accelera lo zoom se l'utente ci passa sopra */
+      }
+
+      /* Badge galleggiante in stile Glassmorphism */
+      .glass-badge {
+        position: absolute;
+        bottom: 2rem;
+        left: -2rem; /* Sborda leggermente a sinistra per profondità */
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        font-weight: 700;
+        color: var(--text-main);
+        z-index: 10; /* Assicurati che stia sopra le immagini */
+
+        i {
+          color: var(--accent);
+          font-size: 1.5rem;
+        }
+      }
+    }
+  }
+}
+
+/* =========================================
+   RESPONSIVE (Mobile)
+========================================= */
+@media (max-width: 768px) {
+
+  .rental-promo-section {
+    padding: 4rem 0;
+
+    .promo-grid {
+      grid-template-columns: 1fr; /* Mette l'immagine sotto al testo */
+      gap: 3rem;
+    }
+
+    .promo-image .image-wrapper .glass-badge {
+      left: 1rem; /* Riporta il badge dentro i bordi dello schermo */
+      bottom: 1rem;
+      font-size: 0.9rem; /* Leggermente più piccolo su mobile */
+    }
+  }
+}

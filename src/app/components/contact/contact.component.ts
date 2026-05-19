@@ -71,9 +71,9 @@ export class ContactComponent implements AfterViewInit, OnDestroy {
     this.isSending = true;
     this.submitStatus = null;
 
-    const serviceID = 'service_24172gj';
-    const templateID = 'template_p0vp3cj';
-    const publicKey = 't0O8eaI9bifF1d3r4';
+    const serviceID = 'service_qkq37o8';
+    const templateID = 'template_f60hvwn';
+    const publicKey = 'uEN1UffQP8cXMYs4D';
 
     emailjs.send(serviceID, templateID, this.formData, publicKey)
         .then((result: EmailJSResponseStatus) => {

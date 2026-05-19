@@ -9,7 +9,6 @@ import {NgOptimizedImage} from "@angular/common";
   styleUrls: ['./services.component.scss'],
     imports: [
         TranslateModule,
-        RouterLink,
         NgOptimizedImage
     ],
   standalone: true
