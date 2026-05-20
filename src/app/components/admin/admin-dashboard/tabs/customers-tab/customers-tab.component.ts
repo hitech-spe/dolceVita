@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
-import { Customer, RentalService } from '../../../../../services/rental.service';
+import {Customer, RentalService, Vehicle} from '../../../../../services/rental.service';
 
 @Component({
   selector: 'app-customers-tab',
@@ -14,6 +14,8 @@ export class CustomersTabComponent implements OnInit {
   private rentalService = inject(RentalService);
 
   customers$!: Observable<Customer[]>;
+
+  searchTerm = '';
 
   isModalOpen = false;
   newCustomer: any = {};
@@ -82,5 +84,14 @@ export class CustomersTabComponent implements OnInit {
     if (!timestamp) return '-';
     if (timestamp.toDate) return timestamp.toDate().toLocaleDateString('it-IT');
     return new Date(timestamp).toLocaleDateString('it-IT');
+  }
+
+  getFiltered(items: Customer[] | null): Customer[] {
+    if (!items) return [];
+    return items
+        .filter(i =>
+            i.firstName.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+            i.lastName.toLowerCase().includes(this.searchTerm.toLowerCase())
+        )
   }
 }

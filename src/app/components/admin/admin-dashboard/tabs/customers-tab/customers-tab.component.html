@@ -1,7 +1,13 @@
 <div class="panel">
     <div class="panel-header">
         <h2>Anagrafica Clienti</h2>
-        <button class="btn btn-accent" (click)="openModal()">+ Nuovo Cliente</button>
+        <div class="panel-actions">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" [(ngModel)]="searchTerm" placeholder="Cerca cliente...">
+            </div>
+            <button class="btn btn-accent" (click)="openModal()">+ Nuovo Cliente</button>
+        </div>
     </div>
     <div class="table-responsive shadow-sm">
         <table class="modern-table">
@@ -16,7 +22,7 @@
                 </tr>
             </thead>
             <tbody>
-                @for (cust of customers$ | async; track cust.id) {
+                @for (cust of getFiltered(customers$ | async); track cust.id) {
                     <tr>
                         <td class="fw-bold">{{ cust.firstName }} {{ cust.lastName }}</td>
                         <td>{{ formatDate(cust.birthDate) }}</td>
