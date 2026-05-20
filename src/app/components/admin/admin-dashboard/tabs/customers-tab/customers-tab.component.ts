@@ -17,23 +17,40 @@ export class CustomersTabComponent implements OnInit {
 
   isModalOpen = false;
   newCustomer: any = {};
+  pendingAttachments: { name: string; data: string }[] = [];
 
   ngOnInit() {
     this.customers$ = this.rentalService.getCustomers();
   }
 
   openModal() { this.isModalOpen = true; }
-  closeModal() { this.isModalOpen = false; this.newCustomer = {}; }
+  closeModal() { this.isModalOpen = false; this.newCustomer = {}; this.pendingAttachments = []; }
 
   async saveCustomer() {
     if (!this.newCustomer.firstName || !this.newCustomer.lastName) return;
     const data: Customer = {
       ...this.newCustomer,
       birthDate: new Date(this.newCustomer.birthDate) as any,
-      licenseExpiry: new Date(this.newCustomer.licenseExpiry) as any
+      licenseExpiry: new Date(this.newCustomer.licenseExpiry) as any,
+      attachments: this.pendingAttachments
     };
     await this.rentalService.addCustomer(data);
     this.closeModal();
+  }
+
+  onNewFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      this.pendingAttachments = [...this.pendingAttachments, { name: file.name, data: reader.result as string }];
+    };
+    event.target.value = '';
+  }
+
+  removePendingAttachment(index: number) {
+    this.pendingAttachments = this.pendingAttachments.filter((_, i) => i !== index);
   }
 
   async onFileSelected(event: any, customer: Customer) {

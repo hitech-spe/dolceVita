@@ -63,6 +63,27 @@
                 <div class="form-group"><label>Telefono</label><input type="text" [(ngModel)]="newCustomer.phone"></div>
                 <div class="form-group"><label>Email</label><input type="email" [(ngModel)]="newCustomer.email"></div>
             </div>
+
+            <div class="modal-section">
+                <label class="modal-section-label">Documenti allegati</label>
+                <div class="attachment-list">
+                    @for (att of pendingAttachments; track $index) {
+                        <div class="attachment-item">
+                            <span class="attachment-name">
+                                <i class="fa-solid fa-file-pdf"></i> {{ att.name }}
+                            </span>
+                            <button class="btn-delete-file" (click)="removePendingAttachment($index)">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    }
+                    <label class="btn-upload">
+                        <input type="file" (change)="onNewFileSelected($event)" hidden>
+                        <i class="fa-solid fa-plus"></i> Aggiungi documento
+                    </label>
+                </div>
+            </div>
+
             <div class="modal-actions">
                 <button class="btn btn-outline" (click)="closeModal()">Annulla</button>
                 <button class="btn btn-accent" (click)="saveCustomer()">Salva Cliente</button>
