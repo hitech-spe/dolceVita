@@ -18,176 +18,45 @@
         </div>
 
         <div class="tabs">
-            <button [class.active]="currentTab === 'rentals'" (click)="currentTab = 'rentals'">
-                <i class="fa-solid fa-calendar-days"></i> Tabellone Noleggi
+            <button [class.active]="currentTab === 'rentals'" (click)="onTabChange('rentals')">
+                <i class="fa-solid fa-calendar-days"></i> Noleggi
             </button>
-            <button [class.active]="currentTab === 'fleet'" (click)="currentTab = 'fleet'">
-                <i class="fa-solid fa-car"></i> Parco Mezzi
+            <button [class.active]="currentTab === 'fleet'" (click)="onTabChange('fleet')">
+                <i class="fa-solid fa-car"></i> Veicoli
+            </button>
+            <button [class.active]="currentTab === 'customers'" (click)="onTabChange('customers')">
+                <i class="fa-solid fa-users"></i> Clienti
+            </button>
+            <button [class.active]="currentTab === 'insurance'" (click)="onTabChange('insurance')">
+                <i class="fa-solid fa-shield-halved"></i> Assicurazioni
+            </button>
+            <button [class.active]="currentTab === 'inspection'" (click)="onTabChange('inspection')">
+                <i class="fa-solid fa-clipboard-check"></i> Revisioni
+            </button>
+            <button [class.active]="currentTab === 'maintenance'" (click)="onTabChange('maintenance')">
+                <i class="fa-solid fa-wrench"></i> Manutenzione
             </button>
         </div>
     </header>
 
     <main class="dashboard-content">
-
         @if (currentTab === 'rentals') {
-            <div class="panel">
-                <div class="panel-header">
-                    <h2>Noleggi in corso e futuri</h2>
-                    <button class="btn btn-accent" (click)="openRentalModal()">+ Nuovo Noleggio</button>
-                </div>
-
-                <div class="table-responsive shadow-sm">
-                    <table class="modern-table">
-                        <thead>
-                        <tr>
-                            <th>Cliente</th>
-                            <th>Veicolo</th>
-                            <th>Dal</th>
-                            <th>Al</th>
-                            <th>Sede</th>
-                            <th>Stato</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                            @for (rental of rentals$ | async; track rental.id) {
-                                <tr>
-                                    <td class="fw-bold">{{ rental.customerName }}</td>
-                                    <td>{{ rental.vehiclePlate }}</td>
-                                    <td>{{ formatDate(rental.startDate) }}</td>
-                                    <td>{{ formatDate(rental.endDate) }}</td>
-                                    <td><span class="badge badge-light">{{ rental.location }}</span></td>
-                                    <td>
-                    <span class="badge"
-                          [class.bg-success]="rental.status === 'In Corso'"
-                          [class.bg-warning]="rental.status === 'Prenotato'"
-                          [class.bg-secondary]="rental.status === 'Concluso'">
-                      {{ rental.status }}
-                    </span>
-                                    </td>
-                                </tr>
-                            } @empty {
-                                <tr><td colspan="6" class="text-center py-4">Nessun noleggio trovato per questa sede.</td></tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <app-rentals-tab [selectedLocation$]="selectedLocation$" />
         }
-
         @if (currentTab === 'fleet') {
-            <div class="panel">
-                <div class="panel-header">
-                    <h2>Elenco Veicoli</h2>
-                    <button class="btn btn-accent" (click)="openVehicleModal()">+ Aggiungi Veicolo</button>
-                </div>
-
-                <div class="table-responsive shadow-sm">
-                    <table class="modern-table">
-                        <thead>
-                        <tr>
-                            <th>Marca e Modello</th>
-                            <th>Targa</th>
-                            <th>Categoria</th>
-                            <th>Sede Attuale</th>
-                            <th>Stato</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                            @for (car of vehicles$ | async; track car.id) {
-                                <tr>
-                                    <td class="fw-bold">{{ car.brand }} {{ car.model }}</td>
-                                    <td><span class="plate-badge">{{ car.plate }}</span></td>
-                                    <td>{{ car.category }}</td>
-                                    <td>{{ car.location }}</td>
-                                    <td>
-                    <span class="badge" [class.bg-success]="car.status === 'Attivo'" [class.bg-danger]="car.status === 'Manutenzione'">
-                      {{ car.status }}
-                    </span>
-                                    </td>
-                                </tr>
-                            } @empty {
-                                <tr><td colspan="5" class="text-center py-4">Nessun veicolo registrato.</td></tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <app-fleet-tab [selectedLocation$]="selectedLocation$" />
+        }
+        @if (currentTab === 'customers') {
+            <app-customers-tab />
+        }
+        @if (currentTab === 'insurance') {
+            <app-insurance-tab />
+        }
+        @if (currentTab === 'inspection') {
+            <app-inspection-tab />
+        }
+        @if (currentTab === 'maintenance') {
+            <app-maintenance-tab />
         }
     </main>
 </div>
-
-@if (isVehicleModalOpen) {
-    <div class="modal-overlay">
-        <div class="modal-card">
-            <h3>Inserisci Nuovo Veicolo</h3>
-            <div class="form-grid">
-                <div class="form-group"><label>Marca</label><input type="text" [(ngModel)]="newVehicle.brand" placeholder="Es. Fiat"></div>
-                <div class="form-group"><label>Modello</label><input type="text" [(ngModel)]="newVehicle.model" placeholder="Es. 500X"></div>
-                <div class="form-group"><label>Targa</label><input type="text" [(ngModel)]="newVehicle.plate" placeholder="AB123CD"></div>
-                <div class="form-group">
-                    <label>Categoria</label>
-                    <select [(ngModel)]="newVehicle.category">
-                        <option value="Auto">Auto</option>
-                        <option value="Furgone">Furgone</option>
-                        <option value="9 Posti">Minivan 9 Posti</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Sede Appartenenza</label>
-                    <select [(ngModel)]="newVehicle.location">
-                        <option value="Mottola">Mottola</option>
-                        <option value="Massafra">Massafra</option>
-                        <option value="Grottaglie">Grottaglie</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-outline" (click)="closeVehicleModal()">Annulla</button>
-                <button class="btn btn-accent" (click)="saveVehicle()">Salva Veicolo</button>
-            </div>
-        </div>
-    </div>
-}
-
-@if (isRentalModalOpen) {
-    <div class="modal-overlay">
-        <div class="modal-card">
-            <h3>Registra Nuovo Noleggio</h3>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>Nome Cliente</label>
-                    <input type="text" [(ngModel)]="newRental.customerName" placeholder="Mario Rossi">
-                </div>
-                <div class="form-group">
-                    <label>Veicolo</label>
-                    <select [(ngModel)]="newRental.vehicleId">
-                        <option value="" disabled selected>Seleziona un'auto...</option>
-                        @for (v of availableVehicles; track v.id) {
-                            <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }}) - {{v.location}}</option>
-                        }
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Data Inizio</label>
-                    <input type="date" [(ngModel)]="newRental.startDate">
-                </div>
-                <div class="form-group">
-                    <label>Data Fine</label>
-                    <input type="date" [(ngModel)]="newRental.endDate">
-                </div>
-                <div class="form-group">
-                    <label>Sede Ritiro/Consegna</label>
-                    <select [(ngModel)]="newRental.location">
-                        <option value="Mottola">Mottola</option>
-                        <option value="Massafra">Massafra</option>
-                        <option value="Grottaglie">Grottaglie</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-outline" (click)="closeRentalModal()">Annulla</button>
-                <button class="btn btn-accent" (click)="saveRental()">Salva Prenotazione</button>
-            </div>
-        </div>
-    </div>
-}

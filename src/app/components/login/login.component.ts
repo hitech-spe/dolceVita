@@ -58,7 +58,7 @@ export class LoginComponent {
     try {
       if (this.isLoginMode) {
         await this.authService.login(this.email, this.password);
-        await this.router.navigate(['/home']);
+        await this.router.navigate(['/admin/dashboard']);
       } else {
         await this.authService.register(this.email, this.password, this.firstName, this.lastName);
         this.success = 'AUTH.SUCCESS_REGISTER';

@@ -1,6 +1,6 @@
 import { Component, HostListener, inject, ElementRef } from '@angular/core';
 import { TranslateService, TranslateModule } from '@ngx-translate/core';
-import { RouterLink } from '@angular/router';
+import {Router, RouterLink} from '@angular/router';
 import { NgOptimizedImage, AsyncPipe } from '@angular/common'; // <-- Aggiunto AsyncPipe
 import { AuthService } from "../../services/auth.service";
 
@@ -15,6 +15,7 @@ export class HeaderComponent {
   private translate = inject(TranslateService);
   private authService = inject(AuthService);
   private eRef = inject(ElementRef); // <-- Serve per chiudere il menu cliccando fuori
+  private router = inject(Router);
 
   isScrolled = false;
   isMenuOpen = false;
@@ -27,10 +28,11 @@ export class HeaderComponent {
     return this.translate.currentLang || 'it';
   }
 
-  logout() {
+  async logout() {
     this.authService.logout();
     this.closeMenu();
-    this.isUserMenuOpen = false; // <-- Assicurati di chiuderlo al logout
+    this.isUserMenuOpen = false;
+    await this.router.navigate(['/home']);
   }
 
   toggleUserMenu(event: Event) {

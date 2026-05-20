@@ -1,0 +1,66 @@
+<div class="panel">
+    <div class="panel-header">
+        <h2>Assicurazioni Veicoli</h2>
+        <div class="panel-actions">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" [(ngModel)]="searchTerm" placeholder="Cerca targa o compagnia...">
+            </div>
+            <select [(ngModel)]="sortBy" class="sort-select">
+                <option value="expiryDate">Ordina per Scadenza</option>
+                <option value="vehiclePlate">Ordina per Targa</option>
+            </select>
+            <button class="btn btn-accent" (click)="openModal()">+ Aggiungi</button>
+        </div>
+    </div>
+    <div class="table-responsive shadow-sm">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Veicolo</th>
+                    <th>Compagnia</th>
+                    <th>Polizza</th>
+                    <th>Scadenza</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (ins of getFiltered(insurances$ | async); track ins.id) {
+                    <tr>
+                        <td class="fw-bold">{{ ins.vehiclePlate }}</td>
+                        <td>{{ ins.company }}</td>
+                        <td>{{ ins.policyNumber }}</td>
+                        <td>{{ formatDate(ins.expiryDate) }}</td>
+                    </tr>
+                } @empty {
+                    <tr><td colspan="4" class="text-center py-4">Nessuna assicurazione trovata.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (isModalOpen) {
+    <div class="modal-overlay">
+        <div class="modal-card">
+            <h3>Nuova Assicurazione</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Veicolo</label>
+                    <select [(ngModel)]="newInsurance.vehicleId">
+                        <option value="" disabled selected>Seleziona veicolo...</option>
+                        @for (v of availableVehicles; track v.id) {
+                            <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }})</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group"><label>Compagnia</label><input type="text" [(ngModel)]="newInsurance.company"></div>
+                <div class="form-group"><label>Numero Polizza</label><input type="text" [(ngModel)]="newInsurance.policyNumber"></div>
+                <div class="form-group"><label>Scadenza</label><input type="date" [(ngModel)]="newInsurance.expiryDate"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" (click)="closeModal()">Annulla</button>
+                <button class="btn btn-accent" (click)="saveInsurance()">Salva</button>
+            </div>
+        </div>
+    </div>
+}

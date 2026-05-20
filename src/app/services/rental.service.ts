@@ -29,6 +29,7 @@ export interface Rental {
   id?: string;
   vehicleId: string;      // Riferimento all'auto
   vehiclePlate?: string;  // Utile da salvare per ricerche veloci
+  customerId?: string;    // Riferimento al cliente
   customerName: string;
   customerPhone?: string;
   startDate: Timestamp;   // Usiamo sempre Timestamp di Firebase
@@ -37,6 +38,46 @@ export interface Rental {
   status: 'Prenotato' | 'In Corso' | 'Concluso' | 'Cancellato';
   totalPrice?: number;
   notes?: string;
+}
+
+export interface Insurance {
+  id?: string;
+  vehicleId: string;
+  vehiclePlate: string;
+  company: string;
+  policyNumber: string;
+  expiryDate: Timestamp;
+  notes?: string;
+}
+
+export interface Inspection {
+  id?: string;
+  vehicleId: string;
+  vehiclePlate: string;
+  expiryDate: Timestamp;
+  notes?: string;
+}
+
+export interface Maintenance {
+  id?: string;
+  vehicleId: string;
+  vehiclePlate: string;
+  description: string;
+  date: Timestamp;
+  cost?: number;
+  km?: number;
+}
+
+export interface Customer {
+  id?: string;
+  firstName: string;
+  lastName: string;
+  birthDate: Timestamp;
+  licenseNumber: string;
+  licenseExpiry: Timestamp;
+  phone?: string;
+  email?: string;
+  attachments?: { name: string, data: string }[]; // Base64 attachments
 }
 
 @Injectable({
@@ -107,5 +148,62 @@ export class RentalService {
   async deleteRental(id: string) {
     const docRef = doc(this.firestore, `rentals/${id}`);
     return deleteDoc(docRef);
+  }
+
+  // ==========================================
+  // GESTIONE ASSICURAZIONI, REVISIONI, MANUTENZIONI
+  // ==========================================
+
+  getInsurances(): Observable<Insurance[]> {
+    const ref = collection(this.firestore, 'insurances');
+    const q = query(ref, orderBy('expiryDate', 'asc'));
+    return collectionData(q, { idField: 'id' }) as Observable<Insurance[]>;
+  }
+
+  async addInsurance(insurance: Insurance) {
+    const ref = collection(this.firestore, 'insurances');
+    return addDoc(ref, insurance);
+  }
+
+  getInspections(): Observable<Inspection[]> {
+    const ref = collection(this.firestore, 'inspections');
+    const q = query(ref, orderBy('expiryDate', 'asc'));
+    return collectionData(q, { idField: 'id' }) as Observable<Inspection[]>;
+  }
+
+  async addInspection(inspection: Inspection) {
+    const ref = collection(this.firestore, 'inspections');
+    return addDoc(ref, inspection);
+  }
+
+  getMaintenances(): Observable<Maintenance[]> {
+    const ref = collection(this.firestore, 'maintenances');
+    const q = query(ref, orderBy('date', 'desc'));
+    return collectionData(q, { idField: 'id' }) as Observable<Maintenance[]>;
+  }
+
+  async addMaintenance(maintenance: Maintenance) {
+    const ref = collection(this.firestore, 'maintenances');
+    return addDoc(ref, maintenance);
+  }
+
+  // ==========================================
+  // GESTIONE CLIENTI
+  // ==========================================
+
+  getCustomers(): Observable<Customer[]> {
+    const ref = collection(this.firestore, 'customers');
+    const q = query(ref, orderBy('lastName'));
+    return collectionData(q, { idField: 'id' }) as Observable<Customer[]>;
+  }
+
+  async addCustomer(customer: Customer) {
+    const ref = collection(this.firestore, 'customers');
+    return addDoc(ref, customer);
+  }
+
+  async updateCustomer(id: string, data: Partial<Customer>) {
+    const docRef = doc(this.firestore, `customers/${id}`);
+    return updateDoc(docRef, data);
   }
 }

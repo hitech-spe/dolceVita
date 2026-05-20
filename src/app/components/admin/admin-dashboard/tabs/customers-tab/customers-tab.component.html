@@ -1,0 +1,72 @@
+<div class="panel">
+    <div class="panel-header">
+        <h2>Anagrafica Clienti</h2>
+        <button class="btn btn-accent" (click)="openModal()">+ Nuovo Cliente</button>
+    </div>
+    <div class="table-responsive shadow-sm">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Nome e Cognome</th>
+                    <th>Data di Nascita</th>
+                    <th>Patente</th>
+                    <th>Scadenza Patente</th>
+                    <th>Documenti</th>
+                    <th>Contatti</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (cust of customers$ | async; track cust.id) {
+                    <tr>
+                        <td class="fw-bold">{{ cust.firstName }} {{ cust.lastName }}</td>
+                        <td>{{ formatDate(cust.birthDate) }}</td>
+                        <td>{{ cust.licenseNumber }}</td>
+                        <td>{{ formatDate(cust.licenseExpiry) }}</td>
+                        <td>
+                            <div class="attachment-list">
+                                @for (att of cust.attachments; track $index) {
+                                    <div class="attachment-item">
+                                        <span class="attachment-name" (click)="downloadAttachment(att)" title="Scarica">
+                                            <i class="fa-solid fa-file-pdf"></i> {{ att.name }}
+                                        </span>
+                                        <button class="btn-delete-file" (click)="removeAttachment(cust, $index)">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                }
+                                <label class="btn-upload">
+                                    <input type="file" (change)="onFileSelected($event, cust)" hidden>
+                                    <i class="fa-solid fa-plus"></i> Aggiungi
+                                </label>
+                            </div>
+                        </td>
+                        <td>{{ cust.phone }} <br> <small>{{ cust.email }}</small></td>
+                    </tr>
+                } @empty {
+                    <tr><td colspan="6" class="text-center py-4">Nessun cliente registrato.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (isModalOpen) {
+    <div class="modal-overlay">
+        <div class="modal-card">
+            <h3>Nuovo Cliente</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>Nome</label><input type="text" [(ngModel)]="newCustomer.firstName"></div>
+                <div class="form-group"><label>Cognome</label><input type="text" [(ngModel)]="newCustomer.lastName"></div>
+                <div class="form-group"><label>Data di Nascita</label><input type="date" [(ngModel)]="newCustomer.birthDate"></div>
+                <div class="form-group"><label>Numero Patente</label><input type="text" [(ngModel)]="newCustomer.licenseNumber"></div>
+                <div class="form-group"><label>Scadenza Patente</label><input type="date" [(ngModel)]="newCustomer.licenseExpiry"></div>
+                <div class="form-group"><label>Telefono</label><input type="text" [(ngModel)]="newCustomer.phone"></div>
+                <div class="form-group"><label>Email</label><input type="email" [(ngModel)]="newCustomer.email"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" (click)="closeModal()">Annulla</button>
+                <button class="btn btn-accent" (click)="saveCustomer()">Salva Cliente</button>
+            </div>
+        </div>
+    </div>
+}

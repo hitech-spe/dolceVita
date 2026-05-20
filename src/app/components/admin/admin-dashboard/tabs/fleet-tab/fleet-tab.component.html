@@ -1,0 +1,79 @@
+<div class="panel">
+    <div class="panel-header">
+        <h2>Elenco Veicoli</h2>
+        <div class="panel-actions">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" [(ngModel)]="searchTerm" placeholder="Cerca targa o compagnia...">
+            </div>
+            <button class="btn btn-accent" (click)="openModal()">+ Aggiungi Veicolo</button>
+        </div>
+
+    </div>
+
+    <div class="table-responsive shadow-sm">
+        <table class="modern-table">
+            <thead>
+            <tr>
+                <th>Marca e Modello</th>
+                <th>Targa</th>
+                <th>Categoria</th>
+                <th>Sede Attuale</th>
+                <th>Stato</th>
+            </tr>
+            </thead>
+            <tbody>
+                @for (car of getFiltered(vehicles$ | async);  track car.id) {
+                    <tr>
+                        <td class="fw-bold">{{ car.brand }} {{ car.model }}</td>
+                        <td><span class="plate-badge">{{ car.plate }}</span></td>
+                        <td>{{ car.category }}</td>
+                        <td>{{ car.location }}</td>
+                        <td>
+                            <span class="badge"
+                                  [class.bg-success]="car.status === 'Attivo'"
+                                  [class.bg-danger]="car.status === 'Manutenzione'">
+                              {{ car.status }}
+                            </span>
+                        </td>
+                    </tr>
+                } @empty {
+                    <tr><td colspan="5" class="text-center py-4">Nessun veicolo registrato.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (isModalOpen) {
+    <div class="modal-overlay">
+        <div class="modal-card">
+            <h3>Inserisci Nuovo Veicolo</h3>
+            <div class="form-grid">
+                <div class="form-group"><label>Marca</label><input type="text" [(ngModel)]="newVehicle.brand" placeholder="Es. Fiat"></div>
+                <div class="form-group"><label>Modello</label><input type="text" [(ngModel)]="newVehicle.model" placeholder="Es. 500X"></div>
+                <div class="form-group"><label>Targa</label><input type="text" [(ngModel)]="newVehicle.plate" placeholder="AB123CD"></div>
+                <div class="form-group">
+                    <label>Categoria</label>
+                    <select [(ngModel)]="newVehicle.category">
+                        <option value="Auto">Auto</option>
+                        <option value="Furgone">Furgone</option>
+                        <option value="9 Posti">Minivan 9 Posti</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Sede Appartenenza</label>
+                    <select [(ngModel)]="newVehicle.location">
+                        <option value="Mottola">Mottola</option>
+                        <option value="Massafra">Massafra</option>
+                        <option value="Grottaglie">Grottaglie</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" (click)="closeModal()">Annulla</button>
+                <button class="btn btn-accent" (click)="saveVehicle()">Salva Veicolo</button>
+            </div>
+        </div>
+    </div>
+}

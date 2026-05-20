@@ -1,0 +1,90 @@
+<div class="panel">
+    <div class="panel-header">
+        <h2>Noleggi in corso e futuri</h2>
+        <button class="btn btn-accent" (click)="openModal()">+ Nuovo Noleggio</button>
+    </div>
+
+    <div class="table-responsive shadow-sm">
+        <table class="modern-table">
+            <thead>
+            <tr>
+                <th>Cliente</th>
+                <th>Veicolo</th>
+                <th>Dal</th>
+                <th>Al</th>
+                <th>Sede</th>
+                <th>Stato</th>
+            </tr>
+            </thead>
+            <tbody>
+                @for (rental of rentals$ | async; track rental.id) {
+                    <tr>
+                        <td class="fw-bold">{{ rental.customerName }}</td>
+                        <td>{{ rental.vehiclePlate }}</td>
+                        <td>{{ formatDate(rental.startDate) }}</td>
+                        <td>{{ formatDate(rental.endDate) }}</td>
+                        <td><span class="badge badge-light">{{ rental.location }}</span></td>
+                        <td>
+                            <span class="badge"
+                                  [class.bg-success]="rental.status === 'In Corso'"
+                                  [class.bg-warning]="rental.status === 'Prenotato'"
+                                  [class.bg-secondary]="rental.status === 'Concluso'">
+                              {{ rental.status }}
+                            </span>
+                        </td>
+                    </tr>
+                } @empty {
+                    <tr><td colspan="6" class="text-center py-4">Nessun noleggio trovato per questa sede.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (isModalOpen) {
+    <div class="modal-overlay">
+        <div class="modal-card">
+            <h3>Registra Nuovo Noleggio</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nome Cliente</label>
+                    <select [(ngModel)]="newRental.customerId">
+                        <option value="" disabled selected>Seleziona cliente...</option>
+                        @for (c of availableCustomers; track c.id) {
+                            <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Veicolo</label>
+                    <select [(ngModel)]="newRental.vehicleId">
+                        <option value="" disabled selected>Seleziona un'auto...</option>
+                        @for (v of availableVehicles; track v.id) {
+                            <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }}) - {{ v.location }}</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Data Inizio</label>
+                    <input type="date" [(ngModel)]="newRental.startDate">
+                </div>
+                <div class="form-group">
+                    <label>Data Fine</label>
+                    <input type="date" [(ngModel)]="newRental.endDate">
+                </div>
+                <div class="form-group">
+                    <label>Sede Ritiro/Consegna</label>
+                    <select [(ngModel)]="newRental.location">
+                        <option value="Mottola">Mottola</option>
+                        <option value="Massafra">Massafra</option>
+                        <option value="Grottaglie">Grottaglie</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" (click)="closeModal()">Annulla</button>
+                <button class="btn btn-accent" (click)="saveRental()">Salva Prenotazione</button>
+            </div>
+        </div>
+    </div>
+}

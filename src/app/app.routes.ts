@@ -16,6 +16,7 @@ import {AutonoleggioComponent} from "./components/service-detail/autonoleggio/au
 import {InformativaPrivacyComponent} from "./components/informativa-privacy/informativa-privacy.component";
 import {InformazioniLegaliComponent} from "./components/informazioni-legali/informazioni-legali.component";
 import {AdminDashboardComponent} from "./components/admin/admin-dashboard/admin-dashboard.component";
+import {AuthGuard} from "@angular/fire/auth-guard";
 
 export const routes: Routes = [
     {path: '', redirectTo: '/home', pathMatch: 'full'},
@@ -43,6 +44,6 @@ export const routes: Routes = [
     {path: 'contact', component: ContactComponent},
     {path: 'login', component: LoginComponent},
     {path: 'annunci', component: AnnouncementsComponent},
-    {path: 'admin/dashboard', component: AdminDashboardComponent},
+    {path: 'admin/dashboard', component: AdminDashboardComponent, canActivate: [AuthGuard]},
     {path: '**', redirectTo: '/home'}
 ];

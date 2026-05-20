@@ -1,0 +1,69 @@
+<div class="panel">
+    <div class="panel-header">
+        <h2>Manutenzioni Effettuate</h2>
+        <div class="panel-actions">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" [(ngModel)]="searchTerm" placeholder="Cerca targa o descrizione...">
+            </div>
+            <select [(ngModel)]="sortBy" class="sort-select">
+                <option value="date">Ordina per Data</option>
+                <option value="vehiclePlate">Ordina per Targa</option>
+            </select>
+            <button class="btn btn-accent" (click)="openModal()">+ Aggiungi</button>
+        </div>
+    </div>
+    <div class="table-responsive shadow-sm">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>Veicolo</th>
+                    <th>Data</th>
+                    <th>Descrizione</th>
+                    <th>Km</th>
+                    <th>Costo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (m of getFiltered(maintenances$ | async); track m.id) {
+                    <tr>
+                        <td class="fw-bold">{{ m.vehiclePlate }}</td>
+                        <td>{{ formatDate(m.date) }}</td>
+                        <td>{{ m.description }}</td>
+                        <td>{{ m.km }}</td>
+                        <td>{{ m.cost | currency:'EUR' }}</td>
+                    </tr>
+                } @empty {
+                    <tr><td colspan="5" class="text-center py-4">Nessuna manutenzione trovata.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (isModalOpen) {
+    <div class="modal-overlay">
+        <div class="modal-card">
+            <h3>Nuova Manutenzione</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Veicolo</label>
+                    <select [(ngModel)]="newMaintenance.vehicleId">
+                        <option value="" disabled selected>Seleziona veicolo...</option>
+                        @for (v of availableVehicles; track v.id) {
+                            <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }})</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group"><label>Data</label><input type="date" [(ngModel)]="newMaintenance.date"></div>
+                <div class="form-group"><label>Descrizione Intervento</label><input type="text" [(ngModel)]="newMaintenance.description"></div>
+                <div class="form-group"><label>Chilometraggio</label><input type="number" [(ngModel)]="newMaintenance.km"></div>
+                <div class="form-group"><label>Costo</label><input type="number" [(ngModel)]="newMaintenance.cost"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" (click)="closeModal()">Annulla</button>
+                <button class="btn btn-accent" (click)="saveMaintenance()">Salva</button>
+            </div>
+        </div>
+    </div>
+}
