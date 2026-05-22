@@ -12,7 +12,7 @@ import { TranslateModule } from '@ngx-translate/core'; // IMPORTANTE
 })
 export class InformativaPrivacyComponent implements AfterViewInit, OnDestroy {
 
-  heroImage: string = 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/GettyImages-1182342221-2880w.jpg';
+  heroImage: string = '/assets/images/informativa.webp';
 
   private observer?: IntersectionObserver;
   private el = inject(ElementRef);

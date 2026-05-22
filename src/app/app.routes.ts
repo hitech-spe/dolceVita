@@ -4,7 +4,6 @@ import {AboutComponent} from './components/about/about.component';
 import {ServicesComponent} from './components/services/services.component';
 import {ContactComponent} from './components/contact/contact.component';
 import {LoginComponent} from "./components/login/login.component";
-import {AnnouncementsComponent} from "./components/announcements/announcements.component";
 import {
     VeicoliCommercialiComponent
 } from "./components/service-detail/veicoli-commerciali/veicoli-commerciali.component";
@@ -43,7 +42,6 @@ export const routes: Routes = [
     {path: 'informazioni-legali', component: InformazioniLegaliComponent},
     {path: 'contact', component: ContactComponent},
     {path: 'login', component: LoginComponent},
-    {path: 'annunci', component: AnnouncementsComponent},
     {path: 'admin/dashboard', component: AdminDashboardComponent, canActivate: [AuthGuard]},
     {path: '**', redirectTo: '/home'}
 ];

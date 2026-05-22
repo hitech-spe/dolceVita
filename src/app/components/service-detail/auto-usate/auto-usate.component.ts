@@ -15,7 +15,7 @@ export class AutoUsateComponent implements AfterViewInit, OnDestroy {
 
   heroImage: string = '/assets/images/autoUsate.webp';
   parallaxBg: string = 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?q=80&w=2000&auto=format&fit=crop';
-  infoImage: string = 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/GettyImages-1473399515-1920w.jpg';
+  infoImage: string = '/assets/images/prenotazione.webp';
 
   private observer?: IntersectionObserver;
   private el = inject(ElementRef);

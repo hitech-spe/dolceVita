@@ -14,11 +14,11 @@ export class RentalPromoComponent {
   private observer?: IntersectionObserver;
 
   promoImages: string[] = [
-    'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/Fiat%2B500X%2BRosso%2BMetallizzato%2B1600%2BDiesel%2B5-528w.jpg',
-    'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/1-528w.jpg',
-    'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/la+dolce+vita+4-528w.jpg',
-    'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/la+dolce+vita+7-528w.jpg',
-    'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/12146673_E_5d8a38b7a7166-528w.jpg'
+    '/assets/images/rental/Fiat500XRosso.webp',
+    '/assets/images/rental/JeepGiallo.webp',
+    '/assets/images/rental/panda.webp',
+    '/assets/images/rental/furgone.webp',
+    '/assets/images/rental/furgoneBianco.webp'
   ];
   currentPromoIndex = 0;
   promoInterval: any;

@@ -9,9 +9,14 @@
 
 <section id="home" class="hero">
     @for (img of backgroundImages; track $index) {
-        <div class="hero-bg"
-             [style.background-image]="'url(' + img + ')'"
-             [class.active]="currentImageIndex === $index">
+        <div class="hero-bg-wrapper" [class.active]="currentImageIndex === $index">
+            <img
+                    [ngSrc]="img"
+                    fill
+                    [priority]="$index === 0"
+                    alt="Sfondo della hero section"
+                    style="object-fit: cover;"
+            >
         </div>
     }
 
@@ -19,9 +24,7 @@
 
     <div class="hero-container">
         <div class="hero-content fade-in">
-            <h1>{{ 'HOME.HERO.TITLE' | translate }}
-            </h1>
-
+            <h1>{{ 'HOME.HERO.TITLE' | translate }}</h1>
             <p class="hero-subtitle">{{ 'HOME.HERO.SUBTITLE' | translate }}</p>
 
             <div class="cta">

@@ -185,6 +185,7 @@
     /* IL TUO LOGO HI-TECH */
     .logo-agency {
       height: 33px; /* Un po' più alto per leggere "Sviluppo Software" */
+      width: auto;
       filter: brightness(0) invert(1); /* TRUCCO CSS: Fa diventare il logo bianco! */
       opacity: 0.7; /* Leggera trasparenza per eleganza */
       transition: opacity 0.3s ease, transform 0.3s ease;
@@ -200,6 +201,7 @@
     /* LOGHI PAGINE GIALLE E BIANCHE */
     .logo-pg, .logo-pb {
       height: 22px;
+      width: auto;
       opacity: 0.5;
       transition: opacity 0.3s ease, transform 0.3s ease;
       vertical-align: middle;

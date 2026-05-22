@@ -5,12 +5,14 @@ import { AboutComponent } from "../about/about.component";
 import { ServicesComponent } from "../services/services.component";
 import {RentalPromoComponent} from "../rental-promo/rental-promo.component";
 import {TestimonialsComponent} from "../testimonials/testimonials.component";
+import {NgOptimizedImage} from "@angular/common";
 
 @Component({
     selector: 'app-home',
     templateUrl: './home.component.html',
     styleUrls: ['./home.component.scss'],
     imports: [
+        NgOptimizedImage,
         TranslateModule,
         RouterLink,
         RouterOutlet,
@@ -28,9 +30,9 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // --- NUOVE VARIABILI PER LO SLIDER (CON IMMAGINI UNSPLASH) ---
     backgroundImages: string[] = [
-        'https://lirp.cdn-website.com/168abf2a/dms3rep/multi/opt/Noleggio+Senza+Meta+-+Guagnano+-+Le+-+001-1920w.jpg', // Auto su strada al tramonto
-        'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?q=80&w=2071&auto=format&fit=crop', // Furgone/Van in viaggio
-        'https://images.unsplash.com/photo-1529369623266-f5264b696110?q=80&w=1974&auto=format&fit=crop'  // Famiglia sorridente in auto
+        '/assets/images/famigliaNoleggio.webp',
+        'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?q=60&w=1920&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1529369623266-f5264b696110?q=60&w=1920&auto=format&fit=crop'
     ];
     currentImageIndex = 0;
     slideInterval: any;

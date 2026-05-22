@@ -1,6 +1,9 @@
 /* =========================================
    HERO SECTION (SLIDER BACKGROUND)
 ========================================= */
+/* =========================================
+   HERO SECTION (SLIDER BACKGROUND)
+========================================= */
 .hero {
   position: relative;
   height: 100vh; /* Prende tutta l'altezza dello schermo */
@@ -10,22 +13,27 @@
   justify-content: center;
   overflow: hidden;
 
-  /* L'immagine di sfondo */
-  .hero-bg {
+  /* Contenitore dell'immagine (sostituisce il vecchio .hero-bg) */
+  .hero-bg-wrapper {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
     opacity: 0;
     z-index: 1;
+    transition: opacity 1.5s ease-in-out; /* Transizione morbida per l'opacità del wrapper */
 
-    /* Transizione morbidissima (Cross-fade) + Effetto Zoom Lento */
-    transition: opacity 1.5s ease-in-out, transform 7s linear;
+    /* Stili per l'immagine vera e propria inserita da Angular (con 'fill') */
+    img {
+      object-fit: cover; /* Sostituisce background-size: cover */
+      transition: transform 7s linear; /* Effetto Zoom Lento spostato sull'immagine */
+    }
 
     &.active {
       opacity: 1;
-      transform: scale(1.05); /* Effetto "Ken Burns" zoom */
+
+      /* Applica lo zoom quando l'immagine è attiva */
+      img {
+        transform: scale(1.05); /* Effetto "Ken Burns" zoom */
+      }
     }
   }
 
