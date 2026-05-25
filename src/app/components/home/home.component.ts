@@ -41,11 +41,11 @@ export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
         // Avvia lo slider automatico ogni 5 secondi
         this.slideInterval = setInterval(() => {
             this.currentImageIndex = (this.currentImageIndex + 1) % this.backgroundImages.length;
-        }, 5000);
+        }, 3000);
 
         this.slideInterval = setInterval(() => {
             this.currentImageIndex = (this.currentImageIndex + 1) % this.backgroundImages.length;
-        }, 5000);
+        }, 3000);
     }
 
     ngAfterViewInit(): void {
