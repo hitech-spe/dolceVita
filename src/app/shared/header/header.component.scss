@@ -1,6 +1,8 @@
 .header {
   position: fixed;
-  top: 0; left: 0; width: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
@@ -31,34 +33,80 @@
   /* --- DESKTOP NAV --- */
   .nav-links {
     ul {
-      list-style: none; display: flex; gap: 2.5rem; align-items: center;
+      list-style: none;
+      display: flex;
+      gap: 2.5rem;
+      align-items: center;
+
       li a {
-        color: var(--text-main); text-decoration: none; font-family: var(--font-heading);
-        font-weight: 600; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.08em;
-        position: relative; padding: 0.5rem 0;
+        color: var(--text-main);
+        text-decoration: none;
+        font-family: var(--font-heading);
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        position: relative;
+        padding: 0.5rem 0;
+
         &::after {
-          content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 2px;
-          background: var(--accent); transition: width 0.3s ease;
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 0;
+          height: 2px;
+          background: var(--accent);
+          transition: width 0.3s ease;
         }
-        &:hover::after, &.active::after { width: 100%; }
+
+        &:hover::after, &.active::after {
+          width: 100%;
+        }
       }
     }
 
     // Dropdown Verticale Desktop
     .dropdown-container {
       position: relative;
+
       .dropdown-menu {
-        position: absolute; top: 100%; transform: translateX(-50%) translateY(15px);
-        display: flex; flex-direction: column; background: white; min-width: 240px;
-        padding: 0.8rem 0; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        opacity: 0; visibility: hidden; transition: 0.3s; z-index: 100;
+        position: absolute;
+        top: 100%;
+        transform: translateX(-50%) translateY(15px);
+        display: flex;
+        flex-direction: column;
+        background: white;
+        min-width: 240px;
+        padding: 0.8rem 0;
+        border-radius: 12px;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        opacity: 0;
+        visibility: hidden;
+        transition: 0.3s;
+        z-index: 100;
+
         li a {
-          padding: 0.8rem 1.5rem !important; text-transform: none !important; font-weight: 500 !important;
-          &::after { display: none !important; }
-          &:hover { background: rgba(220, 38, 38, 0.05); color: var(--accent) !important; }
+          padding: 0.8rem 1.5rem !important;
+          text-transform: none !important;
+          font-weight: 500 !important;
+
+          &::after {
+            display: none !important;
+          }
+
+          &:hover {
+            background: rgba(220, 38, 38, 0.05);
+            color: var(--accent) !important;
+          }
         }
       }
-      &:hover .dropdown-menu { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(5px); }
+
+      &:hover .dropdown-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(5px);
+      }
     }
   }
 
@@ -107,7 +155,7 @@
       padding: 1rem;
       z-index: 1000;
       transform-origin: top right;
-      box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
 
       .user-details {
         padding: 0.5rem;
@@ -154,10 +202,13 @@
         cursor: pointer;
         transition: all 0.2s ease;
 
-        i { font-size: 1.1rem; }
+        i {
+          font-size: 1.1rem;
+        }
 
         &.logout {
           color: #ef4444;
+
           &:hover {
             background: #fef2f2;
             color: #dc2626;
@@ -168,19 +219,47 @@
   }
 
   .header-actions {
-    display: flex; align-items: center; gap: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+
     .lang-switcher {
-      display: flex; gap: 0.2rem; font-weight: 700;
+      display: flex;
+      gap: 0.2rem;
+      font-weight: 700;
+
       button {
-        background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px 8px;
-        &.active { color: var(--primary); border-bottom: 2px solid var(--accent); }
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 4px 8px;
+
+        &.active {
+          color: var(--primary);
+          border-bottom: 2px solid var(--accent);
+        }
       }
     }
-    .book-btn { padding: 0.8rem 1.8rem; background: var(--accent); color: white; border-radius: 50px; font-weight: 700; text-decoration: none; }
-    .mobile-toggle { display: none; }
+
+    .book-btn {
+      padding: 0.8rem 1.8rem;
+      background: var(--accent);
+      color: white;
+      border-radius: 50px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .mobile-toggle {
+      display: none;
+    }
   }
 
-  .mobile-only-content { display: none; }
+  .mobile-only-content {
+    display: none;
+  }
 
   /* =========================================
      FIX MOBILE TOTALE
@@ -188,43 +267,120 @@
   @media (max-width: 992px) {
     padding: 0.7rem 0;
 
-    .header-container { padding: 0 1.2rem; }
-    .logo img { height: 38px !important; }
+    .header-container {
+      padding: 0 1.2rem;
+    }
+    .logo img {
+      height: 38px !important;
+    }
 
     /* Nascondiamo tutto dalla barra superiore tranne logo e hamburger */
     .header-actions {
-      .lang-switcher, .book-btn { display: none !important; }
+      .lang-switcher, .book-btn {
+        display: none !important;
+      }
 
       .mobile-toggle {
-        display: flex; flex-direction: column; gap: 6px; background: none; border: none; cursor: pointer; z-index: 1100;
-        span { width: 28px; height: 2px; background-color: var(--primary); transition: 0.3s; }
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        z-index: 1100;
+
+        span {
+          width: 28px;
+          height: 2px;
+          background-color: var(--primary);
+          transition: 0.3s;
+        }
+
         &.active span {
           background-color: white; // Diventa bianco sopra il menu scuro
-          &:nth-child(1) { transform: translateY(8px) rotate(45deg); }
-          &:nth-child(2) { opacity: 0; }
-          &:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+          &:nth-child(1) {
+            transform: translateY(8px) rotate(45deg);
+          }
+
+          &:nth-child(2) {
+            opacity: 0;
+          }
+
+          &:nth-child(3) {
+            transform: translateY(-8px) rotate(-45deg);
+          }
         }
       }
     }
 
     /* Il Menu Drawer */
     .nav-links {
-      position: fixed; top: 0; right: -100%; width: 300px; height: 100vh;
-      background: var(--primary); padding: 90px 2rem; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 1000; overflow-y: auto; display: block !important;
-      &.open { right: 0; }
+      position: fixed;
+      top: 0;
+      right: -100%;
+      width: 300px;
+      height: 100vh;
+      background: var(--primary);
+      padding: 90px 2rem;
+      transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
+      overflow-y: auto;
+      display: block !important;
+
+      &.open {
+        right: 0;
+      }
 
       ul {
-        flex-direction: column; align-items: flex-start; gap: 1.5rem; margin-bottom: 2rem;
-        li a { color: white; font-size: 1.1rem; text-transform: uppercase; font-weight: 600; &::after { display: none; } }
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+
+        li a {
+          color: white;
+          font-size: 1.1rem;
+          text-transform: uppercase;
+          font-weight: 600;
+
+          &::after {
+            display: none;
+          }
+        }
 
         .dropdown-container {
-          .dropdown-trigger { display: flex; justify-content: space-between; width: 100%; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }
+          .dropdown-trigger {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 0.5rem;
+          }
+
           .dropdown-menu {
-            position: relative; top: 0; transform: none; opacity: 1; visibility: visible; display: none;
-            background: transparent; box-shadow: none; padding-left: 1.2rem; border-left: 1px solid rgba(255,255,255,0.2);
-            &.mobile-open { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; }
-            li a { color: rgba(255,255,255,0.7); font-size: 1rem; text-transform: none; }
+            position: relative;
+            top: 0;
+            transform: none;
+            opacity: 1;
+            visibility: visible;
+            display: none;
+            background: transparent;
+            box-shadow: none;
+            padding-left: 1.2rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.2);
+
+            &.mobile-open {
+              display: flex;
+              flex-direction: column;
+              gap: 1rem;
+              margin-top: 1rem;
+            }
+
+            li a {
+              color: rgba(255, 255, 255, 0.7);
+              font-size: 1rem;
+              text-transform: none;
+            }
           }
         }
       }
@@ -240,18 +396,33 @@
           top: 15px;
           right: auto;
           width: 100%;
-          background: rgba(255,255,255,0.05); /* Vetro scuro per mobile */
+          background: rgba(255, 255, 255, 0.05); /* Vetro scuro per mobile */
           box-shadow: none;
-          border: 1px solid rgba(255,255,255,0.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
 
-          .user-details .full-name { color: white; }
-          .dropdown-divider { background: rgba(255,255,255,0.1); }
+          .user-details .full-name {
+            color: white;
+          }
+
+          .dropdown-divider {
+            background: rgba(255, 255, 255, 0.1);
+          }
+
           .dropdown-item {
-            color: rgba(255,255,255,0.8);
-            &:hover { background: rgba(255,255,255,0.1); color: white; }
+            color: rgba(255, 255, 255, 0.8);
+
+            &:hover {
+              background: rgba(255, 255, 255, 0.1);
+              color: white;
+            }
+
             &.logout {
               color: #fca5a5;
-              &:hover { background: rgba(239,68,68,0.2); color: white; }
+
+              &:hover {
+                background: rgba(239, 68, 68, 0.2);
+                color: white;
+              }
             }
           }
         }
@@ -259,17 +430,43 @@
 
       /* Contenuto speciale mobile (Prenota e Lingua) */
       .mobile-only-content {
-        display: flex; flex-direction: column; gap: 2rem; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
 
-        .mobile-book-btn { text-align: center; padding: 1rem; border-radius: 8px; font-weight: 700; text-transform: uppercase; }
+        .mobile-book-btn {
+          text-align: center;
+          padding: 1rem;
+          border-radius: 8px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
 
         .mobile-lang-switcher {
-          display: flex; align-items: center; justify-content: center; gap: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 1rem;
+
           button {
-            background: none; border: none; color: rgba(255,255,255,0.5); font-size: 1.2rem; font-weight: 700;
-            &.active { color: white; border-bottom: 2px solid var(--accent); }
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 1.2rem;
+            font-weight: 700;
+
+            &.active {
+              color: white;
+              border-bottom: 2px solid var(--accent);
+            }
           }
-          .divider { color: rgba(255,255,255,0.2); }
+
+          .divider {
+            color: rgba(255, 255, 255, 0.2);
+          }
         }
       }
     }
@@ -284,6 +481,12 @@
 }
 
 @keyframes fadeInDropdown {
-  from { opacity: 0; transform: translateY(-10px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }

@@ -54,7 +54,7 @@
                         <div class="checkbox-group">
                             <input type="checkbox" id="privacy" name="privacy" [(ngModel)]="privacyConsent" required>
                             <label for="privacy">
-                                Ho letto e accetto l'<a routerLink="/informativa-privacy" target="_blank">Informativa sulla Privacy</a> per il trattamento dei dati personali. *
+                                Ho letto l'<a routerLink="/informativa-privacy" target="_blank">Informativa sulla Privacy</a> per il trattamento dei dati personali. *
                             </label>
                         </div>
 
@@ -64,8 +64,11 @@
                         </div>
 
                         <button type="submit" class="btn btn-accent btn-submit" [disabled]="contactForm.invalid || !privacyConsent || isSending">
-                            <span *ngIf="!isSending">{{ 'CONTACTS.BTN_SEND' | translate }}</span>
-                            <span *ngIf="isSending"><i class="fa-solid fa-spinner fa-spin"></i> Invio in corso...</span>
+                            @if (!isSending) {
+                                <span>{{ 'CONTACTS.BTN_SEND' | translate }}</span>
+                            } @else {
+                                <span><i class="fa-solid fa-spinner fa-spin"></i> Invio in corso...</span>   
+                            }
                         </button>
                     </form>
                 </div>

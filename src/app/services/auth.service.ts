@@ -1,7 +1,7 @@
 import {inject, Injectable} from '@angular/core';
 import {Auth, authState, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User} from "@angular/fire/auth";
 import {Observable} from "rxjs";
-import {FirestoreService} from "./firestore.service";
+//import {FirestoreService} from "./firestore.service";
 
 @Injectable({
   providedIn: 'root',
@@ -9,7 +9,7 @@ import {FirestoreService} from "./firestore.service";
 export class AuthService {
 
   private auth = inject(Auth);
-  private firestoreService = inject(FirestoreService);
+  //private firestoreService = inject(FirestoreService);
 
   user$: Observable<User | null> = authState(this.auth);
 
@@ -20,13 +20,13 @@ export class AuthService {
   async register(email: string, password: string, firstName: string, lastName: string) {
     const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
     const user = userCredential.user;
-    await this.firestoreService.saveUser(user.uid, {
+    /*await this.firestoreService.saveUser(user.uid, {
       uid: user.uid,
       email: user.email,
       firstName,
       lastName,
       createdAt: new Date().toISOString()
-    });
+    });*/
     return userCredential;
   }
 

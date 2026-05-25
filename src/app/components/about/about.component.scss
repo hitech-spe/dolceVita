@@ -14,19 +14,13 @@
     max-width: 800px;
     margin: 0 auto 5rem; /* Margine enorme sotto per staccare dalle carte */
 
-    .section-title {
-      font-size: clamp(2.5rem, 5vw, 3rem);
-      margin-bottom: 0.5rem;
-    }
 
-    .section-subtitle {
-      font-family: var(--font-main);
-      font-size: 1.2rem;
-      font-weight: 500;
-      color: var(--text-muted);
-      margin-bottom: 2rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
+    .about-logo {
+      display: block;
+      max-width: 350px; /* Puoi aumentare o diminuire questo valore per cambiare la grandezza */
+      width: 100%; /* Garantisce che il logo non esca dai bordi sugli schermi piccoli */
+      height: auto;
+      margin: 0 auto 2rem auto; /* Centra il logo e dà respiro prima del testo */
     }
 
     .intro-text {
