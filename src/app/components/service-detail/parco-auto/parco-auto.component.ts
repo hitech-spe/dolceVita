@@ -46,7 +46,7 @@ export class ParcoAutoComponent implements AfterViewInit, OnDestroy {
     {
       title: 'Segmento C',
       cars: [
-        { name: 'Opel Mokka', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/nuova-500L-1920w.webp' },
+        { name: 'Opel Mokka', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/OPEL-Mokka-1.2-t-Elegance-ss-130cv-at8-1920w.png' },
         { name: 'Fiat 500 X', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/fiat-500x-urban-look-nuove-teverola-casapesenna-1920w.jpg' },
         { name: 'DR 4.0', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/DR-3.0-1920w.webp' },
         { name: 'JEEP RENEGADE', imageUrl: 'https://lirp.cdn-website.com/a317c335/dms3rep/multi/opt/jeep-renegade-limited-ice-alpine-white-br-565x330-1920w.png' }
