@@ -13,7 +13,7 @@ import { Location } from "@angular/common";
 export class AutonoleggioComponent implements AfterViewInit, OnDestroy {
 
   heroImage: string = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?q=80&w=2070&auto=format&fit=crop';
-  detailImage: string = 'https://images.unsplash.com/photo-1518987048-93e29699e79a?q=80&w=2070&auto=format&fit=crop';
+  detailImage: string = '/assets/images/autonoleggio.webp';
 
   private observer?: IntersectionObserver;
   private el = inject(ElementRef);

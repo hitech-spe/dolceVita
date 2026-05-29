@@ -15,7 +15,7 @@ export class AutolavaggioComponent implements AfterViewInit, OnDestroy {
   // Immagini Premium per Lavaggio
   heroImage: string = 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?q=80&w=2000&auto=format&fit=crop'; // Auto insaponata, dettaglio premium
   parallaxBg: string = '/assets/images/lavaggioCerchi.webp'; // Interni auto puliti o dettaglio asciugatura
-  infoImage: string = '/assets/images/autolavaggio.png'; // La tua infografica con i prezzi (15€ - 20€)
+  infoImage: string = '/assets/images/carWash.webp';
 
   private observer?: IntersectionObserver;
   private el = inject(ElementRef);
