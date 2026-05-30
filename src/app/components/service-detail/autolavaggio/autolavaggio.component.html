@@ -59,6 +59,7 @@
                             <i class="fa-solid fa-calendar-check mr-2" style="padding-right: 8px"></i> {{ 'SERVICE_DETAIL.lavaggio.CTA_BUTTON' | translate }}
                         </a>
                     </div>
+
                 </div>
 
                 <div class="split-image reveal-on-scroll reveal-right">
@@ -76,6 +77,55 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+    </section>
+
+    <section class="wash-hours-section bg-light py-5">
+        <div class="container">
+            <div class="premium-hours-card mx-auto reveal-on-scroll">
+                <div class="card-header">
+                    <i class="fa-solid fa-clock"></i>
+                    <h4>{{ 'CONTACTS.WASH_HOURS.TITLE' | translate }}</h4>
+                </div>
+                
+                <div class="hours-content">
+                    <div class="hours-group">
+                        <div class="group-title">
+                            <i class="fa-solid fa-hand-sparkles"></i>
+                            <span>{{ 'CONTACTS.WASH_HOURS.MANUAL' | translate }}</span>
+                        </div>
+                        <div class="group-details">
+                            <div class="detail-row">
+                                <span class="day">{{ 'CONTACTS.WASH_HOURS.MANUAL_DAYS' | translate }}</span>
+                                <span class="time">{{ 'CONTACTS.WASH_HOURS.MANUAL_TIME' | translate }}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="day">{{ 'CONTACTS.WASH_HOURS.MANUAL_SAT_DAYS' | translate }}</span>
+                                <span class="time">{{ 'CONTACTS.WASH_HOURS.MANUAL_SAT_TIME' | translate }}</span>
+                            </div>
+                            <div class="detail-row closed">
+                                <span class="day">{{ 'CONTACTS.WASH_HOURS.MANUAL_SUN_DAYS' | translate }}</span>
+                                <span class="time">{{ 'CONTACTS.WASH_HOURS.MANUAL_SUN_TIME' | translate }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hours-divider"></div>
+
+                    <div class="hours-group">
+                        <div class="group-title">
+                            <i class="fa-solid fa-bolt"></i>
+                            <span>{{ 'CONTACTS.WASH_HOURS.SELF' | translate }}</span>
+                        </div>
+                        <div class="group-details">
+                            <div class="detail-row highlight">
+                                <span class="day">{{ 'CONTACTS.WASH_HOURS.SELF_DAYS' | translate }}</span>
+                                <span class="time">{{ 'CONTACTS.WASH_HOURS.SELF_TIME' | translate }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>

@@ -207,27 +207,20 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .hero-content {
-    position: relative;
-    z-index: 2;
-    color: white;
-    padding: 0 2rem;
-    margin-top: 50px;
+    position: relative; z-index: 2; text-align: center; color: white; padding: 0 2rem;
 
-    h1 {
-      font-size: clamp(2.5rem, 5vw, 4rem);
-      font-weight: 300;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      margin-bottom: 0.5rem;
-      text-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    }
+    h1 { font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 700; text-transform: uppercase; margin-bottom: 1rem; }
 
     p {
       font-size: 1.2rem;
+      /* 1. Aumenta lo spessore da 300 a 600 o 700 */
       font-weight: 600;
-      color: var(--accent);
       letter-spacing: 0.1em;
       text-transform: uppercase;
+      /* 2. Forza un rosso più brillante (adatta il codice esatto al colore del tuo brand) */
+      color: #ff4d4d;
+      /* 3. Aggiungi un'ombra scura per far risaltare il testo sui riflessi chiari dell'acqua */
+      text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.9), 0px 0px 12px rgba(0, 0, 0, 0.6);
     }
   }
 }

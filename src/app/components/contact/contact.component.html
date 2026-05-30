@@ -100,6 +100,20 @@
 
                     <div class="info-card hours-card">
                         <h3><i class="fa-solid fa-clock"></i> {{ 'CONTACTS.HOURS_TITLE' | translate }}</h3>
+                        
+                        <div class="wash-hours-section mb-3 pb-3" style="border-bottom: 1px solid rgba(0,0,0,0.05)">
+                            <h4 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--accent-color)">{{ 'CONTACTS.WASH_HOURS.TITLE' | translate }}</h4>
+                            <ul class="hours-list">
+                                <li>
+                                    <span>{{ 'CONTACTS.WASH_HOURS.MANUAL' | translate }}</span> 
+                                    <span>{{ 'CONTACTS.WASH_HOURS.MANUAL_DAYS' | translate }}: {{ 'CONTACTS.WASH_HOURS.MANUAL_TIME' | translate }}<br>
+                                    {{ 'CONTACTS.WASH_HOURS.MANUAL_SAT_DAYS' | translate }}: {{ 'CONTACTS.WASH_HOURS.MANUAL_SAT_TIME' | translate }}</span>
+                                </li>
+                                <li><span>{{ 'CONTACTS.WASH_HOURS.SELF' | translate }}</span> <span>{{ 'CONTACTS.WASH_HOURS.SELF_DAYS' | translate }}: {{ 'CONTACTS.WASH_HOURS.SELF_TIME' | translate }}</span></li>
+                            </ul>
+                        </div>
+
+                        <h4 style="font-size: 1rem; margin-bottom: 0.5rem; margin-top: 2rem">Uffici</h4>
                         <ul class="hours-list">
                             <li><span>Lun - Ven</span> <span>08:30 - 13:00<br>14:00 - 19:00</span></li>
                             <li><span>Sabato</span> <span>08:30 - 13:00</span></li>

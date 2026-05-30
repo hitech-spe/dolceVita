@@ -68,7 +68,20 @@
     "MSG_SUCCESS": "Grazie! La tua richiesta è stata inviata con successo. Ti ricontatteremo al più presto.",
     "MSG_ERROR": "Si è verificato un errore durante l'invio. Riprova più tardi o contattaci telefonicamente.",
     "INFO_TITLE": "Sedi e Recapiti",
-    "HOURS_TITLE": "Orari di Apertura"
+    "HOURS_TITLE": "Orari di Apertura",
+    "WASH_HOURS": {
+      "TITLE": "Orari Lavaggio",
+      "MANUAL": "Lavaggio a Mano",
+      "SELF": "Self Service 24/7",
+      "MANUAL_DAYS": "Lun - Ven",
+      "MANUAL_TIME": "07:30 - 16:30",
+      "MANUAL_SAT_DAYS": "Sabato",
+      "MANUAL_SAT_TIME": "07:30 - 13:00",
+      "MANUAL_SUN_DAYS": "Domenica",
+      "MANUAL_SUN_TIME": "Chiuso",
+      "SELF_DAYS": "Tutti i giorni",
+      "SELF_TIME": "07:30 - 00:00"
+    }
   },
   "HOME": {
     "HERO": {
@@ -150,7 +163,7 @@
   "ABOUT": {
     "TITLE": "La Dolce Vita",
     "SUBTITLE": "L'eccellenza del noleggio in Puglia",
-    "INTRO_P1": "Siamo un'azienda con sedi a <strong>Mottola</strong> e <strong>Grottaglie</strong> con oltre 10 anni di esperienza. Il nostro parco con <strong>oltre 150 veicoli</strong> ci rende leader nel sud Italia.",
+    "INTRO_P1": "Siamo un'azienda con sedi a <strong>Mottola</strong>, <strong>Massafra</strong> e <strong>Grottaglie</strong> con oltre 10 anni di esperienza. Il nostro parco con <strong>oltre 150 veicoli</strong> ci rende leader nel sud Italia.",
     "FEATURES_TITLE": "Perché Sceglierci",
     "F1_TITLE": "Alta Qualità",
     "F1_DESC": "Proponiamo solo veicoli in ottime condizioni a prezzi competitivi.",
@@ -185,7 +198,7 @@
       "SPLIT_TEXT": "Se desiderate noleggiare un automobile a breve termine o piuttosto, volete disporre di un veicolo esclusivo per una serata di gala o un addio al nubilato o al celibato, La Dolce Vita è l'operatore giusto a cui affidarvi. La società di autonoleggio di Mottola, in provincia di Taranto, vanta un ampio parco di auto di lusso, sportive e classiche, pronte a esaltare il vostro carattere e la vostra personalità durante le occasioni più importanti.\n\nPer conoscere l'intero parco di auto per eventi, non esitate a contattare il personale in sede e a richiedere un preventivo dettagliato, ritagliato su misura per voi. Nell'ambito del noleggio auto a breve termine, La Dolce Vita propone una vasta gamma di modelli sia classici, come le ammiraglie delle case automobilistiche più prestigiose, che sportive. In base allo stile del vostro evento e alla vostra personalità, potrete dunque scegliere la tipologia di veicolo più adatta e sorprendere così tutti mostrandovi a bordo di un veicolo unico ed esclusivo."
     },
     "veicoli_commerciali": {
-      "HERO_TITLE": "Veicoli Commerciali",
+      "HERO_TITLE": "Van e Veicoli Commerciali",
       "HERO_SUBTITLE": "Soluzioni di trasporto per il tuo business",
       "INTRO_TITLE": "Noleggio a Breve e Lungo Termine di Van e veicoli commerciali per Consegne Merci",
       "INTRO_TEXT": "Oltre al noleggio di autovetture di qualsiasi genere, l'agenzia La Dolce Vita di Mottola mette a disposizione anche servizi di noleggio van e veicoli commerciali, ideali per effettuare consegne di merci rapide e complete. La società di autonoleggio tarantina è partner di numerose realtà aziendali che hanno scelto di ottimizzare i propri costi avvalendosi della possibilità di usufruire di un veicolo a noleggio per la propria attività. In questo modo, infatti, è possibile tagliare numerosi costi fissi, legati all'acquisto e alla gestione del parco mezzi aziendale, usufruendo al contempo di sgravi fiscali per l'attività commerciale. A breve, l'agenzia aggiungerà ai propri servizi anche quello di noleggio mezzi industriali. Veicoli commerciali a noleggio per <strong>trasporto merci</strong>, scegli il più adatto alla tua attività commerciale.\n\nFurgoni disponibili per tutte le necessità di trasporto <strong>L1 H1 - L1 H2 - L2 H2 - L2 H3 - L3 H3 - L4 H4</strong> e anche <strong>veicoli refrigerati e veicoli con sponda idraulica</strong>",

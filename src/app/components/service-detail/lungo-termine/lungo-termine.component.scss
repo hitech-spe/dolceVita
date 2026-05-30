@@ -49,12 +49,6 @@ section { margin-bottom: 0; padding: 5rem 0; }
     svg { width: 20px; height: 20px; }
     &:hover { background: var(--accent); border-color: var(--accent); }
   }
-
-  .hero-content {
-    position: relative; z-index: 2; text-align: center; color: white; padding: 0 2rem;
-    h1 { font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 700; text-transform: uppercase; margin-bottom: 1rem; }
-    p { font-size: 1.2rem; font-weight: 300; letter-spacing: 0.1em; text-transform: uppercase; }
-  }
 }
 
 /* =========================================
