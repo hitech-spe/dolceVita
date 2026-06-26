@@ -8,7 +8,8 @@ import { Customer, Rental, RentalService, Vehicle } from '../../../../../service
   selector: 'app-rentals-tab',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './rentals-tab.component.html'
+  templateUrl: './rentals-tab.component.html',
+  styleUrls: ['./rentals-tab.component.scss']
 })
 export class RentalsTabComponent implements OnInit {
   @Input() selectedLocation$!: BehaviorSubject<string>;
@@ -47,8 +48,15 @@ export class RentalsTabComponent implements OnInit {
       endDate: new Date(this.newRental.endDate) as any
     };
 
+    // Calcolo stato iniziale automatico
+    rentalToSave.status = this.rentalService.calculateStatus(rentalToSave);
+
     await this.rentalService.createRental(rentalToSave);
     this.closeModal();
+  }
+
+  async updateStatus(id: string, status: any) {
+    await this.rentalService.updateRental(id, { status });
   }
 
   formatDate(timestamp: any): string {

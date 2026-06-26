@@ -1,0 +1,109 @@
+<div class="calendar-container glass-card">
+  <div class="calendar-header">
+    <h2>Timeline Occupazione Veicoli</h2>
+    <div class="legend">
+      <span class="legend-item"><span class="box status-booked"></span> Prenotato</span>
+      <span class="legend-item"><span class="box status-active"></span> In Corso</span>
+      <span class="legend-item"><span class="box status-done"></span> Concluso</span>
+    </div>
+  </div>
+
+  <div class="calendar-scroll">
+    <table class="calendar-table">
+      <thead>
+        <tr>
+          <th class="sticky-col">Veicolo</th>
+          @for (day of days; track day) {
+            <th [class]="getTodayClass(day)">
+              <div class="day-num">{{ day | date:'dd' }}</div>
+              <div class="day-name">{{ day | date:'EEE' }}</div>
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of vehiclesWithRentals$ | async; track item.vehicle.id) {
+          <tr>
+            <td class="sticky-col vehicle-info">
+              <strong>{{ item.vehicle.brand }} {{ item.vehicle.model }}</strong>
+              <span>{{ item.vehicle.plate }}</span>
+            </td>
+            @for (day of days; track day) {
+              @let rental = isRented(item.rentals, day);
+              <td [class]="getTodayClass(day)">
+                @if (rental) {
+                  <div class="rental-bar" 
+                       [ngClass]="getStatusClass(rental.status)" 
+                       [title]="getFormattedTooltip(rental)"
+                       (click)="openRentalDetail(rental)">
+                    <!-- Solo un indicatore visivo nel calendario -->
+                  </div>
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  
+  @if (isModalOpen && selectedRental) {
+    <div class="modal-overlay" (click)="closeModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <h3>Dettaglio Noleggio</h3>
+        <div class="rental-detail-grid">
+          <div class="detail-item">
+            <label>Cliente</label>
+            <div class="value">{{ selectedRental.customerName }}</div>
+          </div>
+          <div class="detail-item">
+            <label>Telefono</label>
+            <div class="value">{{ selectedRental.customerPhone || '-' }}</div>
+          </div>
+          <div class="detail-item">
+            <label>Veicolo</label>
+            <div class="value">{{ selectedRental.vehiclePlate }}</div>
+          </div>
+          <div class="detail-item">
+            <label>Stato</label>
+            <div class="value">
+              <span class="badge" [ngClass]="getStatusClass(selectedRental.status)">
+                {{ selectedRental.status }}
+              </span>
+            </div>
+          </div>
+          <div class="detail-item">
+            <label>Periodo</label>
+            <div class="value">{{ getFormattedTooltip(selectedRental).split('\n')[1].replace('Periodo: ', '') }}</div>
+          </div>
+          @if (selectedRental.notes) {
+            <div class="detail-item full-width">
+              <label>Note</label>
+              <div class="value notes-box">{{ selectedRental.notes }}</div>
+            </div>
+          }
+        </div>
+        <div class="modal-actions">
+          <button class="btn-utility" (click)="closeModal()">Chiudi</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!--div class="utility-section mt-4">
+      <h3>Utility & Statistiche</h3>
+      <div class="utility-grid">
+          <div class="utility-card">
+              <i class="fa-solid fa-chart-line"></i>
+              <h4>Statistiche Rapide</h4>
+              <p>Prossimamente: Analisi dei noleggi più frequenti e ricavi stimati.</p>
+          </div>
+          <div class="utility-card">
+              <i class="fa-solid fa-file-export"></i>
+              <h4>Esportazione Dati</h4>
+              <p>Esporta i dati dei noleggi in formato PDF per la contabilità.</p>
+              <button class="btn-utility">Esporta Mese Corrente</button>
+          </div>
+      </div>
+  </div-->
+</div>

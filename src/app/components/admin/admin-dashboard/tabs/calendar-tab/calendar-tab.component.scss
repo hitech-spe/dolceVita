@@ -1,0 +1,263 @@
+.calendar-container {
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+    border-radius: 8px;
+  }
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #333;
+  }
+}
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .box {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+}
+
+.calendar-scroll {
+  overflow-x: auto;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+
+  th, td {
+    border: 1px solid #eee;
+    padding: 0.5rem;
+    text-align: center;
+    min-width: 45px;
+
+    @media (max-width: 768px) {
+      padding: 0.4rem;
+      min-width: 40px;
+    }
+  }
+
+  th {
+    background: #f8f9fa;
+    font-weight: 600;
+
+    .day-num {
+      font-size: 1rem;
+    }
+    .day-name {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: #777;
+    }
+    
+    &.is-today {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+  }
+
+  td.is-today {
+      background: #f1f8ff;
+  }
+
+  .sticky-col {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 10;
+    min-width: 180px;
+    text-align: left;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+
+    @media (max-width: 768px) {
+      min-width: 120px;
+      font-size: 0.8rem;
+    }
+  }
+
+  .vehicle-info {
+    display: flex;
+    flex-direction: column;
+    
+    strong {
+      color: #333;
+    }
+    span {
+      font-size: 0.75rem;
+      color: #888;
+    }
+  }
+}
+
+.rental-bar {
+  height: 20px;
+  width: 100%;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+.status-booked { background-color: #ffd54f; } // Giallo
+.status-active { background-color: #4fc3f7; } // Azzurro
+.status-done { background-color: #81c784; }   // Verde
+
+.utility-section {
+    margin-top: 2rem;
+    
+    h3 {
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        color: #444;
+    }
+}
+
+.utility-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.utility-card {
+    padding: 1.5rem;
+    background: #f9f9f9;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    transition: transform 0.2s;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
+
+    i {
+        font-size: 1.5rem;
+        color: var(--primary-color, #d4af37);
+        margin-bottom: 1rem;
+    }
+
+    h4 {
+        margin: 0.5rem 0;
+        font-size: 1rem;
+    }
+
+    p {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 1rem;
+    }
+}
+
+.btn-utility {
+    background: #333;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    
+    &:hover {
+        background: #555;
+    }
+}
+
+.mt-4 { margin-top: 1.5rem; }
+
+.rental-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+
+        label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+        }
+
+        .value {
+            font-size: 1rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        &.full-width {
+            grid-column: span 2;
+
+            @media (max-width: 768px) {
+                grid-column: span 1;
+            }
+        }
+        
+        .notes-box {
+            background: #f9f9f9;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid #eee;
+            font-style: italic;
+            min-height: 50px;
+        }
+    }
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+}

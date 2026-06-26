@@ -11,7 +11,7 @@
 
     </div>
 
-    <div class="table-responsive shadow-sm">
+    <div class="table-responsive shadow-sm hide-mobile">
         <table class="modern-table">
             <thead>
             <tr>
@@ -42,6 +42,38 @@
                 }
             </tbody>
         </table>
+    </div>
+
+    <!-- Layout Mobile: Card -->
+    <div class="mobile-cards show-mobile">
+        @for (car of getFiltered(vehicles$ | async); track car.id) {
+            <div class="rental-card-mobile glass-card">
+                <div class="card-header">
+                    <span class="customer-name">{{ car.brand }} {{ car.model }}</span>
+                    <span class="badge"
+                          [class.bg-success]="car.status === 'Attivo'"
+                          [class.bg-danger]="car.status === 'Manutenzione'">
+                      {{ car.status }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <i class="fa-solid fa-rectangle-ad"></i>
+                        <span class="plate-badge">{{ car.plate }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-tag"></i>
+                        <span>{{ car.category }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span>{{ car.location }}</span>
+                    </div>
+                </div>
+            </div>
+        } @empty {
+            <div class="text-center py-4">Nessun veicolo registrato.</div>
+        }
     </div>
 </div>
 

@@ -4,7 +4,7 @@
         <button class="btn btn-accent" (click)="openModal()">+ Nuovo Noleggio</button>
     </div>
 
-    <div class="table-responsive shadow-sm">
+    <div class="table-responsive shadow-sm hide-mobile">
         <table class="modern-table">
             <thead>
             <tr>
@@ -25,12 +25,17 @@
                         <td>{{ formatDate(rental.endDate) }}</td>
                         <td><span class="badge badge-light">{{ rental.location }}</span></td>
                         <td>
-                            <span class="badge"
-                                  [class.bg-success]="rental.status === 'In Corso'"
-                                  [class.bg-warning]="rental.status === 'Prenotato'"
-                                  [class.bg-secondary]="rental.status === 'Concluso'">
-                              {{ rental.status }}
-                            </span>
+                            <select [ngModel]="rental.status" (ngModelChange)="updateStatus(rental.id!, $event)"
+                                    class="status-select"
+                                    [class.status-active]="rental.status === 'In Corso'"
+                                    [class.status-booked]="rental.status === 'Prenotato'"
+                                    [class.status-done]="rental.status === 'Concluso'"
+                                    [class.status-canceled]="rental.status === 'Cancellato'">
+                                <option value="Prenotato">Prenotato</option>
+                                <option value="In Corso">In Corso</option>
+                                <option value="Concluso">Concluso</option>
+                                <option value="Cancellato">Cancellato</option>
+                            </select>
                         </td>
                     </tr>
                 } @empty {
@@ -38,6 +43,44 @@
                 }
             </tbody>
         </table>
+    </div>
+
+    <!-- Layout Mobile: Card -->
+    <div class="mobile-cards show-mobile">
+        @for (rental of rentals$ | async; track rental.id) {
+            <div class="rental-card-mobile glass-card">
+                <div class="card-header">
+                    <span class="customer-name">{{ rental.customerName }}</span>
+                    <select [ngModel]="rental.status" (ngModelChange)="updateStatus(rental.id!, $event)"
+                            class="status-select"
+                            [class.status-active]="rental.status === 'In Corso'"
+                            [class.status-booked]="rental.status === 'Prenotato'"
+                            [class.status-done]="rental.status === 'Concluso'"
+                            [class.status-canceled]="rental.status === 'Cancellato'">
+                        <option value="Prenotato">Prenotato</option>
+                        <option value="In Corso">In Corso</option>
+                        <option value="Concluso">Concluso</option>
+                        <option value="Cancellato">Cancellato</option>
+                    </select>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <i class="fa-solid fa-car"></i>
+                        <span>{{ rental.vehiclePlate }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>{{ formatDate(rental.startDate) }} - {{ formatDate(rental.endDate) }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span class="badge badge-light">{{ rental.location }}</span>
+                    </div>
+                </div>
+            </div>
+        } @empty {
+            <div class="text-center py-4">Nessun noleggio trovato per questa sede.</div>
+        }
     </div>
 </div>
 

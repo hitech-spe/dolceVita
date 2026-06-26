@@ -12,7 +12,7 @@ import {
   Timestamp,
   orderBy
 } from '@angular/fire/firestore';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 // --- INTERFACCE ---
 export interface Vehicle {
@@ -129,7 +129,17 @@ export class RentalService {
       q = query(rentalsRef, where('location', '==', location), orderBy('startDate', 'desc'));
     }
 
-    return collectionData(q, { idField: 'id' }) as Observable<Rental[]>;
+    return (collectionData(q, { idField: 'id' }) as Observable<Rental[]>).pipe(
+      map(rentals => {
+        rentals.forEach(r => {
+          const newStatus = this.calculateStatus(r);
+          if (r.status !== newStatus) {
+            this.updateRental(r.id!, { status: newStatus });
+          }
+        });
+        return rentals;
+      })
+    );
   }
 
   /** Registra un nuovo noleggio */
@@ -142,6 +152,31 @@ export class RentalService {
   async updateRental(id: string, data: Partial<Rental>) {
     const docRef = doc(this.firestore, `rentals/${id}`);
     return updateDoc(docRef, data);
+  }
+
+  /**
+   * Calcola lo stato teorico di un noleggio in base alle date.
+   * Utile per aggiornamenti automatici.
+   */
+  calculateStatus(rental: Rental): 'Prenotato' | 'In Corso' | 'Concluso' | 'Cancellato' {
+    if (rental.status === 'Cancellato') return 'Cancellato';
+
+    const now = new Date();
+    const start = rental.startDate instanceof Timestamp ? rental.startDate.toDate() : new Date(rental.startDate);
+    const end = rental.endDate instanceof Timestamp ? rental.endDate.toDate() : new Date(rental.endDate);
+
+    // Reset ore per confronto solo date (opzionale, ma consigliato per precisione "giornaliera")
+    const nowTime = now.getTime();
+    const startTime = start.getTime();
+    const endTime = end.getTime();
+
+    if (nowTime < startTime) {
+      return 'Prenotato';
+    } else if (nowTime >= startTime && nowTime <= endTime) {
+      return 'In Corso';
+    } else {
+      return 'Concluso';
+    }
   }
 
   /** Elimina un noleggio (se inserito per sbaglio) */

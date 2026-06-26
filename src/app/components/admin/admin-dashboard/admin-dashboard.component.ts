@@ -9,7 +9,9 @@ import { InsuranceTabComponent } from './tabs/insurance-tab/insurance-tab.compon
 import { InspectionTabComponent } from './tabs/inspection-tab/inspection-tab.component';
 import { MaintenanceTabComponent } from './tabs/maintenance-tab/maintenance-tab.component';
 
-type Tab = 'rentals' | 'fleet' | 'insurance' | 'inspection' | 'maintenance' | 'customers';
+import { CalendarTabComponent } from './tabs/calendar-tab/calendar-tab.component';
+
+type Tab = 'rentals' | 'calendar' | 'fleet' | 'insurance' | 'inspection' | 'maintenance' | 'customers';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -18,6 +20,7 @@ type Tab = 'rentals' | 'fleet' | 'insurance' | 'inspection' | 'maintenance' | 'c
     CommonModule,
     FormsModule,
     RentalsTabComponent,
+    CalendarTabComponent,
     FleetTabComponent,
     CustomersTabComponent,
     InsuranceTabComponent,
@@ -28,7 +31,7 @@ type Tab = 'rentals' | 'fleet' | 'insurance' | 'inspection' | 'maintenance' | 'c
   styleUrls: ['./admin-dashboard.component.scss']
 })
 export class AdminDashboardComponent {
-  currentTab: Tab = 'rentals';
+  currentTab: Tab = 'calendar';
   locations = ['Tutte', 'Mottola', 'Massafra', 'Grottaglie'];
   selectedLocation$ = new BehaviorSubject<string>('Tutte');
 
