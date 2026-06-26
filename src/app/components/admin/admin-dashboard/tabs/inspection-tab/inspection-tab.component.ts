@@ -42,6 +42,12 @@ export class InspectionTabComponent implements OnInit {
     this.closeModal();
   }
 
+  async deleteInspection(id: string) {
+    if (confirm('Sei sicuro di voler eliminare questa revisione?')) {
+      await this.rentalService.deleteInspection(id);
+    }
+  }
+
   getFiltered(items: Inspection[] | null): Inspection[] {
     if (!items) return [];
     return items

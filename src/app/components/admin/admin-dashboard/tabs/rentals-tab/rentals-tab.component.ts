@@ -59,6 +59,12 @@ export class RentalsTabComponent implements OnInit {
     await this.rentalService.updateRental(id, { status });
   }
 
+  async deleteRental(id: string) {
+    if (confirm('Sei sicuro di voler eliminare questo noleggio?')) {
+      await this.rentalService.deleteRental(id);
+    }
+  }
+
   formatDate(timestamp: any): string {
     if (!timestamp) return '-';
     if (timestamp.toDate) return timestamp.toDate().toLocaleDateString('it-IT');

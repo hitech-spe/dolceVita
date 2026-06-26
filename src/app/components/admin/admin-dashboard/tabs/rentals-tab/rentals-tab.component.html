@@ -14,6 +14,7 @@
                 <th>Al</th>
                 <th>Sede</th>
                 <th>Stato</th>
+                <th>Azioni</th>
             </tr>
             </thead>
             <tbody>
@@ -37,9 +38,14 @@
                                 <option value="Cancellato">Cancellato</option>
                             </select>
                         </td>
+                        <td>
+                            <button class="btn-delete" (click)="deleteRental(rental.id!)" title="Elimina Noleggio">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </td>
                     </tr>
                 } @empty {
-                    <tr><td colspan="6" class="text-center py-4">Nessun noleggio trovato per questa sede.</td></tr>
+                    <tr><td colspan="7" class="text-center py-4">Nessun noleggio trovato per questa sede.</td></tr>
                 }
             </tbody>
         </table>
@@ -57,12 +63,15 @@
                             [class.status-booked]="rental.status === 'Prenotato'"
                             [class.status-done]="rental.status === 'Concluso'"
                             [class.status-canceled]="rental.status === 'Cancellato'">
-                        <option value="Prenotato">Prenotato</option>
-                        <option value="In Corso">In Corso</option>
-                        <option value="Concluso">Concluso</option>
-                        <option value="Cancellato">Cancellato</option>
-                    </select>
-                </div>
+                    <option value="Prenotato">Prenotato</option>
+                    <option value="In Corso">In Corso</option>
+                    <option value="Concluso">Concluso</option>
+                    <option value="Cancellato">Cancellato</option>
+                </select>
+                <button class="btn-delete" (click)="deleteRental(rental.id!)" title="Elimina Noleggio">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
                 <div class="card-body">
                     <div class="info-row">
                         <i class="fa-solid fa-car"></i>

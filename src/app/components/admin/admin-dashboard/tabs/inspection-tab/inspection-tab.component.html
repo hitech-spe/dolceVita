@@ -13,13 +13,14 @@
             <button class="btn btn-accent" (click)="openModal()">+ Aggiungi</button>
         </div>
     </div>
-    <div class="table-responsive shadow-sm">
+    <div class="table-responsive shadow-sm hide-mobile">
         <table class="modern-table">
             <thead>
                 <tr>
                     <th>Veicolo</th>
                     <th>Prossima Scadenza</th>
                     <th>Note</th>
+                    <th>Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,12 +29,42 @@
                         <td class="fw-bold">{{ insp.vehiclePlate }}</td>
                         <td>{{ formatDate(insp.expiryDate) }}</td>
                         <td>{{ insp.notes }}</td>
+                        <td>
+                            <button class="btn-delete" (click)="deleteInspection(insp.id!)" title="Elimina Revisione">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
                     </tr>
                 } @empty {
-                    <tr><td colspan="3" class="text-center py-4">Nessuna revisione trovata.</td></tr>
+                    <tr><td colspan="4" class="text-center py-4">Nessuna revisione trovata.</td></tr>
                 }
             </tbody>
         </table>
+    </div>
+    <!-- Layout Mobile: Card -->
+    <div class="mobile-cards show-mobile">
+        @for (insp of getFiltered(inspections$ | async); track insp.id) {
+            <div class="rental-card-mobile glass-card">
+                <div class="card-header">
+                    <span class="customer-name">{{ insp.vehiclePlate }}</span>
+                    <button class="btn-delete" (click)="deleteInspection(insp.id!)" title="Elimina Revisione">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <i class="fa-solid fa-calendar-check"></i>
+                        <span>Scadenza: {{ formatDate(insp.expiryDate) }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-note-sticky"></i>
+                        <span>{{ insp.notes }}</span>
+                    </div>
+                </div>
+            </div>
+        } @empty {
+            <div class="text-center py-4">Nessuna revisione trovata.</div>
+        }
     </div>
 </div>
 

@@ -42,6 +42,12 @@ export class MaintenanceTabComponent implements OnInit {
     this.closeModal();
   }
 
+  async deleteMaintenance(id: string) {
+    if (confirm('Sei sicuro di voler eliminare questa manutenzione?')) {
+      await this.rentalService.deleteMaintenance(id);
+    }
+  }
+
   getFiltered(items: Maintenance[] | null): Maintenance[] {
     if (!items) return [];
     return items

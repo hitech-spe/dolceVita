@@ -42,6 +42,12 @@ export class InsuranceTabComponent implements OnInit {
     this.closeModal();
   }
 
+  async deleteInsurance(id: string) {
+    if (confirm('Sei sicuro di voler eliminare questa assicurazione?')) {
+      await this.rentalService.deleteInsurance(id);
+    }
+  }
+
   getFiltered(items: Insurance[] | null): Insurance[] {
     if (!items) return [];
     return items

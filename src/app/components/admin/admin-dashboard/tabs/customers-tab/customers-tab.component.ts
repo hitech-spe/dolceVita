@@ -80,6 +80,12 @@ export class CustomersTabComponent implements OnInit {
     link.click();
   }
 
+  async deleteCustomer(id: string) {
+    if (confirm('Sei sicuro di voler eliminare questo cliente?')) {
+      await this.rentalService.deleteCustomer(id);
+    }
+  }
+
   formatDate(timestamp: any): string {
     if (!timestamp) return '-';
     if (timestamp.toDate) return timestamp.toDate().toLocaleDateString('it-IT');

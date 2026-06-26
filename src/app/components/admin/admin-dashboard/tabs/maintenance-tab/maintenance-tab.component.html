@@ -13,7 +13,7 @@
             <button class="btn btn-accent" (click)="openModal()">+ Aggiungi</button>
         </div>
     </div>
-    <div class="table-responsive shadow-sm">
+    <div class="table-responsive shadow-sm hide-mobile">
         <table class="modern-table">
             <thead>
                 <tr>
@@ -22,6 +22,7 @@
                     <th>Descrizione</th>
                     <th>Km</th>
                     <th>Costo</th>
+                    <th>Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -32,12 +33,50 @@
                         <td>{{ m.description }}</td>
                         <td>{{ m.km }}</td>
                         <td>{{ m.cost | currency:'EUR' }}</td>
+                        <td>
+                            <button class="btn-delete" (click)="deleteMaintenance(m.id!)" title="Elimina Manutenzione">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
                     </tr>
                 } @empty {
-                    <tr><td colspan="5" class="text-center py-4">Nessuna manutenzione trovata.</td></tr>
+                    <tr><td colspan="6" class="text-center py-4">Nessuna manutenzione trovata.</td></tr>
                 }
             </tbody>
         </table>
+    </div>
+    <!-- Layout Mobile: Card -->
+    <div class="mobile-cards show-mobile">
+        @for (m of getFiltered(maintenances$ | async); track m.id) {
+            <div class="rental-card-mobile glass-card">
+                <div class="card-header">
+                    <span class="customer-name">{{ m.vehiclePlate }}</span>
+                    <button class="btn-delete" (click)="deleteMaintenance(m.id!)" title="Elimina Manutenzione">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <i class="fa-solid fa-calendar-day"></i>
+                        <span>{{ formatDate(m.date) }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-wrench"></i>
+                        <span>{{ m.description }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-gauge-high"></i>
+                        <span>{{ m.km }} km</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-euro-sign"></i>
+                        <span class="fw-bold">{{ m.cost | currency:'EUR' }}</span>
+                    </div>
+                </div>
+            </div>
+        } @empty {
+            <div class="text-center py-4">Nessuna manutenzione trovata.</div>
+        }
     </div>
 </div>
 

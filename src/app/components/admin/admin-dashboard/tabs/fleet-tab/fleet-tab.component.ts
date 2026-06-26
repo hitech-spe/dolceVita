@@ -37,6 +37,12 @@ export class FleetTabComponent implements OnInit {
     this.closeModal();
   }
 
+  async deleteVehicle(id: string) {
+    if (confirm('ATTENZIONE: Eliminando questo veicolo verranno eliminati anche tutti i noleggi, assicurazioni, revisioni e manutenzioni collegati. Sei sicuro di voler procedere?')) {
+      await this.rentalService.deleteVehicle(id);
+    }
+  }
+
   getFiltered(items: Vehicle[] | null): Vehicle[] {
     if (!items) return [];
     return items

@@ -9,7 +9,7 @@
             <button class="btn btn-accent" (click)="openModal()">+ Nuovo Cliente</button>
         </div>
     </div>
-    <div class="table-responsive shadow-sm">
+    <div class="table-responsive shadow-sm hide-mobile">
         <table class="modern-table">
             <thead>
                 <tr>
@@ -19,6 +19,7 @@
                     <th>Scadenza Patente</th>
                     <th>Documenti</th>
                     <th>Contatti</th>
+                    <th>Azioni</th>
                 </tr>
             </thead>
             <tbody>
@@ -47,12 +48,46 @@
                             </div>
                         </td>
                         <td>{{ cust.phone }} <br> <small>{{ cust.email }}</small></td>
+                        <td>
+                            <button class="btn-delete" (click)="deleteCustomer(cust.id!)" title="Elimina Cliente">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </td>
                     </tr>
                 } @empty {
-                    <tr><td colspan="6" class="text-center py-4">Nessun cliente registrato.</td></tr>
+                    <tr><td colspan="7" class="text-center py-4">Nessun cliente registrato.</td></tr>
                 }
             </tbody>
         </table>
+    </div>
+    <!-- Layout Mobile: Card -->
+    <div class="mobile-cards show-mobile">
+        @for (cust of getFiltered(customers$ | async); track cust.id) {
+            <div class="rental-card-mobile glass-card">
+                <div class="card-header">
+                    <span class="customer-name">{{ cust.firstName }} {{ cust.lastName }}</span>
+                    <button class="btn-delete" (click)="deleteCustomer(cust.id!)" title="Elimina Cliente">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <i class="fa-solid fa-id-card"></i>
+                        <span>Patente: {{ cust.licenseNumber }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-calendar-day"></i>
+                        <span>Scadenza: {{ formatDate(cust.licenseExpiry) }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-phone"></i>
+                        <span>{{ cust.phone }}</span>
+                    </div>
+                </div>
+            </div>
+        } @empty {
+            <div class="text-center py-4">Nessun cliente registrato.</div>
+        }
     </div>
 </div>
 
