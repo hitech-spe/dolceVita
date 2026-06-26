@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable, BehaviorSubject, switchMap } from 'rxjs';
 import { Customer, Rental, RentalService, Vehicle } from '../../../../../services/rental.service';
+import { Timestamp } from '@angular/fire/firestore';
 
 @Component({
   selector: 'app-rentals-tab',
@@ -21,6 +22,8 @@ export class RentalsTabComponent implements OnInit {
   availableCustomers: Customer[] = [];
 
   isModalOpen = false;
+  isEditMode = false;
+  editingRentalId?: string;
   newRental: any = { location: 'Mottola', status: 'Prenotato' };
 
   ngOnInit() {
@@ -31,37 +34,76 @@ export class RentalsTabComponent implements OnInit {
     this.rentalService.getCustomers().subscribe(c => this.availableCustomers = c);
   }
 
-  openModal() { this.isModalOpen = true; }
+  openModal(rental?: Rental) {
+    if (rental) {
+      this.isEditMode = true;
+      this.editingRentalId = rental.id;
+      // Convertiamo i Timestamp in stringhe YYYY-MM-DD per l'input date
+      const startDate = rental.startDate && (rental.startDate as any).toDate ? (rental.startDate as any).toDate().toISOString().split('T')[0] : '';
+      const endDate = rental.endDate && (rental.endDate as any).toDate ? (rental.endDate as any).toDate().toISOString().split('T')[0] : '';
+      
+      this.newRental = { 
+        ...rental,
+        startDate: startDate,
+        endDate: endDate
+      };
+    } else {
+      this.isEditMode = false;
+      this.editingRentalId = undefined;
+      this.newRental = { location: 'Mottola', status: 'Prenotato' };
+    }
+    this.isModalOpen = true;
+  }
+
   closeModal() { this.isModalOpen = false; this.newRental = { location: 'Mottola', status: 'Prenotato' }; }
 
   async saveRental() {
     if (!this.newRental.vehicleId || !this.newRental.customerId || !this.newRental.startDate) return;
 
-    const selectedCar = this.availableVehicles.find(v => v.id === this.newRental.vehicleId);
-    const selectedCustomer = this.availableCustomers.find(c => c.id === this.newRental.customerId);
+    try {
+      const selectedCar = this.availableVehicles.find(v => v.id === this.newRental.vehicleId);
+      const selectedCustomer = this.availableCustomers.find(c => c.id === this.newRental.customerId);
 
-    const rentalToSave: Rental = {
-      ...this.newRental,
-      customerName: selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : 'Cliente non trovato',
-      vehiclePlate: selectedCar ? `${selectedCar.brand} ${selectedCar.model} (${selectedCar.plate})` : 'Veicolo non trovato',
-      startDate: new Date(this.newRental.startDate) as any,
-      endDate: new Date(this.newRental.endDate) as any
-    };
+      const rentalToSave: Rental = {
+        ...this.newRental,
+        customerName: selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : (this.newRental.customerName || 'Cliente non trovato'),
+        vehiclePlate: selectedCar ? `${selectedCar.brand} ${selectedCar.model} (${selectedCar.plate})` : (this.newRental.vehiclePlate || 'Veicolo non trovato'),
+        startDate: Timestamp.fromDate(new Date(this.newRental.startDate)),
+        endDate: this.newRental.endDate ? Timestamp.fromDate(new Date(this.newRental.endDate)) : null
+      };
 
-    // Calcolo stato iniziale automatico
-    rentalToSave.status = this.rentalService.calculateStatus(rentalToSave);
+      // Calcolo stato iniziale automatico
+      rentalToSave.status = this.rentalService.calculateStatus(rentalToSave);
 
-    await this.rentalService.createRental(rentalToSave);
-    this.closeModal();
+      if (this.isEditMode && this.editingRentalId) {
+        await this.rentalService.updateRental(this.editingRentalId, rentalToSave);
+      } else {
+        await this.rentalService.createRental(rentalToSave);
+      }
+      this.closeModal();
+    } catch (error) {
+      console.error('Errore durante il salvataggio del noleggio:', error);
+      alert('Si è verificato un errore durante il salvataggio del noleggio.');
+    }
   }
 
   async updateStatus(id: string, status: any) {
-    await this.rentalService.updateRental(id, { status });
+    try {
+      await this.rentalService.updateRental(id, { status });
+    } catch (error) {
+      console.error('Errore durante l\'aggiornamento dello stato:', error);
+      alert('Si è verificato un errore durante l\'aggiornamento dello stato.');
+    }
   }
 
   async deleteRental(id: string) {
     if (confirm('Sei sicuro di voler eliminare questo noleggio?')) {
-      await this.rentalService.deleteRental(id);
+      try {
+        await this.rentalService.deleteRental(id);
+      } catch (error) {
+        console.error('Errore durante l\'eliminazione del noleggio:', error);
+        alert('Si è verificato un errore durante l\'eliminazione del noleggio.');
+      }
     }
   }
 

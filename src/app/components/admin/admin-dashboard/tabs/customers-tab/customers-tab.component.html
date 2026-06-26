@@ -49,9 +49,14 @@
                         </td>
                         <td>{{ cust.phone }} <br> <small>{{ cust.email }}</small></td>
                         <td>
-                            <button class="btn-delete" (click)="deleteCustomer(cust.id!)" title="Elimina Cliente">
-                                <i class="fa-regular fa-trash-can"></i>
-                            </button>
+                            <div class="d-flex gap-3">
+                                <button class="btn-edit" (click)="openModal(cust)" title="Modifica Cliente">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button class="btn-delete" (click)="deleteCustomer(cust.id!)" title="Elimina Cliente">
+                                    <i class="fa-regular fa-trash-can"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 } @empty {
@@ -63,25 +68,34 @@
     <!-- Layout Mobile: Card -->
     <div class="mobile-cards show-mobile">
         @for (cust of getFiltered(customers$ | async); track cust.id) {
-            <div class="rental-card-mobile glass-card">
+            <div class="rental-card-mobile">
                 <div class="card-header">
                     <span class="customer-name">{{ cust.firstName }} {{ cust.lastName }}</span>
-                    <button class="btn-delete" (click)="deleteCustomer(cust.id!)" title="Elimina Cliente">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <div class="d-flex gap-3">
+                        <button class="btn-edit" (click)="openModal(cust)" title="Modifica Cliente">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button class="btn-delete" (click)="deleteCustomer(cust.id!)" title="Elimina Cliente">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="info-row">
-                        <i class="fa-solid fa-id-card"></i>
-                        <span>Patente: {{ cust.licenseNumber }}</span>
+                        <i class="fa-solid fa-id-card" title="Patente"></i>
+                        <span>{{ cust.licenseNumber }}</span>
                     </div>
                     <div class="info-row">
-                        <i class="fa-solid fa-calendar-day"></i>
+                        <i class="fa-solid fa-calendar-day" title="Scadenza"></i>
                         <span>Scadenza: {{ formatDate(cust.licenseExpiry) }}</span>
                     </div>
                     <div class="info-row">
-                        <i class="fa-solid fa-phone"></i>
+                        <i class="fa-solid fa-phone" title="Telefono"></i>
                         <span>{{ cust.phone }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-envelope" title="Email"></i>
+                        <span style="font-size: 0.85rem; word-break: break-all;">{{ cust.email }}</span>
                     </div>
                 </div>
             </div>
@@ -94,7 +108,7 @@
 @if (isModalOpen) {
     <div class="modal-overlay">
         <div class="modal-card">
-            <h3>Nuovo Cliente</h3>
+            <h3>{{ isEditMode ? 'Modifica Cliente' : 'Nuovo Cliente' }}</h3>
             <div class="form-grid">
                 <div class="form-group"><label>Nome</label><input type="text" [(ngModel)]="newCustomer.firstName"></div>
                 <div class="form-group"><label>Cognome</label><input type="text" [(ngModel)]="newCustomer.lastName"></div>
@@ -127,7 +141,7 @@
 
             <div class="modal-actions">
                 <button class="btn btn-outline" (click)="closeModal()">Annulla</button>
-                <button class="btn btn-accent" (click)="saveCustomer()">Salva Cliente</button>
+                <button class="btn btn-accent" (click)="saveCustomer()">{{ isEditMode ? 'Aggiorna' : 'Salva' }} Cliente</button>
             </div>
         </div>
     </div>

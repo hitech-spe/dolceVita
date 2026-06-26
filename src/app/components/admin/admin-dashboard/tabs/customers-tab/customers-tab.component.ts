@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import {Customer, RentalService, Vehicle} from '../../../../../services/rental.service';
+import { Timestamp } from '@angular/fire/firestore';
 
 @Component({
   selector: 'app-customers-tab',
@@ -18,6 +19,8 @@ export class CustomersTabComponent implements OnInit {
   searchTerm = '';
 
   isModalOpen = false;
+  isEditMode = false;
+  editingCustomerId?: string;
   newCustomer: any = {};
   pendingAttachments: { name: string; data: string }[] = [];
 
@@ -25,19 +28,51 @@ export class CustomersTabComponent implements OnInit {
     this.customers$ = this.rentalService.getCustomers();
   }
 
-  openModal() { this.isModalOpen = true; }
+  openModal(customer?: Customer) {
+    if (customer) {
+      this.isEditMode = true;
+      this.editingCustomerId = customer.id;
+      // Convertiamo i Timestamp in stringhe YYYY-MM-DD per l'input date
+      const birthDate = customer.birthDate && (customer.birthDate as any).toDate ? (customer.birthDate as any).toDate().toISOString().split('T')[0] : '';
+      const licenseExpiry = customer.licenseExpiry && (customer.licenseExpiry as any).toDate ? (customer.licenseExpiry as any).toDate().toISOString().split('T')[0] : '';
+      
+      this.newCustomer = { 
+        ...customer,
+        birthDate: birthDate,
+        licenseExpiry: licenseExpiry
+      };
+      this.pendingAttachments = [...(customer.attachments || [])];
+    } else {
+      this.isEditMode = false;
+      this.editingCustomerId = undefined;
+      this.newCustomer = {};
+      this.pendingAttachments = [];
+    }
+    this.isModalOpen = true;
+  }
+
   closeModal() { this.isModalOpen = false; this.newCustomer = {}; this.pendingAttachments = []; }
 
   async saveCustomer() {
     if (!this.newCustomer.firstName || !this.newCustomer.lastName) return;
-    const data: Customer = {
-      ...this.newCustomer,
-      birthDate: new Date(this.newCustomer.birthDate) as any,
-      licenseExpiry: new Date(this.newCustomer.licenseExpiry) as any,
-      attachments: this.pendingAttachments
-    };
-    await this.rentalService.addCustomer(data);
-    this.closeModal();
+    try {
+      const data: Customer = {
+        ...this.newCustomer,
+        birthDate: Timestamp.fromDate(new Date(this.newCustomer.birthDate)),
+        licenseExpiry: Timestamp.fromDate(new Date(this.newCustomer.licenseExpiry)),
+        attachments: this.pendingAttachments
+      };
+
+      if (this.isEditMode && this.editingCustomerId) {
+        await this.rentalService.updateCustomer(this.editingCustomerId, data);
+      } else {
+        await this.rentalService.addCustomer(data);
+      }
+      this.closeModal();
+    } catch (error) {
+      console.error('Errore durante il salvataggio del cliente:', error);
+      alert('Si è verificato un errore durante il salvataggio del cliente.');
+    }
   }
 
   onNewFileSelected(event: any) {
@@ -82,7 +117,12 @@ export class CustomersTabComponent implements OnInit {
 
   async deleteCustomer(id: string) {
     if (confirm('Sei sicuro di voler eliminare questo cliente?')) {
-      await this.rentalService.deleteCustomer(id);
+      try {
+        await this.rentalService.deleteCustomer(id);
+      } catch (error) {
+        console.error('Errore durante l\'eliminazione del cliente:', error);
+        alert('Si è verificato un errore durante l\'eliminazione del cliente.');
+      }
     }
   }
 

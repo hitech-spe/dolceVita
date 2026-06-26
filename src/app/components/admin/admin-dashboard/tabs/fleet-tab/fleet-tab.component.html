@@ -38,9 +38,14 @@
                             </span>
                         </td>
                         <td>
-                            <button class="btn-delete" (click)="deleteVehicle(car.id!)" title="Elimina Veicolo">
-                                <i class="fa-regular fa-trash-can"></i>
-                            </button>
+                            <div class="d-flex gap-3">
+                                <button class="btn-edit" (click)="openModal(car)" title="Modifica Veicolo">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button class="btn-delete" (click)="deleteVehicle(car.id!)" title="Elimina Veicolo">
+                                    <i class="fa-regular fa-trash-can"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 } @empty {
@@ -53,30 +58,38 @@
     <!-- Layout Mobile: Card -->
     <div class="mobile-cards show-mobile">
         @for (car of getFiltered(vehicles$ | async); track car.id) {
-            <div class="rental-card-mobile glass-card">
+            <div class="rental-card-mobile">
                 <div class="card-header">
                     <span class="customer-name">{{ car.brand }} {{ car.model }}</span>
-                    <span class="badge"
-                          [class.bg-success]="car.status === 'Attivo'"
-                          [class.bg-danger]="car.status === 'Manutenzione'">
-                      {{ car.status }}
-                    </span>
-                    <button class="btn-delete" (click)="deleteVehicle(car.id!)" title="Elimina Veicolo">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <div class="d-flex gap-3">
+                        <button class="btn-edit" (click)="openModal(car)" title="Modifica Veicolo">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button class="btn-delete" (click)="deleteVehicle(car.id!)" title="Elimina Veicolo">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="info-row">
-                        <i class="fa-solid fa-rectangle-ad"></i>
+                        <i class="fa-solid fa-rectangle-ad" title="Targa"></i>
                         <span class="plate-badge">{{ car.plate }}</span>
                     </div>
                     <div class="info-row">
-                        <i class="fa-solid fa-tag"></i>
+                        <i class="fa-solid fa-tag" title="Categoria"></i>
                         <span>{{ car.category }}</span>
                     </div>
                     <div class="info-row">
-                        <i class="fa-solid fa-location-dot"></i>
+                        <i class="fa-solid fa-location-dot" title="Sede"></i>
                         <span>{{ car.location }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-circle-info" title="Stato"></i>
+                        <span class="badge"
+                              [class.bg-success]="car.status === 'Attivo'"
+                              [class.bg-danger]="car.status === 'Manutenzione'">
+                          {{ car.status }}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -89,7 +102,7 @@
 @if (isModalOpen) {
     <div class="modal-overlay">
         <div class="modal-card">
-            <h3>Inserisci Nuovo Veicolo</h3>
+            <h3>{{ isEditMode ? 'Modifica Veicolo' : 'Inserisci Nuovo Veicolo' }}</h3>
             <div class="form-grid">
                 <div class="form-group"><label>Marca</label><input type="text" [(ngModel)]="newVehicle.brand" placeholder="Es. Fiat"></div>
                 <div class="form-group"><label>Modello</label><input type="text" [(ngModel)]="newVehicle.model" placeholder="Es. 500X"></div>
@@ -110,10 +123,47 @@
                         <option value="Grottaglie">Grottaglie</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Stato</label>
+                    <select [(ngModel)]="newVehicle.status">
+                        <option value="Attivo">Attivo</option>
+                        <option value="Manutenzione">Manutenzione</option>
+                        <option value="Venduto">Venduto</option>
+                    </select>
+                </div>
             </div>
+
+            <hr class="my-3" style="margin-bottom: 0.5rem; margin-top: 0.5rem;">
+            <h4 class="mb-2">Dettagli (Assicurazione, Revisione, Tagliando)</h4>
+            <div class="form-grid">
+                <!-- Assicurazione -->
+                <div class="form-group">
+                    <label>Compagnia Assicurativa</label>
+                    <input type="text" [(ngModel)]="newInsurance.company" placeholder="Es. Allianz">
+                </div>
+                <div class="form-group">
+                    <label>Scadenza Assicurazione</label>
+                    <input type="date" [(ngModel)]="insuranceExpiryDate">
+                </div>
+                <!-- Revisione -->
+                <div class="form-group">
+                    <label>Scadenza Revisione</label>
+                    <input type="date" [(ngModel)]="inspectionExpiryDate">
+                </div>
+                <!-- Manutenzione -->
+                <div class="form-group">
+                    <label>Ultimo Tagliando (Data)</label>
+                    <input type="date" [(ngModel)]="maintenanceDate">
+                </div>
+                <div class="form-group">
+                    <label>Descrizione Tagliando</label>
+                    <input type="text" [(ngModel)]="newMaintenance.description" placeholder="Es. Cambio olio e filtri">
+                </div>
+            </div>
+
             <div class="modal-actions">
                 <button class="btn btn-outline" (click)="closeModal()">Annulla</button>
-                <button class="btn btn-accent" (click)="saveVehicle()">Salva Veicolo</button>
+                <button class="btn btn-accent" (click)="saveVehicle()">{{ isEditMode ? 'Aggiorna' : 'Salva' }} Veicolo</button>
             </div>
         </div>
     </div>

@@ -34,9 +34,14 @@
                         <td>{{ m.km }}</td>
                         <td>{{ m.cost | currency:'EUR' }}</td>
                         <td>
-                            <button class="btn-delete" (click)="deleteMaintenance(m.id!)" title="Elimina Manutenzione">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                            <div class="d-flex gap-3">
+                                <button class="btn-edit" (click)="openModal(m)" title="Modifica Manutenzione">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button class="btn-delete" (click)="deleteMaintenance(m.id!)" title="Elimina Manutenzione">
+                                    <i class="fa-regular fa-trash-can"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 } @empty {
@@ -48,29 +53,34 @@
     <!-- Layout Mobile: Card -->
     <div class="mobile-cards show-mobile">
         @for (m of getFiltered(maintenances$ | async); track m.id) {
-            <div class="rental-card-mobile glass-card">
+            <div class="rental-card-mobile">
                 <div class="card-header">
                     <span class="customer-name">{{ m.vehiclePlate }}</span>
-                    <button class="btn-delete" (click)="deleteMaintenance(m.id!)" title="Elimina Manutenzione">
-                        <i class="fa-regular fa-trash-can"></i>
-                    </button>
+                    <div class="d-flex gap-3">
+                        <button class="btn-edit" (click)="openModal(m)" title="Modifica Manutenzione">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button class="btn-delete" (click)="deleteMaintenance(m.id!)" title="Elimina Manutenzione">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="info-row">
-                        <i class="fa-solid fa-calendar-day"></i>
+                        <i class="fa-solid fa-calendar-day" title="Data"></i>
                         <span>{{ formatDate(m.date) }}</span>
                     </div>
                     <div class="info-row">
-                        <i class="fa-solid fa-wrench"></i>
+                        <i class="fa-solid fa-wrench" title="Descrizione"></i>
                         <span>{{ m.description }}</span>
                     </div>
                     <div class="info-row">
-                        <i class="fa-solid fa-gauge-high"></i>
+                        <i class="fa-solid fa-gauge-high" title="Km"></i>
                         <span>{{ m.km }} km</span>
                     </div>
                     <div class="info-row">
-                        <i class="fa-solid fa-euro-sign"></i>
-                        <span class="fw-bold">{{ m.cost | currency:'EUR' }}</span>
+                        <i class="fa-solid fa-euro-sign" title="Costo"></i>
+                        <span class="fw-bold text-success">{{ m.cost | currency:'EUR' }}</span>
                     </div>
                 </div>
             </div>
@@ -83,7 +93,7 @@
 @if (isModalOpen) {
     <div class="modal-overlay">
         <div class="modal-card">
-            <h3>Nuova Manutenzione</h3>
+            <h3>{{ isEditMode ? 'Modifica Manutenzione' : 'Nuova Manutenzione' }}</h3>
             <div class="form-grid">
                 <div class="form-group">
                     <label>Veicolo</label>
@@ -101,7 +111,7 @@
             </div>
             <div class="modal-actions">
                 <button class="btn btn-outline" (click)="closeModal()">Annulla</button>
-                <button class="btn btn-accent" (click)="saveMaintenance()">Salva</button>
+                <button class="btn btn-accent" (click)="saveMaintenance()">{{ isEditMode ? 'Aggiorna' : 'Salva' }}</button>
             </div>
         </div>
     </div>

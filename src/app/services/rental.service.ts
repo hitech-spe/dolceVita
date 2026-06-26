@@ -116,6 +116,134 @@ export class RentalService {
     return updateDoc(docRef, data);
   }
 
+  /** Aggiunge un veicolo con dettagli opzionali (assicurazione, revisione, manutenzione) in un batch */
+  async addVehicleWithDetails(vehicle: Vehicle, insurance?: Partial<Insurance>, inspection?: Partial<Inspection>, maintenance?: Partial<Maintenance>) {
+    const batch = writeBatch(this.firestore);
+    
+    // 1. Aggiungi Veicolo
+    const vehicleRef = doc(collection(this.firestore, 'vehicles'));
+    batch.set(vehicleRef, vehicle);
+    const vehicleId = vehicleRef.id;
+
+    // 2. Assicurazione
+    if (insurance && insurance.company && insurance.expiryDate) {
+      const insRef = doc(collection(this.firestore, 'insurances'));
+      batch.set(insRef, { ...insurance, vehicleId, vehiclePlate: vehicle.plate });
+    }
+
+    // 3. Revisione
+    if (inspection && inspection.expiryDate) {
+      const inspRef = doc(collection(this.firestore, 'inspections'));
+      batch.set(inspRef, { ...inspection, vehicleId, vehiclePlate: vehicle.plate });
+    }
+
+    // 4. Manutenzione
+    if (maintenance && maintenance.description && maintenance.date) {
+      const maintRef = doc(collection(this.firestore, 'maintenances'));
+      batch.set(maintRef, { ...maintenance, vehicleId, vehiclePlate: vehicle.plate });
+    }
+
+    return batch.commit();
+  }
+
+  /** Aggiorna un veicolo e i suoi dettagli correlati (assicurazione, revisione, manutenzione) */
+  async updateVehicleWithDetails(vehicleId: string, vehicle: Partial<Vehicle>, insurance?: Partial<Insurance>, inspection?: Partial<Inspection>, maintenance?: Partial<Maintenance>) {
+    const batch = writeBatch(this.firestore);
+    
+    // 1. Aggiorna Veicolo
+    const vehicleRef = doc(this.firestore, `vehicles/${vehicleId}`);
+    batch.update(vehicleRef, vehicle);
+
+    // Per semplicità, se passati, aggiorniamo o creiamo il record più recente.
+    // In questo contesto, se l'utente modifica i dati nel tab veicoli, intendiamo l'ultimo record.
+    
+    // 2. Assicurazione
+    if (insurance && insurance.company && insurance.expiryDate) {
+      if (insurance.id) {
+        const insRef = doc(this.firestore, `insurances/${insurance.id}`);
+        batch.update(insRef, { ...insurance, vehiclePlate: vehicle.plate || (insurance as any).vehiclePlate });
+      } else {
+        const insRef = doc(collection(this.firestore, 'insurances'));
+        batch.set(insRef, { ...insurance, vehicleId, vehiclePlate: vehicle.plate || (insurance as any).vehiclePlate });
+      }
+    }
+
+    // 3. Revisione
+    if (inspection && inspection.expiryDate) {
+      if (inspection.id) {
+        const inspRef = doc(this.firestore, `inspections/${inspection.id}`);
+        batch.update(inspRef, { ...inspection, vehiclePlate: vehicle.plate || (inspection as any).vehiclePlate });
+      } else {
+        const inspRef = doc(collection(this.firestore, 'inspections'));
+        batch.set(inspRef, { ...inspection, vehicleId, vehiclePlate: vehicle.plate || (inspection as any).vehiclePlate });
+      }
+    }
+
+    // 4. Manutenzione
+    if (maintenance && maintenance.description && maintenance.date) {
+      if (maintenance.id) {
+        const maintRef = doc(this.firestore, `maintenances/${maintenance.id}`);
+        batch.update(maintRef, { ...maintenance, vehiclePlate: vehicle.plate || (maintenance as any).vehiclePlate });
+      } else {
+        const maintRef = doc(collection(this.firestore, 'maintenances'));
+        batch.set(maintRef, { ...maintenance, vehicleId, vehiclePlate: vehicle.plate || (maintenance as any).vehiclePlate });
+      }
+    }
+
+    return batch.commit();
+  }
+
+  async getLatestInsurance(vehicleId: string): Promise<Insurance | null> {
+    const ref = collection(this.firestore, 'insurances');
+    const q = query(ref, where('vehicleId', '==', vehicleId));
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    
+    // Sort in memory to avoid composite index requirement
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Insurance));
+    docs.sort((a, b) => {
+      const dateA = (a.expiryDate as any)?.seconds || 0;
+      const dateB = (b.expiryDate as any)?.seconds || 0;
+      return dateB - dateA;
+    });
+    
+    return docs[0];
+  }
+
+  async getLatestInspection(vehicleId: string): Promise<Inspection | null> {
+    const ref = collection(this.firestore, 'inspections');
+    const q = query(ref, where('vehicleId', '==', vehicleId));
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+
+    // Sort in memory
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Inspection));
+    docs.sort((a, b) => {
+      const dateA = (a.expiryDate as any)?.seconds || 0;
+      const dateB = (b.expiryDate as any)?.seconds || 0;
+      return dateB - dateA;
+    });
+
+    return docs[0];
+  }
+
+  async getLatestMaintenance(vehicleId: string): Promise<Maintenance | null> {
+    const ref = collection(this.firestore, 'maintenances');
+    const q = query(ref, where('vehicleId', '==', vehicleId));
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+
+    // Sort in memory
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Maintenance));
+    docs.sort((a, b) => {
+      const dateA = (a.date as any)?.seconds || 0;
+      const dateB = (b.date as any)?.seconds || 0;
+      return dateB - dateA;
+    });
+
+    return docs[0];
+  }
+
   // ==========================================
   // GESTIONE NOLEGGI (IL "FOGLIO EXCEL")
   // ==========================================
@@ -125,14 +253,21 @@ export class RentalService {
    */
   getRentals(location?: string): Observable<Rental[]> {
     const rentalsRef = collection(this.firestore, 'rentals');
-    let q = query(rentalsRef, orderBy('startDate', 'desc'));
+    let q = query(rentalsRef);
 
     if (location) {
-      q = query(rentalsRef, where('location', '==', location), orderBy('startDate', 'desc'));
+      q = query(rentalsRef, where('location', '==', location));
     }
 
     return (collectionData(q, { idField: 'id' }) as Observable<Rental[]>).pipe(
       map(rentals => {
+        // Sort in memory to avoid composite index requirement for location + startDate
+        rentals.sort((a, b) => {
+          const dateA = (a.startDate as any)?.seconds || 0;
+          const dateB = (b.startDate as any)?.seconds || 0;
+          return dateB - dateA;
+        });
+
         rentals.forEach(r => {
           const newStatus = this.calculateStatus(r);
           if (r.status !== newStatus) {
@@ -224,14 +359,29 @@ export class RentalService {
     return addDoc(ref, maintenance);
   }
 
+  async updateMaintenance(id: string, data: Partial<Maintenance>) {
+    const docRef = doc(this.firestore, `maintenances/${id}`);
+    return updateDoc(docRef, data);
+  }
+
   async deleteMaintenance(id: string) {
     const docRef = doc(this.firestore, `maintenances/${id}`);
     return deleteDoc(docRef);
   }
 
+  async updateInsurance(id: string, data: Partial<Insurance>) {
+    const docRef = doc(this.firestore, `insurances/${id}`);
+    return updateDoc(docRef, data);
+  }
+
   async deleteInsurance(id: string) {
     const docRef = doc(this.firestore, `insurances/${id}`);
     return deleteDoc(docRef);
+  }
+
+  async updateInspection(id: string, data: Partial<Inspection>) {
+    const docRef = doc(this.firestore, `inspections/${id}`);
+    return updateDoc(docRef, data);
   }
 
   async deleteInspection(id: string) {

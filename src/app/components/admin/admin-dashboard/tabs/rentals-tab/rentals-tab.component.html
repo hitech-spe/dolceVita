@@ -39,9 +39,14 @@
                             </select>
                         </td>
                         <td>
-                            <button class="btn-delete" (click)="deleteRental(rental.id!)" title="Elimina Noleggio">
-                                <i class="fa-regular fa-trash-can"></i>
-                            </button>
+                            <div class="d-flex gap-3">
+                                <button class="btn-edit" (click)="openModal(rental)" title="Modifica Noleggio">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button class="btn-delete" (click)="deleteRental(rental.id!)" title="Elimina Noleggio">
+                                    <i class="fa-regular fa-trash-can"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 } @empty {
@@ -54,36 +59,44 @@
     <!-- Layout Mobile: Card -->
     <div class="mobile-cards show-mobile">
         @for (rental of rentals$ | async; track rental.id) {
-            <div class="rental-card-mobile glass-card">
+            <div class="rental-card-mobile">
                 <div class="card-header">
                     <span class="customer-name">{{ rental.customerName }}</span>
-                    <select [ngModel]="rental.status" (ngModelChange)="updateStatus(rental.id!, $event)"
-                            class="status-select"
-                            [class.status-active]="rental.status === 'In Corso'"
-                            [class.status-booked]="rental.status === 'Prenotato'"
-                            [class.status-done]="rental.status === 'Concluso'"
-                            [class.status-canceled]="rental.status === 'Cancellato'">
-                    <option value="Prenotato">Prenotato</option>
-                    <option value="In Corso">In Corso</option>
-                    <option value="Concluso">Concluso</option>
-                    <option value="Cancellato">Cancellato</option>
-                </select>
-                <button class="btn-delete" (click)="deleteRental(rental.id!)" title="Elimina Noleggio">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            </div>
+                    <div class="d-flex gap-3">
+                        <button class="btn-edit" (click)="openModal(rental)" title="Modifica Noleggio">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button class="btn-delete" (click)="deleteRental(rental.id!)" title="Elimina Noleggio">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
                 <div class="card-body">
                     <div class="info-row">
-                        <i class="fa-solid fa-car"></i>
-                        <span>{{ rental.vehiclePlate }}</span>
+                        <i class="fa-solid fa-car" title="Veicolo"></i>
+                        <span class="plate-badge">{{ rental.vehiclePlate }}</span>
                     </div>
                     <div class="info-row">
-                        <i class="fa-solid fa-calendar"></i>
+                        <i class="fa-solid fa-calendar" title="Periodo"></i>
                         <span>{{ formatDate(rental.startDate) }} - {{ formatDate(rental.endDate) }}</span>
                     </div>
                     <div class="info-row">
-                        <i class="fa-solid fa-location-dot"></i>
+                        <i class="fa-solid fa-location-dot" title="Sede"></i>
                         <span class="badge badge-light">{{ rental.location }}</span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fa-solid fa-circle-info" title="Stato"></i>
+                        <select [ngModel]="rental.status" (ngModelChange)="updateStatus(rental.id!, $event)"
+                                class="status-select"
+                                [class.status-active]="rental.status === 'In Corso'"
+                                [class.status-booked]="rental.status === 'Prenotato'"
+                                [class.status-done]="rental.status === 'Concluso'"
+                                [class.status-canceled]="rental.status === 'Cancellato'">
+                            <option value="Prenotato">Prenotato</option>
+                            <option value="In Corso">In Corso</option>
+                            <option value="Concluso">Concluso</option>
+                            <option value="Cancellato">Cancellato</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -96,7 +109,7 @@
 @if (isModalOpen) {
     <div class="modal-overlay">
         <div class="modal-card">
-            <h3>Registra Nuovo Noleggio</h3>
+            <h3>{{ isEditMode ? 'Modifica Noleggio' : 'Registra Nuovo Noleggio' }}</h3>
             <div class="form-grid">
                 <div class="form-group">
                     <label>Nome Cliente</label>
@@ -132,10 +145,14 @@
                         <option value="Grottaglie">Grottaglie</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Note</label>
+                    <input type="text" [(ngModel)]="newRental.notes" placeholder="Note aggiuntive...">
+                </div>
             </div>
             <div class="modal-actions">
                 <button class="btn btn-outline" (click)="closeModal()">Annulla</button>
-                <button class="btn btn-accent" (click)="saveRental()">Salva Prenotazione</button>
+                <button class="btn btn-accent" (click)="saveRental()">{{ isEditMode ? 'Aggiorna' : 'Salva' }} Prenotazione</button>
             </div>
         </div>
     </div>
