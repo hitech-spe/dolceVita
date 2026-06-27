@@ -18,7 +18,7 @@ export class InspectionTabComponent implements OnInit {
   availableVehicles: Vehicle[] = [];
 
   searchTerm = '';
-  sortBy: 'expiryDate' | 'vehiclePlate' = 'expiryDate';
+  sortOrder: 'newest' | 'oldest' | 'expiryDate' = 'newest';
 
   isModalOpen = false;
   isEditMode = false;
@@ -84,13 +84,28 @@ export class InspectionTabComponent implements OnInit {
 
   getFiltered(items: Inspection[] | null): Inspection[] {
     if (!items) return [];
-    return items
-      .filter(i => i.vehiclePlate.toLowerCase().includes(this.searchTerm.toLowerCase()))
-      .sort((a, b) =>
-        this.sortBy === 'expiryDate'
-          ? a.expiryDate.toMillis() - b.expiryDate.toMillis()
-          : a.vehiclePlate.localeCompare(b.vehiclePlate)
-      );
+    let filtered = items
+      .filter(i => {
+        const plate = i.vehiclePlate?.toLowerCase() || '';
+        const term = this.searchTerm.toLowerCase();
+        return plate.includes(term);
+      });
+
+    return filtered.sort((a, b) => {
+      if (this.sortOrder === 'newest') {
+        const dateA = (a.createdAt as any)?.seconds || 0;
+        const dateB = (b.createdAt as any)?.seconds || 0;
+        return dateB - dateA;
+      } else if (this.sortOrder === 'oldest') {
+        const dateA = (a.createdAt as any)?.seconds || 0;
+        const dateB = (b.createdAt as any)?.seconds || 0;
+        return dateA - dateB;
+      } else {
+        const dateA = (a.expiryDate as any)?.seconds || 0;
+        const dateB = (b.expiryDate as any)?.seconds || 0;
+        return dateA - dateB; // Scadenza più vicina in alto
+      }
+    });
   }
 
   formatDate(timestamp: any): string {

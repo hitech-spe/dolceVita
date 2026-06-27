@@ -18,7 +18,7 @@ export class MaintenanceTabComponent implements OnInit {
   availableVehicles: Vehicle[] = [];
 
   searchTerm = '';
-  sortBy: 'date' | 'vehiclePlate' = 'date';
+  sortOrder: 'newest' | 'oldest' | 'date' = 'newest';
 
   isModalOpen = false;
   isEditMode = false;
@@ -84,16 +84,29 @@ export class MaintenanceTabComponent implements OnInit {
 
   getFiltered(items: Maintenance[] | null): Maintenance[] {
     if (!items) return [];
-    return items
-      .filter(i =>
-        i.vehiclePlate.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        i.description.toLowerCase().includes(this.searchTerm.toLowerCase())
-      )
-      .sort((a, b) =>
-        this.sortBy === 'date'
-          ? a.date.toMillis() - b.date.toMillis()
-          : a.vehiclePlate.localeCompare(b.vehiclePlate)
-      );
+    let filtered = items
+      .filter(i => {
+        const plate = i.vehiclePlate?.toLowerCase() || '';
+        const desc = i.description?.toLowerCase() || '';
+        const term = this.searchTerm.toLowerCase();
+        return plate.includes(term) || desc.includes(term);
+      });
+
+    return filtered.sort((a, b) => {
+      if (this.sortOrder === 'newest') {
+        const dateA = (a.createdAt as any)?.seconds || 0;
+        const dateB = (b.createdAt as any)?.seconds || 0;
+        return dateB - dateA;
+      } else if (this.sortOrder === 'oldest') {
+        const dateA = (a.createdAt as any)?.seconds || 0;
+        const dateB = (b.createdAt as any)?.seconds || 0;
+        return dateA - dateB;
+      } else {
+        const dateA = (a.date as any)?.seconds || 0;
+        const dateB = (b.date as any)?.seconds || 0;
+        return dateB - dateA; // Più recente in alto
+      }
+    });
   }
 
   formatDate(timestamp: any): string {

@@ -25,6 +25,7 @@ export interface Vehicle {
   location: 'Mottola' | 'Massafra' | 'Grottaglie';
   category: string; // es. 'Segmento A', 'Furgoni', ecc.
   status: 'Attivo' | 'Manutenzione' | 'Venduto';
+  createdAt?: Timestamp;
 }
 
 export interface Rental {
@@ -40,6 +41,7 @@ export interface Rental {
   status: 'Prenotato' | 'In Corso' | 'Concluso' | 'Cancellato';
   totalPrice?: number;
   notes?: string;
+  createdAt?: Timestamp;
 }
 
 export interface Insurance {
@@ -50,6 +52,7 @@ export interface Insurance {
   policyNumber: string;
   expiryDate: Timestamp;
   notes?: string;
+  createdAt?: Timestamp;
 }
 
 export interface Inspection {
@@ -58,6 +61,7 @@ export interface Inspection {
   vehiclePlate: string;
   expiryDate: Timestamp;
   notes?: string;
+  createdAt?: Timestamp;
 }
 
 export interface Maintenance {
@@ -68,6 +72,7 @@ export interface Maintenance {
   date: Timestamp;
   cost?: number;
   km?: number;
+  createdAt?: Timestamp;
 }
 
 export interface Customer {
@@ -80,6 +85,7 @@ export interface Customer {
   phone?: string;
   email?: string;
   attachments?: { name: string, data: string }[]; // Base64 attachments
+  createdAt?: Timestamp;
 }
 
 @Injectable({
@@ -95,19 +101,32 @@ export class RentalService {
   /** Recupera tutti i veicoli (con filtro opzionale per sede) */
   getVehicles(location?: string): Observable<Vehicle[]> {
     const vehiclesRef = collection(this.firestore, 'vehicles');
-    let q = query(vehiclesRef, orderBy('brand')); // Ordina alfabeticamente
+    let q = query(vehiclesRef);
 
     if (location) {
-      q = query(vehiclesRef, where('location', '==', location), orderBy('brand'));
+      q = query(vehiclesRef, where('location', '==', location));
     }
 
-    return collectionData(q, { idField: 'id' }) as Observable<Vehicle[]>;
+    return (collectionData(q, { idField: 'id' }) as Observable<Vehicle[]>).pipe(
+      map(vehicles => {
+        // Ordina per data di inserimento decrescente (più recenti in alto)
+        // Se createdAt manca, lo mettiamo in fondo
+        vehicles.sort((a, b) => {
+          const dateA = (a.createdAt as any)?.seconds || 0;
+          const dateB = (b.createdAt as any)?.seconds || 0;
+          if (dateA !== dateB) return dateB - dateA;
+          // Fallback su marca e modello se la data è uguale o assente
+          return a.brand.localeCompare(b.brand);
+        });
+        return vehicles;
+      })
+    );
   }
 
   /** Aggiunge una nuova auto */
   async addVehicle(vehicle: Vehicle) {
     const vehiclesRef = collection(this.firestore, 'vehicles');
-    return addDoc(vehiclesRef, vehicle);
+    return addDoc(vehiclesRef, { ...vehicle, createdAt: Timestamp.now() });
   }
 
   /** Modifica un'auto (es. cambio stato in Manutenzione) */
@@ -122,7 +141,7 @@ export class RentalService {
     
     // 1. Aggiungi Veicolo
     const vehicleRef = doc(collection(this.firestore, 'vehicles'));
-    batch.set(vehicleRef, vehicle);
+    batch.set(vehicleRef, { ...vehicle, createdAt: Timestamp.now() });
     const vehicleId = vehicleRef.id;
 
     // 2. Assicurazione
@@ -282,7 +301,7 @@ export class RentalService {
   /** Registra un nuovo noleggio */
   async createRental(rental: Rental) {
     const rentalsRef = collection(this.firestore, 'rentals');
-    return addDoc(rentalsRef, rental);
+    return addDoc(rentalsRef, { ...rental, createdAt: Timestamp.now() });
   }
 
   /** Modifica un noleggio (es. se il cliente allunga i giorni o annulla) */
@@ -334,7 +353,7 @@ export class RentalService {
 
   async addInsurance(insurance: Insurance) {
     const ref = collection(this.firestore, 'insurances');
-    return addDoc(ref, insurance);
+    return addDoc(ref, { ...insurance, createdAt: Timestamp.now() });
   }
 
   getInspections(): Observable<Inspection[]> {
@@ -345,7 +364,7 @@ export class RentalService {
 
   async addInspection(inspection: Inspection) {
     const ref = collection(this.firestore, 'inspections');
-    return addDoc(ref, inspection);
+    return addDoc(ref, { ...inspection, createdAt: Timestamp.now() });
   }
 
   getMaintenances(): Observable<Maintenance[]> {
@@ -356,7 +375,7 @@ export class RentalService {
 
   async addMaintenance(maintenance: Maintenance) {
     const ref = collection(this.firestore, 'maintenances');
-    return addDoc(ref, maintenance);
+    return addDoc(ref, { ...maintenance, createdAt: Timestamp.now() });
   }
 
   async updateMaintenance(id: string, data: Partial<Maintenance>) {
@@ -401,7 +420,7 @@ export class RentalService {
 
   async addCustomer(customer: Customer) {
     const ref = collection(this.firestore, 'customers');
-    return addDoc(ref, customer);
+    return addDoc(ref, { ...customer, createdAt: Timestamp.now() });
   }
 
   async updateCustomer(id: string, data: Partial<Customer>) {

@@ -1,7 +1,21 @@
 <div class="panel">
     <div class="panel-header">
         <h2>Noleggi in corso e futuri</h2>
-        <button class="btn btn-accent" (click)="openModal()">+ Nuovo Noleggio</button>
+        <div class="panel-actions">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" [(ngModel)]="searchTerm" placeholder="Cerca cliente o targa...">
+            </div>
+            <div class="sort-box">
+                <i class="fa-solid fa-sort"></i>
+                <select [(ngModel)]="sortOrder" class="sort-select">
+                    <option value="newest">Più recenti</option>
+                    <option value="oldest">Meno recenti</option>
+                    <option value="startDate">Data Inizio</option>
+                </select>
+            </div>
+            <button class="btn btn-accent" (click)="openModal()">+ Nuovo Noleggio</button>
+        </div>
     </div>
 
     <div class="table-responsive shadow-sm hide-mobile">
@@ -18,7 +32,7 @@
             </tr>
             </thead>
             <tbody>
-                @for (rental of rentals$ | async; track rental.id) {
+                @for (rental of getFiltered(rentals$ | async); track rental.id) {
                     <tr>
                         <td class="fw-bold">{{ rental.customerName }}</td>
                         <td>{{ rental.vehiclePlate }}</td>
@@ -58,7 +72,7 @@
 
     <!-- Layout Mobile: Card -->
     <div class="mobile-cards show-mobile">
-        @for (rental of rentals$ | async; track rental.id) {
+        @for (rental of getFiltered(rentals$ | async); track rental.id) {
             <div class="rental-card-mobile">
                 <div class="card-header">
                     <span class="customer-name">{{ rental.customerName }}</span>

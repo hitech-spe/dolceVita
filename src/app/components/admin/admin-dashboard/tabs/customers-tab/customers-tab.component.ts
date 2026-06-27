@@ -15,8 +15,8 @@ export class CustomersTabComponent implements OnInit {
   private rentalService = inject(RentalService);
 
   customers$!: Observable<Customer[]>;
-
   searchTerm = '';
+  sortOrder: 'newest' | 'oldest' | 'alpha' = 'newest';
 
   isModalOpen = false;
   isEditMode = false;
@@ -134,10 +134,26 @@ export class CustomersTabComponent implements OnInit {
 
   getFiltered(items: Customer[] | null): Customer[] {
     if (!items) return [];
-    return items
-        .filter(i =>
-            i.firstName.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-            i.lastName.toLowerCase().includes(this.searchTerm.toLowerCase())
-        )
+    let filtered = items
+        .filter(i => {
+          const first = i.firstName?.toLowerCase() || '';
+          const last = i.lastName?.toLowerCase() || '';
+          const term = this.searchTerm.toLowerCase();
+          return first.includes(term) || last.includes(term);
+        });
+
+    return filtered.sort((a, b) => {
+      if (this.sortOrder === 'newest') {
+        const dateA = (a.createdAt as any)?.seconds || 0;
+        const dateB = (b.createdAt as any)?.seconds || 0;
+        return dateB - dateA;
+      } else if (this.sortOrder === 'oldest') {
+        const dateA = (a.createdAt as any)?.seconds || 0;
+        const dateB = (b.createdAt as any)?.seconds || 0;
+        return dateA - dateB;
+      } else {
+        return a.lastName.localeCompare(b.lastName);
+      }
+    });
   }
 }

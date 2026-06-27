@@ -18,6 +18,8 @@ export class RentalsTabComponent implements OnInit {
   private rentalService = inject(RentalService);
 
   rentals$!: Observable<Rental[]>;
+  searchTerm = '';
+  sortOrder: 'newest' | 'oldest' | 'startDate' = 'newest';
   availableVehicles: Vehicle[] = [];
   availableCustomers: Customer[] = [];
 
@@ -111,5 +113,32 @@ export class RentalsTabComponent implements OnInit {
     if (!timestamp) return '-';
     if (timestamp.toDate) return timestamp.toDate().toLocaleDateString('it-IT');
     return new Date(timestamp).toLocaleDateString('it-IT');
+  }
+
+  getFiltered(items: Rental[] | null): Rental[] {
+    if (!items) return [];
+    let filtered = items
+        .filter(i => {
+          const name = i.customerName?.toLowerCase() || '';
+          const plate = i.vehiclePlate?.toLowerCase() || '';
+          const term = this.searchTerm.toLowerCase();
+          return name.includes(term) || plate.includes(term);
+        });
+
+    return filtered.sort((a, b) => {
+      if (this.sortOrder === 'newest') {
+        const dateA = (a.createdAt as any)?.seconds || 0;
+        const dateB = (b.createdAt as any)?.seconds || 0;
+        return dateB - dateA;
+      } else if (this.sortOrder === 'oldest') {
+        const dateA = (a.createdAt as any)?.seconds || 0;
+        const dateB = (b.createdAt as any)?.seconds || 0;
+        return dateA - dateB;
+      } else {
+        const dateA = (a.startDate as any)?.seconds || 0;
+        const dateB = (b.startDate as any)?.seconds || 0;
+        return dateB - dateA;
+      }
+    });
   }
 }

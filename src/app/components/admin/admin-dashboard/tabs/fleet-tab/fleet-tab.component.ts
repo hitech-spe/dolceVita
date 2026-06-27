@@ -17,6 +17,7 @@ export class FleetTabComponent implements OnInit {
   private rentalService = inject(RentalService);
 
   searchTerm = '';
+  sortOrder: 'newest' | 'oldest' | 'brand' = 'newest';
 
   vehicles$!: Observable<Vehicle[]>;
 
@@ -150,11 +151,31 @@ export class FleetTabComponent implements OnInit {
 
   getFiltered(items: Vehicle[] | null): Vehicle[] {
     if (!items) return [];
-    return items
-        .filter(i =>
-            i.brand.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-            i.model.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-            i.plate.toLowerCase().includes(this.searchTerm.toLowerCase())
-        )
+    let filtered = items
+        .filter(i => {
+          const brand = i.brand?.toLowerCase() || '';
+          const model = i.model?.toLowerCase() || '';
+          const plate = i.plate?.toLowerCase() || '';
+          const term = this.searchTerm.toLowerCase();
+          
+          return brand.includes(term) || 
+                 model.includes(term) || 
+                 plate.includes(term);
+        });
+
+    // Applica ordinamento scelto dall'utente
+    return filtered.sort((a, b) => {
+      if (this.sortOrder === 'newest') {
+        const dateA = (a.createdAt as any)?.seconds || 0;
+        const dateB = (b.createdAt as any)?.seconds || 0;
+        return dateB - dateA;
+      } else if (this.sortOrder === 'oldest') {
+        const dateA = (a.createdAt as any)?.seconds || 0;
+        const dateB = (b.createdAt as any)?.seconds || 0;
+        return dateA - dateB;
+      } else {
+        return a.brand.localeCompare(b.brand);
+      }
+    });
   }
 }
