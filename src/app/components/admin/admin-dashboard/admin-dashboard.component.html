@@ -21,9 +21,6 @@
             <button [class.active]="currentTab === 'calendar'" (click)="onTabChange('calendar')">
                 <i class="fa-solid fa-calendar-check"></i> Calendario
             </button>
-            <button [class.active]="currentTab === 'rentals'" (click)="onTabChange('rentals')">
-                <i class="fa-solid fa-calendar-days"></i> Noleggi
-            </button>
             <button [class.active]="currentTab === 'fleet'" (click)="onTabChange('fleet')">
                 <i class="fa-solid fa-car"></i> Veicoli
             </button>
@@ -45,9 +42,6 @@
     <main class="dashboard-content">
         @if (currentTab === 'calendar') {
             <app-calendar-tab [selectedLocation$]="selectedLocation$" />
-        }
-        @if (currentTab === 'rentals') {
-            <app-rentals-tab [selectedLocation$]="selectedLocation$" />
         }
         @if (currentTab === 'fleet') {
             <app-fleet-tab [selectedLocation$]="selectedLocation$" />

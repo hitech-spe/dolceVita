@@ -1,10 +1,55 @@
 <div class="calendar-container glass-card">
   <div class="calendar-header">
-    <h2>Timeline Occupazione Veicoli</h2>
+    <div class="title-actions">
+      <h2>Timeline Occupazione Veicoli</h2>
+      <div class="action-buttons">
+        <button class="btn-primary" (click)="openRentalModal()">
+          <i class="fa-solid fa-plus"></i> Nuovo Noleggio
+        </button>
+        <button class="btn-secondary" (click)="openMaintenanceModal()">
+          <i class="fa-solid fa-wrench"></i> Manutenzione
+        </button>
+        <button class="btn-utility" (click)="openTransferModal()">
+          <i class="fa-solid fa-exchange-alt"></i> Passaggio Sede
+        </button>
+      </div>
+    </div>
+
+    <div class="calendar-controls">
+      <div class="search-filter">
+        <div class="search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange()" placeholder="Cerca veicolo (marca, modello, targa, categoria)...">
+        </div>
+        <div class="sort-box">
+          <label>Ordina per:</label>
+          <select [(ngModel)]="sortBy" (ngModelChange)="onSortChange()">
+            <option value="category">Categoria</option>
+            <option value="brand">Marca</option>
+            <option value="plate">Targa</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="navigation-controls">
+        <button class="btn-nav" (click)="prevPeriod()" title="Settimana Precedente">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button class="btn-today" (click)="goToToday()">Oggi</button>
+        <button class="btn-nav" (click)="nextPeriod()" title="Settimana Successiva">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <span class="current-period">
+          {{ days[0] | date:'dd MMM' }} - {{ days[days.length-1] | date:'dd MMM yyyy' }}
+        </span>
+      </div>
+    </div>
+
     <div class="legend">
-      <span class="legend-item"><span class="box status-booked"></span> Prenotato</span>
-      <span class="legend-item"><span class="box status-active"></span> In Corso</span>
-      <span class="legend-item"><span class="box status-done"></span> Concluso</span>
+      <span class="legend-item"><span class="box loc-massafra"></span> Massafra</span>
+      <span class="legend-item"><span class="box loc-mottola"></span> Mottola</span>
+      <span class="legend-item"><span class="box loc-grottaglie"></span> Grottaglie</span>
+      <span class="legend-item"><span class="box maintenance-gray"></span> Manutenzione</span>
     </div>
   </div>
 
@@ -22,21 +67,36 @@
         </tr>
       </thead>
       <tbody>
-        @for (item of vehiclesWithRentals$ | async; track item.vehicle.id) {
+        @for (item of vehiclesData$ | async; track item.vehicle.id) {
           <tr>
             <td class="sticky-col vehicle-info">
-              <strong>{{ item.vehicle.brand }} {{ item.vehicle.model }}</strong>
-              <span>{{ item.vehicle.plate }}</span>
+              <div class="vehicle-details">
+                <strong [ngClass]="getCurrentVehicleLocationClass(item)">{{ item.vehicle.brand }} {{ item.vehicle.model }}</strong>
+                <span class="plate">{{ item.vehicle.plate }}</span>
+                <span class="category-badge">{{ item.vehicle.category }}</span>
+              </div>
             </td>
             @for (day of days; track day) {
-              @let rental = isRented(item.rentals, day);
-              <td [class]="getTodayClass(day)">
-                @if (rental) {
-                  <div class="rental-bar" 
-                       [ngClass]="getStatusClass(rental.status)" 
-                       [title]="getFormattedTooltip(rental)"
-                       (click)="openRentalDetail(rental)">
-                    <!-- Solo un indicatore visivo nel calendario -->
+              @let status = getDayStatus(item, day);
+              <td [class]="getTodayClass(day)" 
+                  [ngClass]="status.type === 'maintenance' ? 'maintenance-gray-bg' : (status.type === 'transfer' ? (getVehicleLocationClass(item, day) + '-bg') : '')"
+                  (click)="onCellClick(item, day, status)"
+                  style="cursor: pointer;">
+                @if (status.type === 'rental') {
+                  <div class="calendar-bar rental-bar" 
+                       [ngClass]="getLocationClass(status.data.location)" 
+                       [title]="getFormattedTooltip('rental', status.data)"
+                       (click)="$event.stopPropagation(); openRentalModal(status.data)">
+                  </div>
+                } @else if (status.type === 'maintenance') {
+                  <div class="calendar-bar maintenance-bar" 
+                       title="In Manutenzione"
+                       [title]="getFormattedTooltip('maintenance', status.data)">
+                  </div>
+                } @else if (status.type === 'transfer') {
+                  <div class="calendar-bar transfer-bar" 
+                       [ngClass]="getLocationClass(status.data.location)"
+                       [title]="getFormattedTooltip('transfer', status.data)">
                   </div>
                 }
               </td>
@@ -47,63 +107,190 @@
     </table>
   </div>
   
-  @if (isModalOpen && selectedRental) {
-    <div class="modal-overlay" (click)="closeModal()">
+  <!-- Modal Nuovo Noleggio (Copiata e adattata da rentals-tab) -->
+  @if (isRentalModalOpen) {
+    <div class="modal-overlay" (click)="closeModals()">
       <div class="modal-card" (click)="$event.stopPropagation()">
-        <h3>Dettaglio Noleggio</h3>
-        <div class="rental-detail-grid">
-          <div class="detail-item">
-            <label>Cliente</label>
-            <div class="value">{{ selectedRental.customerName }}</div>
-          </div>
-          <div class="detail-item">
-            <label>Telefono</label>
-            <div class="value">{{ selectedRental.customerPhone || '-' }}</div>
-          </div>
-          <div class="detail-item">
-            <label>Veicolo</label>
-            <div class="value">{{ selectedRental.vehiclePlate }}</div>
-          </div>
-          <div class="detail-item">
-            <label>Stato</label>
-            <div class="value">
-              <span class="badge" [ngClass]="getStatusClass(selectedRental.status)">
-                {{ selectedRental.status }}
-              </span>
+        <h3>{{ isEditMode ? 'Modifica Noleggio' : 'Nuovo Noleggio' }}</h3>
+        <form (ngSubmit)="saveRental()" class="rental-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Veicolo</label>
+              <select [(ngModel)]="newRental.vehicleId" name="vehicleId" required>
+                @for (v of availableVehicles; track v.id) {
+                  <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }})</option>
+                }
+              </select>
             </div>
-          </div>
-          <div class="detail-item">
-            <label>Periodo</label>
-            <div class="value">{{ getFormattedTooltip(selectedRental).split('\n')[1].replace('Periodo: ', '') }}</div>
-          </div>
-          @if (selectedRental.notes) {
-            <div class="detail-item full-width">
+            <div class="form-group">
+              <label>Cliente</label>
+              <select [(ngModel)]="newRental.customerId" name="customerId" required>
+                @for (c of availableCustomers; track c.id) {
+                  <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Sede Ritiro</label>
+              <select [(ngModel)]="newRental.location" name="location">
+                <option value="Mottola">Mottola</option>
+                <option value="Massafra">Massafra</option>
+                <option value="Grottaglie">Grottaglie</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Sede Rientro</label>
+              <select [(ngModel)]="newRental.returnLocation" name="returnLocation">
+                <option value="Mottola">Mottola</option>
+                <option value="Massafra">Massafra</option>
+                <option value="Grottaglie">Grottaglie</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Data Inizio</label>
+              <input type="date" [(ngModel)]="newRental.startDate" name="startDate" required>
+            </div>
+            <div class="form-group">
+              <label>Data Fine</label>
+              <input type="date" [(ngModel)]="newRental.endDate" name="endDate" required>
+            </div>
+            <div class="form-group full-width">
               <label>Note</label>
-              <div class="value notes-box">{{ selectedRental.notes }}</div>
+              <textarea [(ngModel)]="newRental.notes" name="notes" rows="2"></textarea>
             </div>
-          }
-        </div>
-        <div class="modal-actions">
-          <button class="btn-utility" (click)="closeModal()">Chiudi</button>
-        </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-utility" (click)="closeModals()">Annulla</button>
+            <button type="submit" class="btn-primary">Salva Noleggio</button>
+          </div>
+        </form>
       </div>
     </div>
   }
 
-  <!--div class="utility-section mt-4">
-      <h3>Utility & Statistiche</h3>
-      <div class="utility-grid">
-          <div class="utility-card">
-              <i class="fa-solid fa-chart-line"></i>
-              <h4>Statistiche Rapide</h4>
-              <p>Prossimamente: Analisi dei noleggi più frequenti e ricavi stimati.</p>
+  <!-- Modal Manutenzione -->
+  @if (isMaintenanceModalOpen) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <h3>Metti in Manutenzione</h3>
+        <form (ngSubmit)="saveMaintenance()" class="rental-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Veicolo</label>
+              <select [(ngModel)]="newMaintenance.vehicleId" name="vehicleId" required>
+                @for (v of availableVehicles; track v.id) {
+                  <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }})</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Data Inizio</label>
+              <input type="date" [(ngModel)]="newMaintenance.startDate" name="startDate" required>
+            </div>
+            <div class="form-group">
+              <label>Data Fine</label>
+              <input type="date" [(ngModel)]="newMaintenance.endDate" name="endDate" required>
+            </div>
+            <div class="form-group full-width">
+              <label>Note</label>
+              <textarea [(ngModel)]="newMaintenance.notes" name="notes" rows="2"></textarea>
+            </div>
           </div>
-          <div class="utility-card">
-              <i class="fa-solid fa-file-export"></i>
-              <h4>Esportazione Dati</h4>
-              <p>Esporta i dati dei noleggi in formato PDF per la contabilità.</p>
-              <button class="btn-utility">Esporta Mese Corrente</button>
+          <div class="modal-actions">
+            <button type="button" class="btn-utility" (click)="closeModals()">Annulla</button>
+            <button type="submit" class="btn-primary">Salva</button>
           </div>
+        </form>
       </div>
-  </div-->
+    </div>
+  }
+
+  <!-- Modal Trasferimento Sede -->
+  @if (isTransferModalOpen) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <h3>Passaggio Temporaneo di Sede</h3>
+        <form (ngSubmit)="saveTransfer()" class="rental-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Veicolo</label>
+              <select [(ngModel)]="newTransfer.vehicleId" name="vehicleId" required>
+                @for (v of availableVehicles; track v.id) {
+                  <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }})</option>
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Nuova Sede (Temporanea)</label>
+              <select [(ngModel)]="newTransfer.location" name="location" required>
+                <option value="Mottola">Mottola</option>
+                <option value="Massafra">Massafra</option>
+                <option value="Grottaglie">Grottaglie</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Data Inizio</label>
+              <input type="date" [(ngModel)]="newTransfer.startDate" name="startDate" required>
+            </div>
+            <div class="form-group">
+              <label>Data Fine</label>
+              <input type="date" [(ngModel)]="newTransfer.endDate" name="endDate" required>
+            </div>
+            <div class="form-group full-width">
+              <label>Note</label>
+              <textarea [(ngModel)]="newTransfer.notes" name="notes" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-utility" (click)="closeModals()">Annulla</button>
+            <button type="submit" class="btn-primary">Salva</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal Conferma/Modifica Stato -->
+  @if (isConfirmationModalOpen) {
+    <div class="modal-overlay">
+      <div class="modal-content confirmation-modal">
+        <div class="modal-header">
+          <h3>Gestione Periodo</h3>
+          <button class="close-btn" (click)="closeModals()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="status-detail" *ngIf="selectedStatusForAction">
+            <div class="detail-row">
+              <strong>Tipo:</strong> 
+              <span>{{ selectedStatusForAction.type === 'rental' ? 'Noleggio' : (selectedStatusForAction.type === 'maintenance' ? 'Manutenzione' : 'Trasferimento') }}</span>
+            </div>
+            <div class="detail-row" *ngIf="selectedStatusForAction.type === 'rental'">
+              <strong>Cliente:</strong> <span>{{ selectedStatusForAction.data.customerName }}</span>
+            </div>
+            <div class="detail-row" *ngIf="selectedStatusForAction.type === 'transfer'">
+              <strong>Sede:</strong> <span>{{ selectedStatusForAction.data.location }}</span>
+            </div>
+            <div class="detail-row">
+              <strong>Fine attuale:</strong> <span>{{ selectedStatusForAction.data.endDate.toDate() | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <div class="detail-row highlight">
+              <strong>Data selezionata:</strong> <span>{{ selectedDayForAction | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <div class="detail-row date-input-row">
+              <strong>Modifica fine:</strong>
+              <input type="date" [(ngModel)]="manualEndDate" name="manualEndDate" class="inline-date-input">
+            </div>
+          </div>
+          
+          <p class="warning-text">L'operazione imposterà la data indicata come nuovo termine del periodo (puoi sia terminare che allungare).</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-danger-outline" (click)="deleteStatus()">Elimina</button>
+          <div class="spacer"></div>
+          <button class="btn-secondary" (click)="closeModals()">Annulla</button>
+          <button class="btn-primary" (click)="confirmTermination()">Conferma</button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

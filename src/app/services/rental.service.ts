@@ -38,8 +38,28 @@ export interface Rental {
   startDate: Timestamp;   // Usiamo sempre Timestamp di Firebase
   endDate: Timestamp;
   location: 'Mottola' | 'Massafra' | 'Grottaglie';
+  returnLocation?: 'Mottola' | 'Massafra' | 'Grottaglie'; // Sede di rientro
   status: 'Prenotato' | 'In Corso' | 'Concluso' | 'Cancellato';
   totalPrice?: number;
+  notes?: string;
+  createdAt?: Timestamp;
+}
+
+export interface TemporaryTransfer {
+  id?: string;
+  vehicleId: string;
+  startDate: Timestamp;
+  endDate: Timestamp;
+  location: 'Mottola' | 'Massafra' | 'Grottaglie';
+  notes?: string;
+  createdAt?: Timestamp;
+}
+
+export interface MaintenancePeriod {
+  id?: string;
+  vehicleId: string;
+  startDate: Timestamp;
+  endDate: Timestamp;
   notes?: string;
   createdAt?: Timestamp;
 }
@@ -301,12 +321,70 @@ export class RentalService {
   /** Registra un nuovo noleggio */
   async createRental(rental: Rental) {
     const rentalsRef = collection(this.firestore, 'rentals');
-    return addDoc(rentalsRef, { ...rental, createdAt: Timestamp.now() });
+    const docRef = await addDoc(rentalsRef, { ...rental, createdAt: Timestamp.now() });
+    
+    // Se è stato specificato un returnLocation diverso da location, aggiorniamo la sede del veicolo
+    // NOTA: In un'app reale questo andrebbe fatto quando il noleggio passa a "Concluso",
+    // ma l'utente dice "la sede di rientro vada a modificare la sede del veicolo stesso".
+    // Se lo facciamo subito, il veicolo risulterà nella nuova sede anche durante il noleggio.
+    if (rental.returnLocation && rental.returnLocation !== rental.location) {
+      await this.updateVehicle(rental.vehicleId, { location: rental.returnLocation });
+    }
+    
+    return docRef;
   }
 
   /** Modifica un noleggio (es. se il cliente allunga i giorni o annulla) */
   async updateRental(id: string, data: Partial<Rental>) {
     const docRef = doc(this.firestore, `rentals/${id}`);
+    await updateDoc(docRef, data);
+    
+    if (data.returnLocation && data.vehicleId) {
+      await this.updateVehicle(data.vehicleId, { location: data.returnLocation });
+    }
+  }
+
+  // ==========================================
+  // GESTIONE TRASFERIMENTI E MANUTENZIONI (CALENDARIO)
+  // ==========================================
+
+  getTemporaryTransfers(): Observable<TemporaryTransfer[]> {
+    const ref = collection(this.firestore, 'temporary_transfers');
+    return collectionData(ref, { idField: 'id' }) as Observable<TemporaryTransfer[]>;
+  }
+
+  async addTemporaryTransfer(transfer: TemporaryTransfer) {
+    const ref = collection(this.firestore, 'temporary_transfers');
+    return addDoc(ref, { ...transfer, createdAt: Timestamp.now() });
+  }
+
+  async deleteTemporaryTransfer(id: string) {
+    const docRef = doc(this.firestore, `temporary_transfers/${id}`);
+    return deleteDoc(docRef);
+  }
+
+  getMaintenancePeriods(): Observable<MaintenancePeriod[]> {
+    const ref = collection(this.firestore, 'maintenance_periods');
+    return collectionData(ref, { idField: 'id' }) as Observable<MaintenancePeriod[]>;
+  }
+
+  async addMaintenancePeriod(period: MaintenancePeriod) {
+    const ref = collection(this.firestore, 'maintenance_periods');
+    return addDoc(ref, { ...period, createdAt: Timestamp.now() });
+  }
+
+  async deleteMaintenancePeriod(id: string) {
+    const docRef = doc(this.firestore, `maintenance_periods/${id}`);
+    return deleteDoc(docRef);
+  }
+
+  async updateTemporaryTransfer(id: string, data: Partial<TemporaryTransfer>) {
+    const docRef = doc(this.firestore, `temporary_transfers/${id}`);
+    return updateDoc(docRef, data);
+  }
+
+  async updateMaintenancePeriod(id: string, data: Partial<MaintenancePeriod>) {
+    const docRef = doc(this.firestore, `maintenance_periods/${id}`);
     return updateDoc(docRef, data);
   }
 

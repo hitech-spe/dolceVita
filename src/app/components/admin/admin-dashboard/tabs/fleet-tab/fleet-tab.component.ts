@@ -25,7 +25,8 @@ export class FleetTabComponent implements OnInit {
   isEditMode = false;
   editingVehicleId?: string;
 
-  newVehicle: Partial<Vehicle> = { location: 'Mottola', status: 'Attivo', category: 'Auto' };
+  newVehicle: Partial<Vehicle> = { location: 'Mottola', status: 'Attivo', category: 'A' };
+  categories: string[] = ['A', 'B', 'C', 'D', 'E', 'F', '7 posti', 'Van 9 posti', 'L1H1', 'L2H2', 'L3H3', 'L4H3', 'Cassa quadrata', 'Cassone aperto 3 posti', 'Cassone aperto 7 posti', 'Sponda idraulica', 'Refrigerato', 'Ribaltabile'];
 
   // Dettagli opzionali per nuovo veicolo
   newInsurance: Partial<Insurance> = {};
@@ -84,7 +85,7 @@ export class FleetTabComponent implements OnInit {
     } else {
       this.isEditMode = false;
       this.editingVehicleId = undefined;
-      this.newVehicle = { location: 'Mottola', status: 'Attivo', category: 'Auto' };
+      this.newVehicle = { location: 'Mottola', status: 'Attivo', category: 'A' };
       this.newInsurance = {};
       this.newInspection = {};
       this.newMaintenance = {};
@@ -97,7 +98,7 @@ export class FleetTabComponent implements OnInit {
 
   closeModal() {
     this.isModalOpen = false;
-    this.newVehicle = { location: 'Mottola', status: 'Attivo', category: 'Auto' };
+    this.newVehicle = { location: 'Mottola', status: 'Attivo', category: 'A' };
   }
 
   async saveVehicle() {
