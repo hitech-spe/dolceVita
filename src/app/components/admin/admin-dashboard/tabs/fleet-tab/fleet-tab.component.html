@@ -12,6 +12,7 @@
                     <option value="newest">Più recenti</option>
                     <option value="oldest">Meno recenti</option>
                     <option value="brand">Marca</option>
+                    <option value="category">Categoria</option>
                 </select>
             </div>
             <button class="btn btn-accent" (click)="openModal()">+ Aggiungi Veicolo</button>
@@ -41,7 +42,8 @@
                         <td>
                             <span class="badge"
                                   [class.bg-success]="car.status === 'Attivo'"
-                                  [class.bg-danger]="car.status === 'Manutenzione'">
+                                  [class.bg-danger]="car.status === 'Manutenzione'"
+                                  [class.bg-dark]="car.status === 'Venduto'">
                               {{ car.status }}
                             </span>
                         </td>
@@ -95,7 +97,8 @@
                         <i class="fa-solid fa-circle-info" title="Stato"></i>
                         <span class="badge"
                               [class.bg-success]="car.status === 'Attivo'"
-                              [class.bg-danger]="car.status === 'Manutenzione'">
+                              [class.bg-danger]="car.status === 'Manutenzione'"
+                              [class.bg-dark]="car.status === 'Venduto'">
                           {{ car.status }}
                         </span>
                     </div>
@@ -136,6 +139,7 @@
                     <select [(ngModel)]="newVehicle.status">
                         <option value="Attivo">Attivo</option>
                         <option value="Manutenzione">Manutenzione</option>
+                        <option value="Venduto">Venduto</option>
                     </select>
                 </div>
             </div>

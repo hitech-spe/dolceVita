@@ -12,6 +12,9 @@
         <button class="btn-utility" (click)="openTransferModal()">
           <i class="fa-solid fa-exchange-alt"></i> Passaggio Sede
         </button>
+        <button class="btn-danger" (click)="openSaleModal()">
+          <i class="fa-solid fa-tags"></i> Vendita Auto
+        </button>
       </div>
     </div>
 
@@ -50,6 +53,11 @@
       <span class="legend-item"><span class="box loc-mottola"></span> Mottola</span>
       <span class="legend-item"><span class="box loc-grottaglie"></span> Grottaglie</span>
       <span class="legend-item"><span class="box maintenance-gray"></span> Manutenzione</span>
+      <span class="legend-item"><span class="box service-rental-purple"></span> Noleggio Servizi</span>
+      <span class="legend-item"><span class="box rental-start-day"></span> Inizio Noleggio (Verde)</span>
+      <span class="legend-item"><span class="box rental-end-day"></span> Rientro Noleggio (Rosso)</span>
+      <span class="legend-item"><span class="box rental-same-day"></span> In Giornata (Arancione)</span>
+      <span class="legend-item"><span class="box sold-red"></span> Venduto</span>
     </div>
   </div>
 
@@ -79,14 +87,15 @@
             @for (day of days; track day) {
               @let status = getDayStatus(item, day);
               <td [class]="getTodayClass(day)" 
-                  [ngClass]="status.type === 'maintenance' ? 'maintenance-gray-bg' : (status.type === 'transfer' ? (getVehicleLocationClass(item, day) + '-bg') : '')"
+                  [ngClass]="status.type === 'maintenance' ? 'maintenance-gray-bg' : (status.type === 'transfer' ? (getVehicleLocationClass(item, day) + '-bg') : (status.type === 'sold' ? 'sold-red-bg' : ''))"
                   (click)="onCellClick(item, day, status)"
                   style="cursor: pointer;">
                 @if (status.type === 'rental') {
                   <div class="calendar-bar rental-bar" 
-                       [ngClass]="getLocationClass(status.data.location)" 
+                       [ngClass]="getRentalBarClass(status.data, day)" 
                        [title]="getFormattedTooltip('rental', status.data)"
                        (click)="$event.stopPropagation(); openRentalModal(status.data)">
+                    <span class="rental-day-label">{{ getRentalDayLabel(status.data, day) }}</span>
                   </div>
                 } @else if (status.type === 'maintenance') {
                   <div class="calendar-bar maintenance-bar" 
@@ -97,6 +106,10 @@
                   <div class="calendar-bar transfer-bar" 
                        [ngClass]="getLocationClass(status.data.location)"
                        [title]="getFormattedTooltip('transfer', status.data)">
+                  </div>
+                } @else if (status.type === 'sold') {
+                  <div class="calendar-bar sold-bar"
+                       [title]="getFormattedTooltip('sold', status.data)">
                   </div>
                 }
               </td>
@@ -151,8 +164,33 @@
               <input type="date" [(ngModel)]="newRental.startDate" name="startDate" required>
             </div>
             <div class="form-group">
+              <label>Fascia Oraria Inizio</label>
+              <select [(ngModel)]="newRental.startPeriod" name="startPeriod" required>
+                <option value="Mat">Mat</option>
+                <option value="Tarda mat">Tarda mat</option>
+                <option value="Pom">Pom</option>
+                <option value="Sera">Sera</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label>Data Fine</label>
               <input type="date" [(ngModel)]="newRental.endDate" name="endDate" required>
+            </div>
+            <div class="form-group">
+              <label>Fascia Oraria Fine</label>
+              <select [(ngModel)]="newRental.endPeriod" name="endPeriod" required>
+                <option value="Mat">Mat</option>
+                <option value="Tarda mat">Tarda mat</option>
+                <option value="Pom">Pom</option>
+                <option value="Sera">Sera</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label>Tipo Noleggio</label>
+              <select [(ngModel)]="newRental.isServiceRental" name="isServiceRental">
+                <option [ngValue]="false">Noleggio Standard</option>
+                <option [ngValue]="true">Noleggio per Servizi (Caselle Viola)</option>
+              </select>
             </div>
             <div class="form-group full-width">
               <label>Note</label>
@@ -260,36 +298,86 @@
         </div>
         <div class="modal-body">
           <div class="status-detail" *ngIf="selectedStatusForAction">
-            <div class="detail-row">
-              <strong>Tipo:</strong> 
-              <span>{{ selectedStatusForAction.type === 'rental' ? 'Noleggio' : (selectedStatusForAction.type === 'maintenance' ? 'Manutenzione' : 'Trasferimento') }}</span>
-            </div>
-            <div class="detail-row" *ngIf="selectedStatusForAction.type === 'rental'">
-              <strong>Cliente:</strong> <span>{{ selectedStatusForAction.data.customerName }}</span>
-            </div>
-            <div class="detail-row" *ngIf="selectedStatusForAction.type === 'transfer'">
-              <strong>Sede:</strong> <span>{{ selectedStatusForAction.data.location }}</span>
-            </div>
-            <div class="detail-row">
-              <strong>Fine attuale:</strong> <span>{{ selectedStatusForAction.data.endDate.toDate() | date:'dd/MM/yyyy' }}</span>
-            </div>
-            <div class="detail-row highlight">
-              <strong>Data selezionata:</strong> <span>{{ selectedDayForAction | date:'dd/MM/yyyy' }}</span>
-            </div>
-            <div class="detail-row date-input-row">
-              <strong>Modifica fine:</strong>
-              <input type="date" [(ngModel)]="manualEndDate" name="manualEndDate" class="inline-date-input">
-            </div>
+            @if (selectedStatusForAction.type === 'sold') {
+              <div class="detail-row">
+                <strong>Veicolo:</strong> <span>{{ selectedStatusForAction.data.brand }} {{ selectedStatusForAction.data.model }}</span>
+              </div>
+              <div class="detail-row">
+                <strong>Stato:</strong> <span class="text-danger fw-bold">VENDUTO</span>
+              </div>
+              <div class="detail-row" *ngIf="selectedStatusForAction.data.soldDate">
+                <strong>Data Vendita:</strong> <span>{{ selectedStatusForAction.data.soldDate.toDate() | date:'dd/MM/yyyy' }}</span>
+              </div>
+              <p class="warning-text">L'operazione annullerà la vendita di questo veicolo, riattivandolo sul mercato.</p>
+            } @else {
+              <div class="detail-row">
+                <strong>Tipo:</strong> 
+                <span>{{ selectedStatusForAction.type === 'rental' ? 'Noleggio' : (selectedStatusForAction.type === 'maintenance' ? 'Manutenzione' : 'Trasferimento') }}</span>
+              </div>
+              <div class="detail-row" *ngIf="selectedStatusForAction.type === 'rental'">
+                <strong>Cliente:</strong> <span>{{ selectedStatusForAction.data.customerName }}</span>
+              </div>
+              <div class="detail-row" *ngIf="selectedStatusForAction.type === 'transfer'">
+                <strong>Sede:</strong> <span>{{ selectedStatusForAction.data.location }}</span>
+              </div>
+              <div class="detail-row">
+                <strong>Fine attuale:</strong> <span>{{ selectedStatusForAction.data.endDate.toDate() | date:'dd/MM/yyyy' }}</span>
+              </div>
+              <div class="detail-row highlight">
+                <strong>Data selezionata:</strong> <span>{{ selectedDayForAction | date:'dd/MM/yyyy' }}</span>
+              </div>
+              <div class="detail-row date-input-row">
+                <strong>Modifica fine:</strong>
+                <input type="date" [(ngModel)]="manualEndDate" name="manualEndDate" class="inline-date-input">
+              </div>
+              <p class="warning-text">L'operazione imposterà la data indicata come nuovo termine del periodo (puoi sia terminare che allungare).</p>
+            }
           </div>
-          
-          <p class="warning-text">L'operazione imposterà la data indicata come nuovo termine del periodo (puoi sia terminare che allungare).</p>
         </div>
         <div class="modal-footer">
-          <button class="btn-danger-outline" (click)="deleteStatus()">Elimina</button>
-          <div class="spacer"></div>
-          <button class="btn-secondary" (click)="closeModals()">Annulla</button>
-          <button class="btn-primary" (click)="confirmTermination()">Conferma</button>
+          @if (selectedStatusForAction?.type === 'sold') {
+            <button class="btn-danger-outline" (click)="cancelSale()">Annulla Vendita</button>
+            <div class="spacer"></div>
+            <button class="btn-secondary" (click)="closeModals()">Chiudi</button>
+          } @else {
+            <button class="btn-danger-outline" (click)="deleteStatus()">Elimina</button>
+            <div class="spacer"></div>
+            <button class="btn-secondary" (click)="closeModals()">Annulla</button>
+            <button class="btn-primary" (click)="confirmTermination()">Conferma</button>
+          }
         </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal Registra Vendita Auto -->
+  @if (isSaleModalOpen) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <h3>Registra Vendita Auto</h3>
+        <form (ngSubmit)="saveSale()" class="rental-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Veicolo</label>
+              <select [(ngModel)]="newSale.vehicleId" name="vehicleId" required>
+                <option value="" disabled selected>Seleziona un veicolo...</option>
+                @for (v of availableVehicles; track v.id) {
+                  @if (v.status !== 'Venduto') {
+                    <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }})</option>
+                  }
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Data Vendita</label>
+              <input type="date" [(ngModel)]="newSale.soldDate" name="soldDate" required>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-utility" (click)="closeModals()">Annulla</button>
+            <button type="submit" class="btn-danger">Registra Vendita</button>
+          </div>
+        </form>
       </div>
     </div>
   }

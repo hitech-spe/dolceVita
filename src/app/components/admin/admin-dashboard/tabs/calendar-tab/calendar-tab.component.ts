@@ -39,6 +39,7 @@ export class CalendarTabComponent implements OnInit {
   isMaintenanceModalOpen = false;
   isTransferModalOpen = false;
   isConfirmationModalOpen = false;
+  isSaleModalOpen = false;
   selectedStatusForAction: any = null;
   selectedDayForAction: Date | null = null;
   manualEndDate: string = '';
@@ -46,9 +47,10 @@ export class CalendarTabComponent implements OnInit {
   editingRentalId?: string;
 
   // Form data
-  newRental: any = { location: 'Mottola', returnLocation: 'Mottola', status: 'Prenotato' };
+  newRental: any = { location: 'Mottola', returnLocation: 'Mottola', status: 'Prenotato', isServiceRental: false };
   newMaintenance: any = { vehicleId: '', startDate: '', endDate: '', notes: '' };
   newTransfer: any = { vehicleId: '', startDate: '', endDate: '', location: 'Mottola', notes: '' };
+  newSale: any = { vehicleId: '', soldDate: '' };
 
   availableVehicles: Vehicle[] = [];
   availableCustomers: Customer[] = [];
@@ -186,10 +188,18 @@ export class CalendarTabComponent implements OnInit {
     }
   }
 
-  getDayStatus(item: any, day: Date): { type: 'rental' | 'transfer' | 'maintenance' | null, data?: any } {
+  getDayStatus(item: any, day: Date): { type: 'rental' | 'transfer' | 'maintenance' | 'sold' | null, data?: any } {
     const d = new Date(day);
     d.setHours(0,0,0,0);
     const time = d.getTime();
+
+    if (item.vehicle.status === 'Venduto' && item.vehicle.soldDate) {
+      const soldDate = item.vehicle.soldDate.toDate();
+      soldDate.setHours(0,0,0,0);
+      if (time >= soldDate.getTime()) {
+        return { type: 'sold', data: item.vehicle };
+      }
+    }
 
     const trans = item.transfers.find((t: any) => {
       const s = t.startDate.toDate(); s.setHours(0,0,0,0);
@@ -251,6 +261,64 @@ export class CalendarTabComponent implements OnInit {
     }
   }
 
+  getRentalBarClass(rental: any, day: Date): string {
+    const d = new Date(day);
+    d.setHours(0,0,0,0);
+    const time = d.getTime();
+
+    const start = rental.startDate.toDate(); start.setHours(0,0,0,0);
+    const end = rental.endDate.toDate(); end.setHours(0,0,0,0);
+
+    const isStart = time === start.getTime();
+    const isEnd = time === end.getTime();
+
+    if (isStart && isEnd) {
+      return 'rental-same-day';
+    }
+    if (isStart) {
+      return 'rental-start-day';
+    }
+    if (isEnd) {
+      return 'rental-end-day';
+    }
+    if (rental.isServiceRental) {
+      return 'service-rental-purple';
+    }
+    return this.getLocationClass(rental.location);
+  }
+
+  getRentalDayLabel(rental: any, day: Date): string {
+    const d = new Date(day);
+    d.setHours(0,0,0,0);
+    const time = d.getTime();
+
+    const start = rental.startDate.toDate(); start.setHours(0,0,0,0);
+    const end = rental.endDate.toDate(); end.setHours(0,0,0,0);
+
+    const isStart = time === start.getTime();
+    const isEnd = time === end.getTime();
+
+    const formatPeriod = (period: string) => {
+      if (period === 'Tarda mat') return 'T.mat';
+      return period;
+    };
+
+    const startP = formatPeriod(rental.startPeriod || 'Mat');
+    const endP = formatPeriod(rental.endPeriod || 'Mat');
+
+    if (isStart && isEnd) {
+      if (startP === endP) return startP;
+      return `${startP}-${endP}`;
+    }
+    if (isStart) {
+      return startP;
+    }
+    if (isEnd) {
+      return endP;
+    }
+    return '';
+  }
+
   // --- AZIONI MODALI ---
 
   openRentalModal(rental?: Rental) {
@@ -259,11 +327,25 @@ export class CalendarTabComponent implements OnInit {
       this.editingRentalId = rental.id;
       const startDate = rental.startDate && (rental.startDate as any).toDate ? (rental.startDate as any).toDate().toISOString().split('T')[0] : '';
       const endDate = rental.endDate && (rental.endDate as any).toDate ? (rental.endDate as any).toDate().toISOString().split('T')[0] : '';
-      this.newRental = { ...rental, startDate, endDate };
+      this.newRental = { 
+        ...rental, 
+        startDate, 
+        endDate, 
+        isServiceRental: !!rental.isServiceRental,
+        startPeriod: rental.startPeriod || 'Mat',
+        endPeriod: rental.endPeriod || 'Mat'
+      };
     } else {
       this.isEditMode = false;
       this.editingRentalId = undefined;
-      this.newRental = { location: 'Mottola', returnLocation: 'Mottola', status: 'Prenotato' };
+      this.newRental = { 
+        location: 'Mottola', 
+        returnLocation: 'Mottola', 
+        status: 'Prenotato', 
+        isServiceRental: false,
+        startPeriod: 'Mat',
+        endPeriod: 'Mat'
+      };
     }
     this.isRentalModalOpen = true;
   }
@@ -278,11 +360,17 @@ export class CalendarTabComponent implements OnInit {
     this.isTransferModalOpen = true;
   }
 
+  openSaleModal() {
+    this.newSale = { vehicleId: '', soldDate: new Date().toISOString().split('T')[0] };
+    this.isSaleModalOpen = true;
+  }
+
   closeModals() {
     this.isRentalModalOpen = false;
     this.isMaintenanceModalOpen = false;
     this.isTransferModalOpen = false;
     this.isConfirmationModalOpen = false;
+    this.isSaleModalOpen = false;
     this.selectedRental = null;
     this.selectedStatusForAction = null;
     this.selectedDayForAction = null;
@@ -298,6 +386,9 @@ export class CalendarTabComponent implements OnInit {
 
       const rentalToSave: Rental = {
         ...this.newRental,
+        isServiceRental: !!this.newRental.isServiceRental,
+        startPeriod: this.newRental.startPeriod || 'Mat',
+        endPeriod: this.newRental.endPeriod || 'Mat',
         customerName: selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : (this.newRental.customerName || 'Cliente non trovato'),
         vehiclePlate: selectedCar ? `${selectedCar.brand} ${selectedCar.model} (${selectedCar.plate})` : (this.newRental.vehiclePlate || 'Veicolo non trovato'),
         startDate: Timestamp.fromDate(new Date(this.newRental.startDate)),
@@ -314,6 +405,39 @@ export class CalendarTabComponent implements OnInit {
       this.closeModals();
     } catch (error) {
       console.error('Errore noleggio:', error);
+    }
+  }
+
+  async saveSale() {
+    if (!this.newSale.vehicleId || !this.newSale.soldDate) return;
+    try {
+      const soldDateTimestamp = Timestamp.fromDate(new Date(this.newSale.soldDate));
+      await this.rentalService.updateVehicle(this.newSale.vehicleId, {
+        status: 'Venduto',
+        soldDate: soldDateTimestamp
+      });
+      this.closeModals();
+    } catch (error) {
+      console.error('Errore registrazione vendita:', error);
+      alert('Si è verificato un errore durante la registrazione della vendita.');
+    }
+  }
+
+  async cancelSale() {
+    if (!this.selectedStatusForAction || this.selectedStatusForAction.type !== 'sold') return;
+    const vehicle = this.selectedStatusForAction.data;
+    
+    if (confirm(`Sei sicuro di voler annullare la vendita del veicolo ${vehicle.brand} ${vehicle.model} (${vehicle.plate})?`)) {
+      try {
+        await this.rentalService.updateVehicle(vehicle.id, {
+          status: 'Attivo',
+          soldDate: null as any
+        });
+        this.closeModals();
+      } catch (error) {
+        console.error('Errore annullamento vendita:', error);
+        alert('Si è verificato un errore durante l\'annullamento della vendita.');
+      }
     }
   }
 
@@ -349,10 +473,15 @@ export class CalendarTabComponent implements OnInit {
   }
 
   getFormattedTooltip(type: string, data: any): string {
+    if (type === 'sold') {
+      const dateStr = data.soldDate ? (data.soldDate as any).toDate().toLocaleDateString('it-IT') : '-';
+      return `Veicolo Venduto il ${dateStr}\n\nClicca su un giorno per annullare la vendita`;
+    }
     if (type === 'rental') {
       const start = data.startDate.toDate().toLocaleDateString('it-IT');
       const end = data.endDate.toDate().toLocaleDateString('it-IT');
-      return `Noleggio: ${data.customerName}\nDal ${start} al ${end}\nSede: ${data.location} -> ${data.returnLocation || data.location}\n\nClicca su un giorno per terminare o allungare il noleggio`;
+      const typeLabel = data.isServiceRental ? 'Noleggio per Servizi' : 'Noleggio Standard';
+      return `${typeLabel}: ${data.customerName}\nDal ${start} al ${end}\nSede: ${data.location} -> ${data.returnLocation || data.location}\n\nClicca su un giorno per terminare o allungare il noleggio`;
     }
     if (type === 'maintenance') {
       return `In Manutenzione\nNote: ${data.notes || '-'}\n\nClicca su un giorno per terminare o allungare la manutenzione`;

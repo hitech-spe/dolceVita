@@ -17,7 +17,14 @@ export class FleetTabComponent implements OnInit {
   private rentalService = inject(RentalService);
 
   searchTerm = '';
-  sortOrder: 'newest' | 'oldest' | 'brand' = 'newest';
+  sortOrder: 'newest' | 'oldest' | 'brand' | 'category' = 'newest';
+
+  readonly CATEGORY_ORDER = [
+    'A', 'B', 'C', 'D', 'E', 'F', '7 posti', 'Van 9 posti', 
+    'L1H1', 'L2H1', 'L2H2', 'L3H3', 'L4H3', 'Cassa quadrata',
+    'Cassone aperto 3 posti', 'Cassone aperto 7 posti', 
+    'Sponda idraulica', 'Refrigerato', 'Ribaltabile'
+  ];
 
   vehicles$!: Observable<Vehicle[]>;
 
@@ -174,6 +181,13 @@ export class FleetTabComponent implements OnInit {
         const dateA = (a.createdAt as any)?.seconds || 0;
         const dateB = (b.createdAt as any)?.seconds || 0;
         return dateA - dateB;
+      } else if (this.sortOrder === 'category') {
+        const indexA = this.CATEGORY_ORDER.indexOf(a.category);
+        const indexB = this.CATEGORY_ORDER.indexOf(b.category);
+        if (indexA === -1 && indexB === -1) return a.category.localeCompare(b.category);
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
       } else {
         return a.brand.localeCompare(b.brand);
       }

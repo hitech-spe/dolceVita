@@ -25,6 +25,7 @@ export interface Vehicle {
   location: 'Mottola' | 'Massafra' | 'Grottaglie';
   category: string; // es. 'Segmento A', 'Furgoni', ecc.
   status: 'Attivo' | 'Manutenzione' | 'Venduto';
+  soldDate?: Timestamp;
   createdAt?: Timestamp;
 }
 
@@ -41,6 +42,9 @@ export interface Rental {
   returnLocation?: 'Mottola' | 'Massafra' | 'Grottaglie'; // Sede di rientro
   status: 'Prenotato' | 'In Corso' | 'Concluso' | 'Cancellato';
   totalPrice?: number;
+  isServiceRental?: boolean;
+  startPeriod?: 'Mat' | 'Tarda mat' | 'Pom' | 'Sera';
+  endPeriod?: 'Mat' | 'Tarda mat' | 'Pom' | 'Sera';
   notes?: string;
   createdAt?: Timestamp;
 }
