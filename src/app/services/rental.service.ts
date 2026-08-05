@@ -25,6 +25,7 @@ export interface Vehicle {
   location: 'Mottola' | 'Massafra' | 'Grottaglie';
   category: string; // es. 'Segmento A', 'Furgoni', ecc.
   status: 'Attivo' | 'Manutenzione' | 'Venduto';
+  dailyPrice?: number;
   soldDate?: Timestamp;
   createdAt?: Timestamp;
 }
@@ -103,9 +104,9 @@ export interface Customer {
   id?: string;
   firstName: string;
   lastName: string;
-  birthDate: Timestamp;
-  licenseNumber: string;
-  licenseExpiry: Timestamp;
+  birthDate?: Timestamp;
+  licenseNumber?: string;
+  licenseExpiry?: Timestamp;
   phone?: string;
   email?: string;
   attachments?: { name: string, data: string }[]; // Base64 attachments

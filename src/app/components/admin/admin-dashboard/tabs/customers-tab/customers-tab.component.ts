@@ -58,8 +58,8 @@ export class CustomersTabComponent implements OnInit {
     try {
       const data: Customer = {
         ...this.newCustomer,
-        birthDate: Timestamp.fromDate(new Date(this.newCustomer.birthDate)),
-        licenseExpiry: Timestamp.fromDate(new Date(this.newCustomer.licenseExpiry)),
+        birthDate: this.newCustomer.birthDate ? Timestamp.fromDate(new Date(this.newCustomer.birthDate)) : null,
+        licenseExpiry: this.newCustomer.licenseExpiry ? Timestamp.fromDate(new Date(this.newCustomer.licenseExpiry)) : null,
         attachments: this.pendingAttachments
       };
 

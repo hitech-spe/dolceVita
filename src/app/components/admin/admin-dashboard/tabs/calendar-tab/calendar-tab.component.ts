@@ -52,6 +52,9 @@ export class CalendarTabComponent implements OnInit {
   newTransfer: any = { vehicleId: '', startDate: '', endDate: '', location: 'Mottola', notes: '' };
   newSale: any = { vehicleId: '', soldDate: '' };
 
+  isQuickCustomer = false;
+  quickCustomer: any = { firstName: '', lastName: '', phone: '', email: '' };
+
   availableVehicles: Vehicle[] = [];
   availableCustomers: Customer[] = [];
 
@@ -95,10 +98,15 @@ export class CalendarTabComponent implements OnInit {
             // Filtraggio
             let filteredVehicles = vehicles.filter(v => {
               const s = search.toLowerCase();
-              return v.brand.toLowerCase().includes(s) || 
-                     v.model.toLowerCase().includes(s) || 
-                     v.plate.toLowerCase().includes(s) ||
-                     v.category.toLowerCase().includes(s);
+              const brand = v.brand?.toLowerCase() || '';
+              const model = v.model?.toLowerCase() || '';
+              const plate = v.plate?.toLowerCase() || '';
+              const category = v.category?.toLowerCase() || '';
+
+              return brand.includes(s) || 
+                     model.includes(s) || 
+                     plate.includes(s) ||
+                     category.includes(s);
             });
 
             // Ordinamento
@@ -322,6 +330,8 @@ export class CalendarTabComponent implements OnInit {
   // --- AZIONI MODALI ---
 
   openRentalModal(rental?: Rental) {
+    this.isQuickCustomer = false;
+    this.quickCustomer = { firstName: '', lastName: '', phone: '', email: '' };
     if (rental) {
       this.isEditMode = true;
       this.editingRentalId = rental.id;
@@ -374,22 +384,48 @@ export class CalendarTabComponent implements OnInit {
     this.selectedRental = null;
     this.selectedStatusForAction = null;
     this.selectedDayForAction = null;
+    this.isQuickCustomer = false;
+    this.quickCustomer = { firstName: '', lastName: '', phone: '', email: '' };
   }
 
   // --- SALVATAGGIO DATI ---
 
   async saveRental() {
-    if (!this.newRental.vehicleId || !this.newRental.customerId || !this.newRental.startDate) return;
+    if (!this.newRental.vehicleId || !this.newRental.startDate) return;
+    if (!this.isQuickCustomer && !this.newRental.customerId) return;
+    if (this.isQuickCustomer && (!this.quickCustomer.firstName || !this.quickCustomer.lastName)) {
+      alert('Inserisci Nome e Cognome per il nuovo cliente.');
+      return;
+    }
+
     try {
+      let customerId = this.newRental.customerId;
+      let customerName = '';
+
+      if (this.isQuickCustomer) {
+        // Creazione rapida del cliente
+        const customerRef = await this.rentalService.addCustomer({
+          firstName: this.quickCustomer.firstName,
+          lastName: this.quickCustomer.lastName,
+          phone: this.quickCustomer.phone || '',
+          email: this.quickCustomer.email || ''
+        });
+        customerId = customerRef.id;
+        customerName = `${this.quickCustomer.firstName} ${this.quickCustomer.lastName}`;
+      } else {
+        const selectedCustomer = this.availableCustomers.find(c => c.id === customerId);
+        customerName = selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : (this.newRental.customerName || 'Cliente non trovato');
+      }
+
       const selectedCar = this.availableVehicles.find(v => v.id === this.newRental.vehicleId);
-      const selectedCustomer = this.availableCustomers.find(c => c.id === this.newRental.customerId);
 
       const rentalToSave: Rental = {
         ...this.newRental,
+        customerId: customerId,
         isServiceRental: !!this.newRental.isServiceRental,
         startPeriod: this.newRental.startPeriod || 'Mat',
         endPeriod: this.newRental.endPeriod || 'Mat',
-        customerName: selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : (this.newRental.customerName || 'Cliente non trovato'),
+        customerName: customerName,
         vehiclePlate: selectedCar ? `${selectedCar.brand} ${selectedCar.model} (${selectedCar.plate})` : (this.newRental.vehiclePlate || 'Veicolo non trovato'),
         startDate: Timestamp.fromDate(new Date(this.newRental.startDate)),
         endDate: this.newRental.endDate ? Timestamp.fromDate(new Date(this.newRental.endDate)) : Timestamp.now()
@@ -405,6 +441,7 @@ export class CalendarTabComponent implements OnInit {
       this.closeModals();
     } catch (error) {
       console.error('Errore noleggio:', error);
+      alert('Si è verificato un errore durante il salvataggio del noleggio.');
     }
   }
 

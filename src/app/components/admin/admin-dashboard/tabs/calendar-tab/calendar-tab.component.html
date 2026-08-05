@@ -135,14 +135,39 @@
                 }
               </select>
             </div>
-            <div class="form-group">
-              <label>Cliente</label>
-              <select [(ngModel)]="newRental.customerId" name="customerId" required>
-                @for (c of availableCustomers; track c.id) {
-                  <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
-                }
-              </select>
+            <div class="form-group full-width" style="display: flex; flex-direction: row; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+              <input type="checkbox" id="isQuickCustomer" [(ngModel)]="isQuickCustomer" name="isQuickCustomer" style="width: auto; cursor: pointer; margin-bottom: 0;">
+              <label for="isQuickCustomer" style="cursor: pointer; margin-bottom: 0; font-weight: 600;">Nuovo Cliente (Registrazione Rapida)</label>
             </div>
+
+            @if (isQuickCustomer) {
+              <div class="form-group">
+                <label>Nome Cliente</label>
+                <input type="text" [(ngModel)]="quickCustomer.firstName" name="quickFirstName" placeholder="Es. Mario" required>
+              </div>
+              <div class="form-group">
+                <label>Cognome Cliente</label>
+                <input type="text" [(ngModel)]="quickCustomer.lastName" name="quickLastName" placeholder="Es. Rossi" required>
+              </div>
+              <div class="form-group">
+                <label>Telefono</label>
+                <input type="text" [(ngModel)]="quickCustomer.phone" name="quickPhone" placeholder="Es. 3331234567">
+              </div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" [(ngModel)]="quickCustomer.email" name="quickEmail" placeholder="Es. mario.rossi@example.com">
+              </div>
+            } @else {
+              <div class="form-group">
+                <label>Cliente</label>
+                <select [(ngModel)]="newRental.customerId" name="customerId" required>
+                  <option value="" disabled selected>Seleziona un cliente...</option>
+                  @for (c of availableCustomers; track c.id) {
+                    <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
+                  }
+                </select>
+              </div>
+            }
             <div class="form-group">
               <label>Sede Ritiro</label>
               <select [(ngModel)]="newRental.location" name="location">
