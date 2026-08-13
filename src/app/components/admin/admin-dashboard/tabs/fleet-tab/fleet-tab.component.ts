@@ -325,9 +325,39 @@ export class FleetTabComponent implements OnInit {
 
       await this.rentalService.addMaintenance(data);
       this.sheetInlineMaintenance = { description: '', date: '', cost: null, km: null };
+      
+      this.sheetMaintenances = this.allMaintenances.filter(m => m.vehicleId === v.id);
     } catch (error) {
       console.error('Errore durante l\'aggiunta della lavorazione:', error);
       alert('Si è verificato un errore.');
+    }
+  }
+
+  editingJobId: string | null = null;
+  tempEditingJob: any = {};
+
+  startEditJob(job: Maintenance) {
+    this.editingJobId = job.id || null;
+    this.tempEditingJob = { ...job };
+  }
+
+  cancelEditJob() {
+    this.editingJobId = null;
+    this.tempEditingJob = {};
+  }
+
+  async saveEditedJob() {
+    if (!this.editingJobId || !this.tempEditingJob.description) return;
+    try {
+      await this.rentalService.updateMaintenance(this.editingJobId, {
+        description: this.tempEditingJob.description,
+        km: this.tempEditingJob.km || null,
+        cost: this.tempEditingJob.cost || 0
+      });
+      this.cancelEditJob();
+    } catch (error) {
+      console.error('Errore durante la modifica:', error);
+      alert('Si è verificato un errore durante la modifica.');
     }
   }
 }

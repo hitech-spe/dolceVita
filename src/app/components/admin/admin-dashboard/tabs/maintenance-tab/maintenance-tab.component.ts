@@ -35,8 +35,19 @@ export class MaintenanceTabComponent implements OnInit {
 
   ngOnInit() {
     this.maintenances$ = this.rentalService.getMaintenances();
-    this.maintenances$.subscribe(m => this.allMaintenances = m);
+    this.maintenances$.subscribe(m => {
+      this.allMaintenances = m;
+      if (this.selectedVehicleForSheet) {
+        this.sheetMaintenances = m.filter(x => x.vehicleId === this.selectedVehicleForSheet.id);
+      }
+    });
     this.rentalService.getVehicles().subscribe(v => this.availableVehicles = v);
+  }
+
+  getVehicleDisplayName(vehicleId: string): string {
+    const v = this.availableVehicles.find(x => x.id === vehicleId);
+    if (v) return `${v.brand} ${v.model} (${v.plate})`;
+    return '?';
   }
 
   openModal(maintenance?: Maintenance) {
@@ -191,9 +202,39 @@ export class MaintenanceTabComponent implements OnInit {
 
       await this.rentalService.addMaintenance(data);
       this.sheetInlineMaintenance = { description: '', date: '', cost: null, km: null };
+      
+      this.sheetMaintenances = this.allMaintenances.filter(m => m.vehicleId === v.id);
     } catch (error) {
       console.error('Errore durante l\'aggiunta della lavorazione:', error);
       alert('Si è verificato un errore.');
+    }
+  }
+
+  editingJobId: string | null = null;
+  tempEditingJob: any = {};
+
+  startEditJob(job: Maintenance) {
+    this.editingJobId = job.id || null;
+    this.tempEditingJob = { ...job };
+  }
+
+  cancelEditJob() {
+    this.editingJobId = null;
+    this.tempEditingJob = {};
+  }
+
+  async saveEditedJob() {
+    if (!this.editingJobId || !this.tempEditingJob.description) return;
+    try {
+      await this.rentalService.updateMaintenance(this.editingJobId, {
+        description: this.tempEditingJob.description,
+        km: this.tempEditingJob.km || null,
+        cost: this.tempEditingJob.cost || 0
+      });
+      this.cancelEditJob();
+    } catch (error) {
+      console.error('Errore durante la modifica:', error);
+      alert('Si è verificato un errore durante la modifica.');
     }
   }
 }
