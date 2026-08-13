@@ -1,7 +1,15 @@
 <div class="calendar-container glass-card">
   <div class="calendar-header">
     <div class="title-actions">
-      <h2>Timeline Occupazione Veicoli</h2>
+      <h2 style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0;">
+        Timeline Occupazione Veicoli
+        @if (selectedVehicleId) {
+          <span style="font-size: 0.78rem; background: #fff5e6; color: #b8962d; border: 1px solid #f4e8cb; padding: 4px 10px; border-radius: 4px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px;">
+            <i class="fa-solid fa-circle-check" style="color: #28a745;"></i> 
+            Cella Selezionata (Usa Freccette)
+          </span>
+        }
+      </h2>
       <div class="action-buttons">
         <button class="btn-primary" (click)="openRentalModal()">
           <i class="fa-solid fa-plus"></i> Nuovo Noleggio
@@ -23,6 +31,11 @@
         <div class="search-box">
           <i class="fa-solid fa-magnifying-glass"></i>
           <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange()" placeholder="Cerca veicolo (marca, modello, targa, categoria)...">
+          @if (searchTerm) {
+            <button class="clear-search" (click)="clearSearch()" title="Cancella ricerca">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          }
         </div>
         <div class="sort-box">
           <label>Ordina per:</label>
@@ -35,6 +48,9 @@
       </div>
 
       <div class="navigation-controls">
+        <button class="btn-nav" (click)="prevMonth()" title="Mese Precedente">
+          <i class="fa-solid fa-angles-left"></i>
+        </button>
         <button class="btn-nav" (click)="prevPeriod()" title="Settimana Precedente">
           <i class="fa-solid fa-chevron-left"></i>
         </button>
@@ -42,9 +58,39 @@
         <button class="btn-nav" (click)="nextPeriod()" title="Settimana Successiva">
           <i class="fa-solid fa-chevron-right"></i>
         </button>
+        <button class="btn-nav" (click)="nextMonth()" title="Mese Successivo">
+          <i class="fa-solid fa-angles-right"></i>
+        </button>
+
+        <div class="quick-jump-controls">
+          <select [ngModel]="getSelectedMonthValue()" (change)="onMonthSelect($event)" class="month-select" title="Vai al mese">
+            @for (opt of monthOptions; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+          <input type="date" [ngModel]="getFormattedStartDate()" (ngModelChange)="onDateJump($event)" class="date-jump-input" title="Seleziona data di inizio precisa">
+        </div>
+
         <span class="current-period">
-          {{ days[0] | date:'dd MMM' }} - {{ days[days.length-1] | date:'dd MMM yyyy' }}
+          @if (days.length > 0) {
+            {{ days[0].date | date:'dd MMM' }} - {{ days[days.length-1].date | date:'dd MMM yyyy' }}
+          }
         </span>
+      </div>
+    </div>
+
+    <div class="keyboard-helper">
+      <span class="helper-title"><i class="fa-solid fa-keyboard"></i> Scorciatoie Excel (Tastiera):</span>
+      <div class="helper-keys-list">
+        <span class="helper-item"><span class="helper-key">Clic Cella</span> Seleziona</span>
+        <span class="helper-item"><span class="helper-key">◀</span>/<span class="helper-key">▶</span> (o <span class="helper-key">A</span>/<span class="helper-key">D</span>) Giorno Prec/Succ</span>
+        <span class="helper-item"><span class="helper-key">▲</span>/<span class="helper-key">▼</span> (o <span class="helper-key">W</span>/<span class="helper-key">S</span>) Veicolo Sopra/Sotto</span>
+        <span class="helper-item"><span class="helper-key">INVIO</span> Gestisci / Crea</span>
+        <span class="helper-item"><span class="helper-key">N</span> Nuovo Nol.</span>
+        <span class="helper-item"><span class="helper-key">M</span> Manut.</span>
+        <span class="helper-item"><span class="helper-key">P</span> Sede</span>
+        <span class="helper-item"><span class="helper-key">F</span> Cerca</span>
+        <span class="helper-item"><span class="helper-key">ESC</span> Deseleziona / Chiudi</span>
       </div>
     </div>
 
@@ -61,41 +107,74 @@
     </div>
   </div>
 
+  @if (selectedVehicleId && selectedDay) {
+    @let activeRow = getSelectedVehicleData();
+    @if (activeRow) {
+      <div class="excel-focus-bar">
+        <div class="focus-cell-address">
+          <i class="fa-solid fa-crosshairs"></i>
+          <span>Cella</span>
+        </div>
+        <div class="focus-vehicle-info">
+          <i class="fa-solid fa-car"></i>
+          <strong>{{ activeRow.vehicle.brand }} {{ activeRow.vehicle.model }}</strong>
+          <span class="plate-badge">{{ activeRow.vehicle.plate }}</span>
+          <span class="cat-badge">{{ activeRow.vehicle.category }}</span>
+        </div>
+        <div class="focus-date-info">
+          <i class="fa-solid fa-calendar-day"></i>
+          <span>{{ selectedDay | date:'EEEE dd MMMM yyyy' }}</span>
+        </div>
+        <div class="focus-actions-hint">
+          <span class="hint-badge">INVIO</span> Gestisci | 
+          <span class="hint-badge">◀ ▲ ▼ ▶</span> Sposta
+        </div>
+      </div>
+    }
+  }
+
   <div class="calendar-scroll">
     <table class="calendar-table">
       <thead>
         <tr>
           <th class="sticky-col">Veicolo</th>
-          @for (day of days; track day) {
-            <th [class]="getTodayClass(day)">
-              <div class="day-num">{{ day | date:'dd' }}</div>
-              <div class="day-name">{{ day | date:'EEE' }}</div>
+          @for (day of days; track day.dateStr) {
+            <th [class.is-today]="day.isToday">
+              <div class="day-num">{{ day.date | date:'dd' }}</div>
+              <div class="day-name">{{ day.date | date:'EEE' }}</div>
             </th>
           }
         </tr>
       </thead>
       <tbody>
         @for (item of vehiclesData$ | async; track item.vehicle.id) {
-          <tr>
+          <tr [class.is-selected-row]="selectedVehicleId === item.vehicle.id">
             <td class="sticky-col vehicle-info">
               <div class="vehicle-details">
-                <strong [ngClass]="getCurrentVehicleLocationClass(item)">{{ item.vehicle.brand }} {{ item.vehicle.model }}</strong>
-                <span class="plate">{{ item.vehicle.plate }}</span>
-                <span class="category-badge">{{ item.vehicle.category }}</span>
+                <strong [ngClass]="getCurrentVehicleLocationClass(item)" [title]="item.vehicle.brand + ' ' + item.vehicle.model">{{ item.vehicle.brand }} {{ item.vehicle.model }}</strong>
+                <div class="plate-cat-row">
+                  <span class="plate">{{ item.vehicle.plate }}</span>
+                  <span class="category-badge" [title]="item.vehicle.category">{{ item.vehicle.category }}</span>
+                </div>
               </div>
             </td>
-            @for (day of days; track day) {
-              @let status = getDayStatus(item, day);
-              <td [class]="getTodayClass(day)" 
-                  [ngClass]="status.type === 'maintenance' ? 'maintenance-gray-bg' : (status.type === 'transfer' ? (getVehicleLocationClass(item, day) + '-bg') : (status.type === 'sold' ? 'sold-red-bg' : ''))"
-                  (click)="onCellClick(item, day, status)"
+            @for (day of days; track day.dateStr) {
+              @let status = getDayStatus(item, day.date);
+              <td [class.is-today]="day.isToday"
+                  [class.is-selected-cell]="isCellSelected(item, day)"
+                  [class.maintenance-gray-bg]="status.type === 'maintenance'"
+                  [class.sold-red-bg]="status.type === 'sold'"
+                  [class.loc-mottola-bg]="status.type === 'transfer' && getVehicleLocationAtDate(item, day.date) === 'Mottola'"
+                  [class.loc-massafra-bg]="status.type === 'transfer' && getVehicleLocationAtDate(item, day.date) === 'Massafra'"
+                  [class.loc-grottaglie-bg]="status.type === 'transfer' && getVehicleLocationAtDate(item, day.date) === 'Grottaglie'"
+                  (click)="onCellClick(item, day.date, status)"
                   style="cursor: pointer;">
                 @if (status.type === 'rental') {
                   <div class="calendar-bar rental-bar" 
-                       [ngClass]="getRentalBarClass(status.data, day)" 
+                       [ngClass]="getRentalBarClass(status.data, day.date)" 
                        [title]="getFormattedTooltip('rental', status.data)"
-                       (click)="$event.stopPropagation(); openRentalModal(status.data)">
-                    <span class="rental-day-label">{{ getRentalDayLabel(status.data, day) }}</span>
+                       (click)="$event.stopPropagation(); selectCell(item, day.date); openRentalModal(status.data)">
+                    <span class="rental-day-label">{{ getRentalDayLabel(status.data, day.date) }}</span>
                   </div>
                 } @else if (status.type === 'maintenance') {
                   <div class="calendar-bar maintenance-bar" 
@@ -111,6 +190,8 @@
                   <div class="calendar-bar sold-bar"
                        [title]="getFormattedTooltip('sold', status.data)">
                   </div>
+                } @else {
+                  <div class="empty-cell-filler">&nbsp;</div>
                 }
               </td>
             }
@@ -356,6 +437,62 @@
                 <input type="date" [(ngModel)]="manualEndDate" name="manualEndDate" class="inline-date-input">
               </div>
               <p class="warning-text">L'operazione imposterà la data indicata come nuovo termine del periodo (puoi sia terminare che allungare).</p>
+
+              @if (selectedStatusForAction.type === 'maintenance') {
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee;">
+                  <h4 style="font-size: 0.95rem; color: #444; margin: 0 0 10px 0; display: flex; align-items: center; gap: 6px; font-weight: bold;">
+                    <i class="fa-solid fa-file-invoice"></i> Scheda Lavori Manutenzione
+                  </h4>
+                  
+                  @let jobs = getAssociatedJobs();
+                  @if (jobs.length === 0) {
+                    <div style="background: #fdfdfd; border: 1px dashed #ddd; border-radius: 6px; padding: 15px; text-align: center; color: #777; font-size: 0.85rem;">
+                      <p style="margin: 0;">Nessun lavoro registrato in questa scheda.</p>
+                    </div>
+                  } @else {
+                    <div style="max-height: 160px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; margin-bottom: 15px;">
+                      <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                        <thead>
+                          <tr style="background: #f8f9fa; border-bottom: 1px solid #eee;">
+                            <th style="padding: 6px 10px; text-align: left; font-weight: 600; color: #555;">Descrizione</th>
+                            <th style="padding: 6px 10px; text-align: left; font-weight: 600; color: #555;">KM</th>
+                            <th style="padding: 6px 10px; text-align: left; font-weight: 600; color: #555;">Costo</th>
+                            <th style="padding: 6px 10px; text-align: left;"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (job of jobs; track job.id) {
+                            <tr style="border-bottom: 1px solid #eee;">
+                              <td style="padding: 6px 10px; text-align: left; font-weight: 500;">{{ job.description }}</td>
+                              <td style="padding: 6px 10px; text-align: left;">{{ job.km || '-' }}</td>
+                              <td style="padding: 6px 10px; text-align: left; font-weight: bold; color: #333;">{{ job.cost | currency:'EUR' }}</td>
+                              <td style="padding: 6px 10px; text-align: right;">
+                                <button type="button" (click)="deleteAssociatedJob(job.id!)" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 0.85rem; padding: 0;" title="Elimina lavoro">
+                                  <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          }
+                          <tr style="background: #fafafa; font-weight: bold;">
+                            <td colspan="2" style="padding: 8px 10px; text-align: left;">Costo Totale Scheda:</td>
+                            <td colspan="2" style="padding: 8px 10px; text-align: left; color: #d4af37; font-size: 0.85rem;">{{ getAssociatedJobsTotalCost() | currency:'EUR' }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+
+                  <div style="background: #f9f9f9; padding: 10px; border-radius: 6px; border: 1px solid #eee;">
+                    <h5 style="margin: 0 0 8px 0; font-size: 0.82rem; color: #666; font-weight: bold;"><i class="fa-solid fa-plus"></i> Aggiungi Voce alla Scheda</h5>
+                    <div style="display: flex; gap: 6px;">
+                      <input type="text" [(ngModel)]="newInlineJob.description" placeholder="Descrizione lavoro" style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;" name="jobDesc">
+                      <input type="number" [(ngModel)]="newInlineJob.km" placeholder="KM" style="width: 70px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;" name="jobKm">
+                      <input type="number" [(ngModel)]="newInlineJob.cost" placeholder="Costo" style="width: 70px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;" name="jobCost">
+                      <button type="button" class="btn-primary" (click)="addAssociatedJob()" style="padding: 6px 12px; font-size: 0.8rem;">Aggiungi</button>
+                    </div>
+                  </div>
+                </div>
+              }
             }
           </div>
         </div>

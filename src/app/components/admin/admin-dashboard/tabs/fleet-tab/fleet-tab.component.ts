@@ -45,10 +45,35 @@ export class FleetTabComponent implements OnInit {
   inspectionExpiryDate = '';
   maintenanceDate = '';
 
+  // Storico Lavorazioni Veicolo
+  allMaintenances: Maintenance[] = [];
+  vehicleMaintenances: Maintenance[] = [];
+  inlineMaintenance: any = { description: '', date: '', cost: null, km: null };
+
+  // Scheda Lavori Stampabile
+  isJobSheetOpen = false;
+  selectedVehicleForSheet: any = null;
+  sheetMaintenances: Maintenance[] = [];
+  todayDate = new Date();
+  sheetInlineMaintenance: any = { description: '', date: '', cost: null, km: null };
+
   ngOnInit() {
     this.vehicles$ = this.selectedLocation$.pipe(
       switchMap(loc => this.rentalService.getVehicles(loc === 'Tutte' ? undefined : loc))
     );
+    this.rentalService.getMaintenances().subscribe(m => {
+      this.allMaintenances = m;
+      if (this.editingVehicleId) {
+        this.updateVehicleMaintenances();
+      }
+      if (this.selectedVehicleForSheet) {
+        this.sheetMaintenances = m.filter(x => x.vehicleId === this.selectedVehicleForSheet.id);
+      }
+    });
+  }
+
+  updateVehicleMaintenances() {
+    this.vehicleMaintenances = this.allMaintenances.filter(m => m.vehicleId === this.editingVehicleId);
   }
 
   async openModal(vehicle?: Vehicle) {
@@ -56,6 +81,7 @@ export class FleetTabComponent implements OnInit {
       this.isEditMode = true;
       this.editingVehicleId = vehicle.id;
       this.newVehicle = { ...vehicle };
+      this.updateVehicleMaintenances();
 
       // Carica dettagli correlati più recenti
       if (vehicle.id) {
@@ -93,12 +119,14 @@ export class FleetTabComponent implements OnInit {
       this.isEditMode = false;
       this.editingVehicleId = undefined;
       this.newVehicle = { location: 'Mottola', status: 'Attivo', category: 'A' };
+      this.vehicleMaintenances = [];
       this.newInsurance = {};
       this.newInspection = {};
       this.newMaintenance = {};
       this.insuranceExpiryDate = '';
       this.inspectionExpiryDate = '';
       this.maintenanceDate = '';
+      this.inlineMaintenance = { description: '', date: '', cost: null, km: null };
     }
     this.isModalOpen = true;
   }
@@ -192,5 +220,114 @@ export class FleetTabComponent implements OnInit {
         return a.brand.localeCompare(b.brand);
       }
     });
+  }
+
+  async addInlineMaintenance() {
+    if (!this.editingVehicleId || !this.inlineMaintenance.description || !this.inlineMaintenance.date) return;
+    try {
+      const v = this.newVehicle;
+      const data: Maintenance = {
+        vehicleId: this.editingVehicleId,
+        vehiclePlate: v ? `${v.brand} ${v.model} (${v.plate})` : '?',
+        description: this.inlineMaintenance.description,
+        date: Timestamp.fromDate(new Date(this.inlineMaintenance.date)),
+        cost: this.inlineMaintenance.cost || 0,
+        km: this.inlineMaintenance.km || null
+      };
+
+      await this.rentalService.addMaintenance(data);
+      this.inlineMaintenance = { description: '', date: '', cost: null, km: null };
+    } catch (error) {
+      console.error('Errore durante l\'aggiunta della lavorazione:', error);
+      alert('Si è verificato un errore.');
+    }
+  }
+
+  async deleteInlineMaintenance(id: string) {
+    if (confirm('Sei sicuro di voler eliminare questa lavorazione dallo storico?')) {
+      try {
+        await this.rentalService.deleteMaintenance(id);
+      } catch (error) {
+        console.error('Errore durante l\'eliminazione della manutenzione:', error);
+        alert('Si è verificato un errore.');
+      }
+    }
+  }
+
+  formatDate(timestamp: any): string {
+    if (!timestamp) return '-';
+    if (timestamp.toDate) return timestamp.toDate().toLocaleDateString('it-IT');
+    return new Date(timestamp).toLocaleDateString('it-IT');
+  }
+
+  openJobSheet(vehicle: Vehicle) {
+    this.selectedVehicleForSheet = vehicle;
+    this.sheetMaintenances = this.allMaintenances.filter(m => m.vehicleId === vehicle.id);
+    this.todayDate = new Date();
+    this.isJobSheetOpen = true;
+  }
+
+  closeJobSheet() {
+    this.isJobSheetOpen = false;
+    this.selectedVehicleForSheet = null;
+    this.sheetMaintenances = [];
+  }
+
+  getSheetTotalCost(): number {
+    return this.sheetMaintenances.reduce((sum, m) => sum + (m.cost || 0), 0);
+  }
+
+  getMaxKm(): string {
+    const kms = this.sheetMaintenances.map(m => m.km || 0).filter(k => k > 0);
+    if (kms.length === 0) return '-';
+    return Math.max(...kms).toLocaleString('it-IT');
+  }
+
+  printJobSheet() {
+    if (!this.selectedVehicleForSheet) return;
+    const printContent = document.getElementById('printable-job-sheet')?.innerHTML;
+    if (printContent) {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Foglio Lavori - ${this.selectedVehicleForSheet.brand} ${this.selectedVehicleForSheet.model} (${this.selectedVehicleForSheet.plate})</title>
+              <style>
+                body { font-family: system-ui, -apple-system, sans-serif; padding: 3rem; color: #333; }
+                table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+                th, td { border: 1px solid #eee; padding: 10px; font-size: 0.85rem; text-align: left; }
+                th { background: #f8f9fa; font-weight: bold; }
+              </style>
+            </head>
+            <body onload="window.print(); window.close();">
+              ${printContent}
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      }
+    }
+  }
+
+  async addJobFromSheet() {
+    if (!this.selectedVehicleForSheet || !this.sheetInlineMaintenance.description || !this.sheetInlineMaintenance.date) return;
+    try {
+      const v = this.selectedVehicleForSheet;
+      const data: Maintenance = {
+        vehicleId: v.id,
+        vehiclePlate: `${v.brand} ${v.model} (${v.plate})`,
+        description: this.sheetInlineMaintenance.description,
+        date: Timestamp.fromDate(new Date(this.sheetInlineMaintenance.date)),
+        cost: this.sheetInlineMaintenance.cost || 0,
+        km: this.sheetInlineMaintenance.km || null
+      };
+
+      await this.rentalService.addMaintenance(data);
+      this.sheetInlineMaintenance = { description: '', date: '', cost: null, km: null };
+    } catch (error) {
+      console.error('Errore durante l\'aggiunta della lavorazione:', error);
+      alert('Si è verificato un errore.');
+    }
   }
 }

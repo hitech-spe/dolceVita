@@ -98,6 +98,7 @@ export interface Maintenance {
   cost?: number;
   km?: number;
   createdAt?: Timestamp;
+  maintenancePeriodId?: string;
 }
 
 export interface Customer {

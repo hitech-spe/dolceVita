@@ -1,8 +1,8 @@
-import { Component, Input, OnInit, inject } from '@angular/core';
+import { Component, Input, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable, combineLatest, map, switchMap, BehaviorSubject } from 'rxjs';
-import { Rental, RentalService, Vehicle, Customer, TemporaryTransfer, MaintenancePeriod } from "../../../../../services/rental.service";
+import { Rental, RentalService, Vehicle, Customer, TemporaryTransfer, MaintenancePeriod, Maintenance } from "../../../../../services/rental.service";
 import { Timestamp } from '@angular/fire/firestore';
 
 @Component({
@@ -24,7 +24,7 @@ export class CalendarTabComponent implements OnInit {
     maintenances: MaintenancePeriod[],
     displayLocation: string
   }[]>;
-  days: Date[] = [];
+  days: { date: Date, dateStr: string, isToday: boolean }[] = [];
   
   // Filtri e Ricerca
   searchTerm: string = '';
@@ -32,6 +32,14 @@ export class CalendarTabComponent implements OnInit {
   
   // Navigazione Calendario
   startDate: Date = new Date();
+  monthOptions: { label: string, value: string }[] = [];
+  displayedVehicleIds: string[] = [];
+  currentVehiclesData: any[] = [];
+  selectedVehicleId: string | null = null;
+  selectedDay: Date | null = null;
+  selectedCellKey: string | null = null;
+  allMaintenances: Maintenance[] = [];
+  newInlineJob: any = { description: '', cost: null, km: null };
   
   // Modali e stati
   selectedRental: Rental | null = null;
@@ -70,6 +78,7 @@ export class CalendarTabComponent implements OnInit {
   private dateSubject = new BehaviorSubject<Date>(new Date());
 
   ngOnInit() {
+    this.generateMonthOptions();
     this.startDate = new Date();
     this.startDate.setDate(this.startDate.getDate() - 3);
     this.dateSubject.next(this.startDate);
@@ -80,6 +89,7 @@ export class CalendarTabComponent implements OnInit {
     
     this.rentalService.getVehicles().subscribe(v => this.availableVehicles = v);
     this.rentalService.getCustomers().subscribe(c => this.availableCustomers = c);
+    this.rentalService.getMaintenances().subscribe(m => this.allMaintenances = m);
 
     this.vehiclesData$ = combineLatest([
       this.selectedLocation$,
@@ -140,6 +150,11 @@ export class CalendarTabComponent implements OnInit {
             });
           })
         );
+      }),
+      map(data => {
+        this.displayedVehicleIds = data.map(item => item.vehicle.id).filter((id): id is string => !!id);
+        this.currentVehiclesData = data;
+        return data;
       })
     );
   }
@@ -152,6 +167,11 @@ export class CalendarTabComponent implements OnInit {
 
   onSortChange() {
     this.sortSubject.next(this.sortBy);
+  }
+
+  clearSearch() {
+    this.searchTerm = '';
+    this.onSearchChange();
   }
 
   prevPeriod() {
@@ -168,11 +188,298 @@ export class CalendarTabComponent implements OnInit {
     this.dateSubject.next(this.startDate);
   }
 
+  prevMonth() {
+    const newDate = new Date(this.startDate);
+    newDate.setMonth(newDate.getMonth() - 1);
+    this.startDate = newDate;
+    this.dateSubject.next(this.startDate);
+  }
+
+  nextMonth() {
+    const newDate = new Date(this.startDate);
+    newDate.setMonth(newDate.getMonth() + 1);
+    this.startDate = newDate;
+    this.dateSubject.next(this.startDate);
+  }
+
   goToToday() {
     const today = new Date();
     today.setDate(today.getDate() - 3);
     this.startDate = today;
     this.dateSubject.next(this.startDate);
+  }
+
+  generateMonthOptions() {
+    const options = [];
+    const base = new Date();
+    // Genera 6 mesi passati e 18 mesi futuri per la selezione rapida
+    const start = new Date(base.getFullYear(), base.getMonth() - 6, 1);
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+      const label = d.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+      options.push({
+        label: label.charAt(0).toUpperCase() + label.slice(1),
+        value: d.toISOString().split('T')[0]
+      });
+    }
+    this.monthOptions = options;
+  }
+
+  onMonthSelect(event: any) {
+    const val = event.target.value;
+    if (val) {
+      this.startDate = new Date(val);
+      this.dateSubject.next(this.startDate);
+    }
+  }
+
+  getSelectedMonthValue(): string {
+    if (!this.startDate) return '';
+    const y = this.startDate.getFullYear();
+    const m = String(this.startDate.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}-01`;
+  }
+
+  getFormattedStartDate(): string {
+    if (!this.startDate) return '';
+    const y = this.startDate.getFullYear();
+    const m = String(this.startDate.getMonth() + 1).padStart(2, '0');
+    const d = String(this.startDate.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  onDateJump(value: any) {
+    const dateStr = value?.target?.value || value;
+    if (dateStr) {
+      this.startDate = new Date(dateStr);
+      this.dateSubject.next(this.startDate);
+    }
+  }
+
+  isSameDay(d1: any, d2: any): boolean {
+    if (!d1 || !d2) return false;
+    try {
+      const date1 = d1 instanceof Date ? d1 : new Date(d1);
+      const date2 = d2 instanceof Date ? d2 : new Date(d2);
+      if (isNaN(date1.getTime()) || isNaN(date2.getTime())) return false;
+      return date1.getDate() === date2.getDate() &&
+             date1.getMonth() === date2.getMonth() &&
+             date1.getFullYear() === date2.getFullYear();
+    } catch {
+      return false;
+    }
+  }
+
+  scrollSelectedIntoView() {
+    setTimeout(() => {
+      const selectedRow = document.querySelector('.is-selected-row');
+      if (selectedRow) {
+        selectedRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 10);
+  }
+
+  triggerActionOnSelectedCell() {
+    if (!this.selectedVehicleId || !this.selectedDay) return;
+    const rowItem = this.currentVehiclesData.find(item => item.vehicle.id === this.selectedVehicleId);
+    if (rowItem) {
+      const status = this.getDayStatus(rowItem, this.selectedDay);
+      if (status && status.type) {
+        this.selectedStatusForAction = status;
+        this.selectedDayForAction = this.selectedDay;
+        this.manualEndDate = this.selectedDay.toISOString().split('T')[0];
+        this.isConfirmationModalOpen = true;
+      } else {
+        this.openRentalModal();
+      }
+    }
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  handleKeyDown(event: KeyboardEvent) {
+    // Evita di attivare scorciatoie se l'utente sta scrivendo in un input o form
+    const activeElem = document.activeElement;
+    if (activeElem) {
+      const tagName = activeElem.tagName.toLowerCase();
+      if (tagName === 'input' || tagName === 'select' || tagName === 'textarea' || activeElem.getAttribute('contenteditable') === 'true') {
+        if (event.key === 'Escape') {
+          this.closeModals();
+          if (tagName === 'input' && (activeElem as HTMLInputElement).placeholder?.includes('Cerca')) {
+            this.clearSearch();
+            (activeElem as HTMLInputElement).blur();
+          }
+        }
+        return;
+      }
+    }
+
+    const hasSelection = this.selectedVehicleId !== null && this.selectedDay !== null;
+
+    switch (event.key) {
+      case 'ArrowLeft':
+      case 'a':
+      case 'A':
+        event.preventDefault();
+        if (hasSelection) {
+          const currentIndex = this.days.findIndex(d => this.isSameDay(d.date, this.selectedDay));
+          if (currentIndex > 0) {
+            this.selectCell(this.getSelectedVehicleData(), this.days[currentIndex - 1].date);
+          } else {
+            this.prevPeriod();
+            setTimeout(() => {
+              this.selectCell(this.getSelectedVehicleData(), this.days[0].date);
+            }, 50);
+          }
+        } else {
+          this.prevPeriod();
+        }
+        break;
+
+      case 'ArrowRight':
+      case 'd':
+      case 'D':
+        event.preventDefault();
+        if (hasSelection) {
+          const currentIndex = this.days.findIndex(d => this.isSameDay(d.date, this.selectedDay));
+          if (currentIndex < this.days.length - 1) {
+            this.selectCell(this.getSelectedVehicleData(), this.days[currentIndex + 1].date);
+          } else {
+            this.nextPeriod();
+            setTimeout(() => {
+              this.selectCell(this.getSelectedVehicleData(), this.days[this.days.length - 1].date);
+            }, 50);
+          }
+        } else {
+          this.nextPeriod();
+        }
+        break;
+
+      case 'ArrowUp':
+        event.preventDefault();
+        if (hasSelection) {
+          const currentVehIndex = this.displayedVehicleIds.indexOf(this.selectedVehicleId!);
+          if (currentVehIndex > 0) {
+            this.selectedVehicleId = this.displayedVehicleIds[currentVehIndex - 1];
+            this.scrollSelectedIntoView();
+          }
+        }
+        break;
+
+      case 'ArrowDown':
+        event.preventDefault();
+        if (hasSelection) {
+          const currentVehIndex = this.displayedVehicleIds.indexOf(this.selectedVehicleId!);
+          if (currentVehIndex < this.displayedVehicleIds.length - 1) {
+            this.selectedVehicleId = this.displayedVehicleIds[currentVehIndex + 1];
+            this.scrollSelectedIntoView();
+          }
+        }
+        break;
+
+      case 'w':
+      case 'W':
+        event.preventDefault();
+        if (hasSelection) {
+          const currentVehIndex = this.displayedVehicleIds.indexOf(this.selectedVehicleId!);
+          if (currentVehIndex > 0) {
+            this.selectedVehicleId = this.displayedVehicleIds[currentVehIndex - 1];
+            this.scrollSelectedIntoView();
+          }
+        } else {
+          this.prevMonth();
+        }
+        break;
+
+      case 's':
+      case 'S':
+        event.preventDefault();
+        if (hasSelection) {
+          const currentVehIndex = this.displayedVehicleIds.indexOf(this.selectedVehicleId!);
+          if (currentVehIndex < this.displayedVehicleIds.length - 1) {
+            this.selectedVehicleId = this.displayedVehicleIds[currentVehIndex + 1];
+            this.scrollSelectedIntoView();
+          }
+        } else {
+          this.nextMonth();
+        }
+        break;
+
+      case 'PageUp':
+        event.preventDefault();
+        this.prevMonth();
+        break;
+
+      case 'PageDown':
+        event.preventDefault();
+        this.nextMonth();
+        break;
+
+      case 'h':
+      case 'H':
+      case 't':
+      case 'T':
+        event.preventDefault();
+        this.goToToday();
+        if (hasSelection) {
+          const today = new Date();
+          const foundToday = this.days.find(d => this.isSameDay(d.date, today));
+          if (foundToday) {
+            this.selectCell(this.getSelectedVehicleData(), foundToday.date);
+          }
+        }
+        break;
+
+      case 'f':
+      case 'F':
+        const searchInput = document.querySelector('.search-box input') as HTMLInputElement;
+        if (searchInput) {
+          event.preventDefault();
+          searchInput.focus();
+          searchInput.select();
+        }
+        break;
+
+      case 'Enter':
+        event.preventDefault();
+        if (hasSelection) {
+          this.triggerActionOnSelectedCell();
+        }
+        break;
+
+      case 'n':
+      case 'N':
+        if (hasSelection) {
+          event.preventDefault();
+          this.openRentalModal();
+        }
+        break;
+
+      case 'm':
+      case 'M':
+        if (hasSelection) {
+          event.preventDefault();
+          this.openMaintenanceModal();
+        }
+        break;
+
+      case 'p':
+      case 'P':
+        if (hasSelection) {
+          event.preventDefault();
+          this.openTransferModal();
+        }
+        break;
+
+      case 'Escape':
+        event.preventDefault();
+        if (hasSelection) {
+          this.selectedVehicleId = null;
+          this.selectedDay = null;
+        } else {
+          this.closeModals();
+        }
+        break;
+    }
   }
 
   // --- LOGICA CALENDARIO ---
@@ -187,13 +494,128 @@ export class CalendarTabComponent implements OnInit {
     return '';
   }
 
+  selectCell(item: any, day: Date) {
+    this.selectedVehicleId = item.vehicle.id;
+    this.selectedDay = day;
+  }
+
+  getSelectedVehicleData() {
+    if (!this.selectedVehicleId) return null;
+    return this.currentVehiclesData.find(item => item.vehicle.id === this.selectedVehicleId);
+  }
+
+  getSelectedCellAddress(): string {
+    if (!this.selectedVehicleId || !this.selectedDay) return '';
+    const rowItem = this.getSelectedVehicleData();
+    if (!rowItem) return '';
+    const dateStr = this.selectedDay.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+    return `${rowItem.vehicle.brand} [${dateStr}]`;
+  }
+
+  isCellSelected(item: any, day: any): boolean {
+    if (!this.selectedVehicleId || !this.selectedDay || !item?.vehicle?.id || !day?.date) return false;
+    return this.selectedVehicleId === item.vehicle.id && this.isSameDay(this.selectedDay, day.date);
+  }
+
+  getAssociatedJobs(): Maintenance[] {
+    if (!this.selectedStatusForAction || this.selectedStatusForAction.type !== 'maintenance') return [];
+    const periodId = this.selectedStatusForAction.data.id;
+    return this.allMaintenances.filter(m => m.maintenancePeriodId === periodId);
+  }
+
+  getAssociatedJobsTotalCost(): number {
+    return this.getAssociatedJobs().reduce((sum, job) => sum + (job.cost || 0), 0);
+  }
+
+  async addAssociatedJob() {
+    if (!this.selectedStatusForAction || !this.newInlineJob.description) return;
+    try {
+      const periodId = this.selectedStatusForAction.data.id;
+      const vehicleId = this.selectedStatusForAction.data.vehicleId;
+      const v = this.availableVehicles.find(x => x.id === vehicleId);
+
+      const data: Maintenance = {
+        vehicleId: vehicleId,
+        vehiclePlate: v ? `${v.brand} ${v.model} (${v.plate})` : '?',
+        description: this.newInlineJob.description,
+        date: this.selectedStatusForAction.data.startDate,
+        cost: this.newInlineJob.cost || 0,
+        km: this.newInlineJob.km || null,
+        maintenancePeriodId: periodId
+      };
+
+      await this.rentalService.addMaintenance(data);
+      this.newInlineJob = { description: '', cost: null, km: null };
+    } catch (error) {
+      console.error('Errore durante l\'aggiunta del lavoro:', error);
+      alert('Si è verificato un errore durante l\'aggiunta del lavoro.');
+    }
+  }
+
+  async deleteAssociatedJob(jobId: string) {
+    if (confirm('Sei sicuro di voler eliminare questo lavoro dalla scheda?')) {
+      try {
+        await this.rentalService.deleteMaintenance(jobId);
+      } catch (error) {
+        console.error('Errore durante l\'eliminazione del lavoro:', error);
+        alert('Si è verificato un errore.');
+      }
+    }
+  }
+
+  getCellClass(item: any, day: Date, status: any): string[] {
+    const classes: string[] = [];
+
+    // Today class
+    if (this.getTodayClass(day) === 'is-today') {
+      classes.push('is-today');
+    }
+
+    // Selection class
+    if (this.selectedVehicleId === item.vehicle.id && this.isSameDay(this.selectedDay, day)) {
+      classes.push('is-selected-cell');
+    }
+
+    // Status backgrounds
+    if (status.type === 'maintenance') {
+      classes.push('maintenance-gray-bg');
+    } else if (status.type === 'sold') {
+      classes.push('sold-red-bg');
+    } else if (status.type === 'transfer') {
+      const locClass = this.getVehicleLocationClass(item, day);
+      if (locClass) {
+        classes.push(locClass + '-bg');
+      }
+    }
+
+    return classes;
+  }
+
   private generateDays(baseDate: Date) {
-    this.days = [];
+    const arr = [];
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    
     for (let i = 0; i < 35; i++) {
       const d = new Date(baseDate);
       d.setDate(baseDate.getDate() + i);
-      this.days.push(d);
+      
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dateNum = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${dateNum}`;
+      
+      const dCopy = new Date(d);
+      dCopy.setHours(0,0,0,0);
+      const isToday = dCopy.getTime() === today.getTime();
+      
+      arr.push({
+        date: d,
+        dateStr: dateStr,
+        isToday: isToday
+      });
     }
+    this.days = arr;
   }
 
   getDayStatus(item: any, day: Date): { type: 'rental' | 'transfer' | 'maintenance' | 'sold' | null, data?: any } {
@@ -348,11 +770,16 @@ export class CalendarTabComponent implements OnInit {
     } else {
       this.isEditMode = false;
       this.editingRentalId = undefined;
+      const dateStr = this.selectedDay ? this.selectedDay.toISOString().split('T')[0] : '';
       this.newRental = { 
+        vehicleId: this.selectedVehicleId || '',
+        customerId: '',
         location: 'Mottola', 
         returnLocation: 'Mottola', 
         status: 'Prenotato', 
         isServiceRental: false,
+        startDate: dateStr,
+        endDate: dateStr,
         startPeriod: 'Mat',
         endPeriod: 'Mat'
       };
@@ -361,17 +788,35 @@ export class CalendarTabComponent implements OnInit {
   }
 
   openMaintenanceModal(vehicleId?: string) {
-    this.newMaintenance = { vehicleId: vehicleId || '', startDate: '', endDate: '', notes: '' };
+    const defaultVeh = vehicleId || this.selectedVehicleId || '';
+    const dateStr = this.selectedDay ? this.selectedDay.toISOString().split('T')[0] : '';
+    this.newMaintenance = { 
+      vehicleId: defaultVeh, 
+      startDate: dateStr, 
+      endDate: dateStr, 
+      notes: '' 
+    };
     this.isMaintenanceModalOpen = true;
   }
 
   openTransferModal(vehicleId?: string) {
-    this.newTransfer = { vehicleId: vehicleId || '', startDate: '', endDate: '', location: 'Mottola', notes: '' };
+    const defaultVeh = vehicleId || this.selectedVehicleId || '';
+    const dateStr = this.selectedDay ? this.selectedDay.toISOString().split('T')[0] : '';
+    this.newTransfer = { 
+      vehicleId: defaultVeh, 
+      startDate: dateStr, 
+      endDate: dateStr, 
+      location: 'Mottola', 
+      notes: '' 
+    };
     this.isTransferModalOpen = true;
   }
 
   openSaleModal() {
-    this.newSale = { vehicleId: '', soldDate: new Date().toISOString().split('T')[0] };
+    this.newSale = { 
+      vehicleId: this.selectedVehicleId || '', 
+      soldDate: this.selectedDay ? this.selectedDay.toISOString().split('T')[0] : new Date().toISOString().split('T')[0] 
+    };
     this.isSaleModalOpen = true;
   }
 
@@ -530,13 +975,14 @@ export class CalendarTabComponent implements OnInit {
   }
 
   async onCellClick(item: any, day: Date, status: any) {
-    if (!status || !status.type) return;
+    this.selectCell(item, day);
 
-    this.selectedStatusForAction = status;
-    this.selectedDayForAction = day;
-    // Pre-popola la data manuale con quella cliccata (ma l'utente può cambiarla)
-    this.manualEndDate = day.toISOString().split('T')[0];
-    this.isConfirmationModalOpen = true;
+    if (status && status.type) {
+      this.selectedStatusForAction = status;
+      this.selectedDayForAction = day;
+      this.manualEndDate = day.toISOString().split('T')[0];
+      this.isConfirmationModalOpen = true;
+    }
   }
 
   async confirmTermination() {
@@ -573,6 +1019,10 @@ export class CalendarTabComponent implements OnInit {
           await this.rentalService.deleteRental(status.data.id);
         } else if (status.type === 'maintenance') {
           await this.rentalService.deleteMaintenancePeriod(status.data.id);
+          const associatedJobs = this.getAssociatedJobs();
+          for (const job of associatedJobs) {
+            await this.rentalService.deleteMaintenance(job.id!);
+          }
         } else if (status.type === 'transfer') {
           await this.rentalService.deleteTemporaryTransfer(status.data.id);
         }
