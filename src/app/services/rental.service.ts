@@ -97,6 +97,7 @@ export interface Maintenance {
   date: Timestamp;
   cost?: number;
   km?: number;
+  workshop?: string;
   createdAt?: Timestamp;
   maintenancePeriodId?: string;
 }

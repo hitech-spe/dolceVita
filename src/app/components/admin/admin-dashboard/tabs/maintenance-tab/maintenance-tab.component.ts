@@ -31,7 +31,7 @@ export class MaintenanceTabComponent implements OnInit {
   sheetMaintenances: Maintenance[] = [];
   todayDate = new Date();
   allMaintenances: Maintenance[] = [];
-  sheetInlineMaintenance: any = { description: '', date: '', cost: null, km: null };
+  sheetInlineMaintenance: any = { description: '', date: '', cost: null, km: null, workshop: '' };
 
   ngOnInit() {
     this.maintenances$ = this.rentalService.getMaintenances();
@@ -108,8 +108,9 @@ export class MaintenanceTabComponent implements OnInit {
       .filter(i => {
         const plate = i.vehiclePlate?.toLowerCase() || '';
         const desc = i.description?.toLowerCase() || '';
+        const workshop = i.workshop?.toLowerCase() || '';
         const term = this.searchTerm.toLowerCase();
-        return plate.includes(term) || desc.includes(term);
+        return plate.includes(term) || desc.includes(term) || workshop.includes(term);
       });
 
     return filtered.sort((a, b) => {
@@ -197,11 +198,12 @@ export class MaintenanceTabComponent implements OnInit {
         description: this.sheetInlineMaintenance.description,
         date: Timestamp.fromDate(new Date(this.sheetInlineMaintenance.date)),
         cost: this.sheetInlineMaintenance.cost || 0,
-        km: this.sheetInlineMaintenance.km || null
+        km: this.sheetInlineMaintenance.km || null,
+        workshop: this.sheetInlineMaintenance.workshop || ''
       };
 
       await this.rentalService.addMaintenance(data);
-      this.sheetInlineMaintenance = { description: '', date: '', cost: null, km: null };
+      this.sheetInlineMaintenance = { description: '', date: '', cost: null, km: null, workshop: '' };
       
       this.sheetMaintenances = this.allMaintenances.filter(m => m.vehicleId === v.id);
     } catch (error) {
@@ -229,7 +231,8 @@ export class MaintenanceTabComponent implements OnInit {
       await this.rentalService.updateMaintenance(this.editingJobId, {
         description: this.tempEditingJob.description,
         km: this.tempEditingJob.km || null,
-        cost: this.tempEditingJob.cost || 0
+        cost: this.tempEditingJob.cost || 0,
+        workshop: this.tempEditingJob.workshop || ''
       });
       this.cancelEditJob();
     } catch (error) {

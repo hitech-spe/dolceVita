@@ -48,14 +48,14 @@ export class FleetTabComponent implements OnInit {
   // Storico Lavorazioni Veicolo
   allMaintenances: Maintenance[] = [];
   vehicleMaintenances: Maintenance[] = [];
-  inlineMaintenance: any = { description: '', date: '', cost: null, km: null };
+  inlineMaintenance: any = { description: '', date: '', cost: null, km: null, workshop: '' };
 
   // Scheda Lavori Stampabile
   isJobSheetOpen = false;
   selectedVehicleForSheet: any = null;
   sheetMaintenances: Maintenance[] = [];
   todayDate = new Date();
-  sheetInlineMaintenance: any = { description: '', date: '', cost: null, km: null };
+  sheetInlineMaintenance: any = { description: '', date: '', cost: null, km: null, workshop: '' };
 
   ngOnInit() {
     this.vehicles$ = this.selectedLocation$.pipe(
@@ -126,7 +126,7 @@ export class FleetTabComponent implements OnInit {
       this.insuranceExpiryDate = '';
       this.inspectionExpiryDate = '';
       this.maintenanceDate = '';
-      this.inlineMaintenance = { description: '', date: '', cost: null, km: null };
+      this.inlineMaintenance = { description: '', date: '', cost: null, km: null, workshop: '' };
     }
     this.isModalOpen = true;
   }
@@ -232,11 +232,12 @@ export class FleetTabComponent implements OnInit {
         description: this.inlineMaintenance.description,
         date: Timestamp.fromDate(new Date(this.inlineMaintenance.date)),
         cost: this.inlineMaintenance.cost || 0,
-        km: this.inlineMaintenance.km || null
+        km: this.inlineMaintenance.km || null,
+        workshop: this.inlineMaintenance.workshop || ''
       };
 
       await this.rentalService.addMaintenance(data);
-      this.inlineMaintenance = { description: '', date: '', cost: null, km: null };
+      this.inlineMaintenance = { description: '', date: '', cost: null, km: null, workshop: '' };
     } catch (error) {
       console.error('Errore durante l\'aggiunta della lavorazione:', error);
       alert('Si è verificato un errore.');
@@ -320,11 +321,12 @@ export class FleetTabComponent implements OnInit {
         description: this.sheetInlineMaintenance.description,
         date: Timestamp.fromDate(new Date(this.sheetInlineMaintenance.date)),
         cost: this.sheetInlineMaintenance.cost || 0,
-        km: this.sheetInlineMaintenance.km || null
+        km: this.sheetInlineMaintenance.km || null,
+        workshop: this.sheetInlineMaintenance.workshop || ''
       };
 
       await this.rentalService.addMaintenance(data);
-      this.sheetInlineMaintenance = { description: '', date: '', cost: null, km: null };
+      this.sheetInlineMaintenance = { description: '', date: '', cost: null, km: null, workshop: '' };
       
       this.sheetMaintenances = this.allMaintenances.filter(m => m.vehicleId === v.id);
     } catch (error) {
@@ -352,7 +354,8 @@ export class FleetTabComponent implements OnInit {
       await this.rentalService.updateMaintenance(this.editingJobId, {
         description: this.tempEditingJob.description,
         km: this.tempEditingJob.km || null,
-        cost: this.tempEditingJob.cost || 0
+        cost: this.tempEditingJob.cost || 0,
+        workshop: this.tempEditingJob.workshop || ''
       });
       this.cancelEditJob();
     } catch (error) {

@@ -203,6 +203,7 @@
                       <tr style="background: #f8f9fa; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 10;">
                         <th style="padding: 6px 10px; text-align: left; font-weight: 600; color: #555;">Data</th>
                         <th style="padding: 6px 10px; text-align: left; font-weight: 600; color: #555;">Descrizione / Lavoro</th>
+                        <th style="padding: 6px 10px; text-align: left; font-weight: 600; color: #555;">Officina</th>
                         <th style="padding: 6px 10px; text-align: left; font-weight: 600; color: #555;">KM</th>
                         <th style="padding: 6px 10px; text-align: left; font-weight: 600; color: #555;">Costo</th>
                         <th style="padding: 6px 10px; text-align: left;"></th>
@@ -213,6 +214,7 @@
                         <tr style="border-bottom: 1px solid #eee;">
                           <td style="padding: 6px 10px; text-align: left; color: #666;">{{ formatDate(m.date) }}</td>
                           <td style="padding: 6px 10px; text-align: left; font-weight: 500; color: #333;">{{ m.description }}</td>
+                          <td style="padding: 6px 10px; text-align: left;">{{ m.workshop || '-' }}</td>
                           <td style="padding: 6px 10px; text-align: left;">{{ m.km || '-' }}</td>
                           <td style="padding: 6px 10px; text-align: left; font-weight: bold; color: #d4af37;">{{ m.cost ? (m.cost | currency:'EUR') : '-' }}</td>
                           <td style="padding: 6px 10px; text-align: right;">
@@ -231,6 +233,7 @@
                 <h5 style="margin: 0 0 8px 0; font-size: 0.8rem; color: #555; font-weight: bold;"><i class="fa-solid fa-plus-circle"></i> Registra Nuova Lavorazione</h5>
                 <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                   <input type="text" [(ngModel)]="inlineMaintenance.description" placeholder="Descrizione lavoro" style="flex: 2; min-width: 150px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;">
+                  <input type="text" [(ngModel)]="inlineMaintenance.workshop" placeholder="Officina" style="flex: 1; min-width: 100px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;">
                   <input type="date" [(ngModel)]="inlineMaintenance.date" style="flex: 1; min-width: 110px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;">
                   <input type="number" [(ngModel)]="inlineMaintenance.km" placeholder="KM" style="width: 70px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;">
                   <input type="number" [(ngModel)]="inlineMaintenance.cost" placeholder="Costo" style="width: 70px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;">
@@ -295,8 +298,10 @@
                             <tr style="background: #f4f4f4; border-bottom: 2px solid #ddd;">
                                 <th style="padding: 6px 8px; text-align: left; font-weight: 600; color: #555;">Data</th>
                                 <th style="padding: 6px 8px; text-align: left; font-weight: 600; color: #555;">Descrizione Intervento</th>
+                                <th style="padding: 6px 8px; text-align: left; font-weight: 600; color: #555;">Officina</th>
                                 <th style="padding: 6px 8px; text-align: left; font-weight: 600; color: #555;">KM</th>
                                 <th style="padding: 6px 8px; text-align: right; font-weight: 600; color: #555;">Costo</th>
+                                <th style="padding: 6px 8px; text-align: left;"></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -308,6 +313,13 @@
                                             <input type="text" [(ngModel)]="tempEditingJob.description" style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem;">
                                         } @else {
                                             {{ m.description }}
+                                        }
+                                    </td>
+                                    <td style="padding: 6px 8px; text-align: left; color: #333;">
+                                        @if (editingJobId === m.id) {
+                                            <input type="text" [(ngModel)]="tempEditingJob.workshop" style="width: 100%; padding: 4px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem;">
+                                        } @else {
+                                            {{ m.workshop || '-' }}
                                         }
                                     </td>
                                     <td style="padding: 6px 8px; text-align: left; color: #666;">
@@ -344,7 +356,7 @@
                                 </tr>
                             }
                             <tr style="background: #fafafa; border-top: 2px solid #ddd; font-weight: bold; font-size: 0.82rem;">
-                                <td colspan="2" style="padding: 8px; text-align: left;">Totale Interventi: {{ sheetMaintenances.length }}</td>
+                                <td colspan="3" style="padding: 8px; text-align: left;">Totale Interventi: {{ sheetMaintenances.length }}</td>
                                 <td style="padding: 8px; text-align: left;">KM: {{ getMaxKm() }}</td>
                                 <td style="padding: 8px; text-align: right; color: #d4af37; font-size: 0.85rem;">{{ getSheetTotalCost() | currency:'EUR' }}</td>
                             </tr>
@@ -368,6 +380,7 @@
                 <h5 style="margin: 0 0 8px 0; font-size: 0.8rem; color: #555; font-weight: bold;"><i class="fa-solid fa-plus-circle"></i> Aggiungi Nuova Lavorazione alla Scheda</h5>
                 <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                     <input type="text" [(ngModel)]="sheetInlineMaintenance.description" placeholder="Descrizione lavoro (es. Cambio gomme)" style="flex: 2; min-width: 150px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;">
+                    <input type="text" [(ngModel)]="sheetInlineMaintenance.workshop" placeholder="Officina (es. Officina Rossi)" style="flex: 1; min-width: 110px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;">
                     <input type="date" [(ngModel)]="sheetInlineMaintenance.date" style="flex: 1; min-width: 110px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;">
                     <input type="number" [(ngModel)]="sheetInlineMaintenance.km" placeholder="KM" style="width: 70px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;">
                     <input type="number" [(ngModel)]="sheetInlineMaintenance.cost" placeholder="Costo" style="width: 70px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.8rem; outline: none; background: white;">
