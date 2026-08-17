@@ -61,7 +61,7 @@ export class CalendarTabComponent implements OnInit {
   newSale: any = { vehicleId: '', soldDate: '' };
 
   isQuickCustomer = false;
-  quickCustomer: any = { firstName: '', lastName: '', phone: '', email: '' };
+  quickCustomer: any = { firstName: '', lastName: '', phone: '', address: '' };
 
   availableVehicles: Vehicle[] = [];
   availableCustomers: Customer[] = [];
@@ -753,7 +753,7 @@ export class CalendarTabComponent implements OnInit {
 
   openRentalModal(rental?: Rental) {
     this.isQuickCustomer = false;
-    this.quickCustomer = { firstName: '', lastName: '', phone: '', email: '' };
+    this.quickCustomer = { firstName: '', lastName: '', phone: '', address: '' };
     if (rental) {
       this.isEditMode = true;
       this.editingRentalId = rental.id;
@@ -830,7 +830,7 @@ export class CalendarTabComponent implements OnInit {
     this.selectedStatusForAction = null;
     this.selectedDayForAction = null;
     this.isQuickCustomer = false;
-    this.quickCustomer = { firstName: '', lastName: '', phone: '', email: '' };
+    this.quickCustomer = { firstName: '', lastName: '', phone: '', address: '' };
   }
 
   // --- SALVATAGGIO DATI ---
@@ -853,7 +853,7 @@ export class CalendarTabComponent implements OnInit {
           firstName: this.quickCustomer.firstName,
           lastName: this.quickCustomer.lastName,
           phone: this.quickCustomer.phone || '',
-          email: this.quickCustomer.email || ''
+          address: this.quickCustomer.address || ''
         });
         customerId = customerRef.id;
         customerName = `${this.quickCustomer.firstName} ${this.quickCustomer.lastName}`;

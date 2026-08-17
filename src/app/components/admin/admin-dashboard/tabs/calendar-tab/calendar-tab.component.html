@@ -120,6 +120,12 @@
           <strong>{{ activeRow.vehicle.brand }} {{ activeRow.vehicle.model }}</strong>
           <span class="plate-badge">{{ activeRow.vehicle.plate }}</span>
           <span class="cat-badge">{{ activeRow.vehicle.category }}</span>
+          @if (activeRow.vehicle.dailyPrice) {
+            <span class="price-badge">
+              <i class="fa-solid fa-euro-sign"></i>
+              {{ activeRow.vehicle.dailyPrice | currency:'EUR':'symbol':'1.2-2' }} / giorno
+            </span>
+          }
         </div>
         <div class="focus-date-info">
           <i class="fa-solid fa-calendar-day"></i>
@@ -156,6 +162,12 @@
                   <span class="plate">{{ item.vehicle.plate }}</span>
                   <span class="category-badge" [title]="item.vehicle.category">{{ item.vehicle.category }}</span>
                 </div>
+                @if (item.vehicle.dailyPrice) {
+                  <div class="price-row">
+                    <i class="fa-solid fa-tag"></i>
+                    <span>{{ item.vehicle.dailyPrice | currency:'EUR':'symbol':'1.2-2' }} / giorno</span>
+                  </div>
+                }
               </div>
             </td>
             @for (day of days; track day.dateStr) {
@@ -235,8 +247,8 @@
                 <input type="text" [(ngModel)]="quickCustomer.phone" name="quickPhone" placeholder="Es. 3331234567">
               </div>
               <div class="form-group">
-                <label>Email</label>
-                <input type="email" [(ngModel)]="quickCustomer.email" name="quickEmail" placeholder="Es. mario.rossi@example.com">
+                <label>Indirizzo di Residenza</label>
+                <input type="text" [(ngModel)]="quickCustomer.address" name="quickAddress" placeholder="Es. Via Roma 10, Mottola">
               </div>
             } @else {
               <div class="form-group">

@@ -114,4 +114,19 @@ export class InsuranceTabComponent implements OnInit {
     if (timestamp.toDate) return timestamp.toDate().toLocaleDateString('it-IT');
     return new Date(timestamp).toLocaleDateString('it-IT');
   }
+
+  getVehicleName(vehicleId: string): string {
+    const v = this.availableVehicles.find(x => x.id === vehicleId);
+    return v ? `${v.brand} ${v.model}` : '';
+  }
+
+  getVehiclePlate(ins: Insurance): string {
+    const v = this.availableVehicles.find(x => x.id === ins.vehicleId);
+    if (v) return v.plate;
+    if (ins.vehiclePlate && ins.vehiclePlate.includes('(') && ins.vehiclePlate.includes(')')) {
+      const parts = ins.vehiclePlate.split('(');
+      return parts[parts.length - 1].replace(')', '').trim();
+    }
+    return ins.vehiclePlate || '';
+  }
 }

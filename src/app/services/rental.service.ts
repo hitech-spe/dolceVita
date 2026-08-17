@@ -109,8 +109,9 @@ export interface Customer {
   birthDate?: Timestamp;
   licenseNumber?: string;
   licenseExpiry?: Timestamp;
+  licenseReleasedBy?: string;
   phone?: string;
-  email?: string;
+  address?: string;
   attachments?: { name: string, data: string }[]; // Base64 attachments
   createdAt?: Timestamp;
 }

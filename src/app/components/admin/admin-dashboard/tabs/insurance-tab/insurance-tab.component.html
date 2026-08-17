@@ -31,7 +31,17 @@
             <tbody>
                 @for (ins of getFiltered(insurances$ | async); track ins.id) {
                     <tr>
-                        <td class="fw-bold">{{ ins.vehiclePlate }}</td>
+                        <td class="fw-bold">
+                            @let vName = getVehicleName(ins.vehicleId);
+                            @if (vName) {
+                                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                    <span style="font-size: 0.95rem; color: #1e293b; font-weight: 700;">{{ vName }}</span>
+                                    <span class="plate-badge" style="font-size: 0.75rem; padding: 2px 6px; width: fit-content; text-transform: uppercase;">{{ getVehiclePlate(ins) }}</span>
+                                </div>
+                            } @else {
+                                {{ ins.vehiclePlate }}
+                            }
+                        </td>
                         <td>{{ ins.company }}</td>
                         <td>{{ ins.policyNumber }}</td>
                         <td>{{ formatDate(ins.expiryDate) }}</td>
@@ -55,9 +65,16 @@
     <!-- Layout Mobile: Card -->
     <div class="mobile-cards show-mobile">
         @for (ins of getFiltered(insurances$ | async); track ins.id) {
+            @let vName = getVehicleName(ins.vehicleId);
             <div class="rental-card-mobile">
                 <div class="card-header">
-                    <span class="customer-name">{{ ins.vehiclePlate }}</span>
+                    <span class="customer-name">
+                        @if (vName) {
+                            {{ vName }}
+                        } @else {
+                            {{ ins.vehiclePlate }}
+                        }
+                    </span>
                     <div class="d-flex gap-3">
                         <button class="btn-edit" (click)="openModal(ins)" title="Modifica Assicurazione">
                             <i class="fa-solid fa-pen-to-square"></i>
@@ -68,6 +85,12 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    @if (vName) {
+                        <div class="info-row">
+                            <i class="fa-solid fa-rectangle-ad" title="Targa"></i>
+                            <span class="plate-badge" style="font-size: 0.8rem; padding: 2px 6px; text-transform: uppercase;">{{ getVehiclePlate(ins) }}</span>
+                        </div>
+                    }
                     <div class="info-row">
                         <i class="fa-solid fa-building-shield" title="Compagnia"></i>
                         <span>{{ ins.company }}</span>

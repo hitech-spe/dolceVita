@@ -280,6 +280,13 @@
     text-overflow: ellipsis;
     max-width: 55px;
   }
+
+  .price-row {
+    font-size: 0.65rem;
+    color: #28a745;
+    font-weight: 600;
+    i { font-size: 0.55rem; margin-right: 2px; }
+  }
 }
 
 // Stili per i form nelle modali (presi da altri tab)
@@ -788,6 +795,15 @@ tr.is-selected-row {
       color: #888;
       font-style: italic;
       font-size: 0.72rem;
+    }
+    .price-badge {
+      background: #e6fffa;
+      color: #1e7e34;
+      border: 1px solid #b1f2d9;
+      padding: 1px 5px;
+      font-size: 0.7rem;
+      border-radius: 3px;
+      font-weight: 600;
     }
   }
 
