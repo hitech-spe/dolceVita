@@ -102,6 +102,19 @@ export class MaintenanceTabComponent implements OnInit {
     }
   }
 
+  private getTimeSeconds(val: any): number {
+    if (!val) return 0;
+    if (typeof val.seconds === 'number') {
+      return val.seconds;
+    }
+    if (typeof val.toDate === 'function') {
+      return Math.floor(val.toDate().getTime() / 1000);
+    }
+    const d = new Date(val);
+    const time = d.getTime();
+    return isNaN(time) ? 0 : Math.floor(time / 1000);
+  }
+
   getFiltered(items: Maintenance[] | null): Maintenance[] {
     if (!items) return [];
     let filtered = items
@@ -114,17 +127,16 @@ export class MaintenanceTabComponent implements OnInit {
       });
 
     return filtered.sort((a, b) => {
+      const dateA = this.getTimeSeconds(a.date);
+      const dateB = this.getTimeSeconds(b.date);
+      const createA = this.getTimeSeconds(a.createdAt) || dateA;
+      const createB = this.getTimeSeconds(b.createdAt) || dateB;
+
       if (this.sortOrder === 'newest') {
-        const dateA = (a.createdAt as any)?.seconds || 0;
-        const dateB = (b.createdAt as any)?.seconds || 0;
-        return dateB - dateA;
+        return createB - createA;
       } else if (this.sortOrder === 'oldest') {
-        const dateA = (a.createdAt as any)?.seconds || 0;
-        const dateB = (b.createdAt as any)?.seconds || 0;
-        return dateA - dateB;
+        return createA - createB;
       } else {
-        const dateA = (a.date as any)?.seconds || 0;
-        const dateB = (b.date as any)?.seconds || 0;
         return dateB - dateA; // Più recente in alto
       }
     });

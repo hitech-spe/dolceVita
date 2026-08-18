@@ -82,6 +82,19 @@ export class InsuranceTabComponent implements OnInit {
     }
   }
 
+  private getTimeSeconds(val: any): number {
+    if (!val) return 0;
+    if (typeof val.seconds === 'number') {
+      return val.seconds;
+    }
+    if (typeof val.toDate === 'function') {
+      return Math.floor(val.toDate().getTime() / 1000);
+    }
+    const d = new Date(val);
+    const time = d.getTime();
+    return isNaN(time) ? 0 : Math.floor(time / 1000);
+  }
+
   getFiltered(items: Insurance[] | null): Insurance[] {
     if (!items) return [];
     let filtered = items
@@ -93,18 +106,17 @@ export class InsuranceTabComponent implements OnInit {
       });
 
     return filtered.sort((a, b) => {
+      const expA = this.getTimeSeconds(a.expiryDate);
+      const expB = this.getTimeSeconds(b.expiryDate);
+      const createA = this.getTimeSeconds(a.createdAt) || expA;
+      const createB = this.getTimeSeconds(b.createdAt) || expB;
+
       if (this.sortOrder === 'newest') {
-        const dateA = (a.createdAt as any)?.seconds || 0;
-        const dateB = (b.createdAt as any)?.seconds || 0;
-        return dateB - dateA;
+        return createB - createA;
       } else if (this.sortOrder === 'oldest') {
-        const dateA = (a.createdAt as any)?.seconds || 0;
-        const dateB = (b.createdAt as any)?.seconds || 0;
-        return dateA - dateB;
+        return createA - createB;
       } else {
-        const dateA = (a.expiryDate as any)?.seconds || 0;
-        const dateB = (b.expiryDate as any)?.seconds || 0;
-        return dateA - dateB; // Scadenza più vicina in alto
+        return expA - expB; // Scadenza più vicina in alto
       }
     });
   }
