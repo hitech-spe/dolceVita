@@ -28,6 +28,11 @@ export class RemindersTabComponent implements OnInit {
   newReminderDate = '';
   newReminderColor = '#fef08a'; // Pastel Yellow default
 
+  // Early alert configuration
+  hasAlert = false;
+  alertValue = 15;
+  alertUnit: 'minutes' | 'hours' | 'days' = 'minutes';
+
   // Available beautiful pastel colors for post-its
   colorOptions = [
     { name: 'Giallo', hex: '#fef08a', textHex: '#854d0e', borderHex: '#fef08a' },
@@ -67,6 +72,17 @@ export class RemindersTabComponent implements OnInit {
       this.newReminderText = reminder.text;
       this.newReminderColor = reminder.color || '#fef08a';
       
+      // Load alert info
+      if (reminder.alertBeforeUnit && reminder.alertBeforeUnit !== 'none') {
+        this.hasAlert = true;
+        this.alertValue = reminder.alertBeforeValue || 15;
+        this.alertUnit = reminder.alertBeforeUnit as 'minutes' | 'hours' | 'days';
+      } else {
+        this.hasAlert = false;
+        this.alertValue = 15;
+        this.alertUnit = 'minutes';
+      }
+
       // Convert Timestamp to YYYY-MM-DDTHH:MM for input type="datetime-local"
       if (reminder.date) {
         const d = reminder.date.toDate();
@@ -82,6 +98,9 @@ export class RemindersTabComponent implements OnInit {
       this.editingReminderId = undefined;
       this.newReminderText = '';
       this.newReminderColor = '#fef08a';
+      this.hasAlert = false;
+      this.alertValue = 15;
+      this.alertUnit = 'minutes';
       // Default to current date and time + 1 hour, rounded to nearest 5 mins
       const now = new Date();
       now.setHours(now.getHours() + 1);
@@ -97,6 +116,9 @@ export class RemindersTabComponent implements OnInit {
     this.newReminderDate = '';
     this.newReminderColor = '#fef08a';
     this.editingReminderId = undefined;
+    this.hasAlert = false;
+    this.alertValue = 15;
+    this.alertUnit = 'minutes';
   }
 
   async saveReminder() {
@@ -111,7 +133,9 @@ export class RemindersTabComponent implements OnInit {
         text: this.newReminderText.trim(),
         date: Timestamp.fromDate(targetDate),
         color: this.newReminderColor,
-        completed: this.isEditMode ? false : false // New or edited defaults/resets to not completed
+        completed: this.isEditMode ? false : false, // New or edited defaults/resets to not completed
+        alertBeforeValue: this.hasAlert ? this.alertValue : 0,
+        alertBeforeUnit: this.hasAlert ? this.alertUnit : 'none'
       };
 
       if (this.isEditMode && this.editingReminderId) {
@@ -193,6 +217,38 @@ export class RemindersTabComponent implements OnInit {
       if (diffHours < 24) return `Scade tra ${diffHours} ore`;
       return `Scade tra ${diffDays} giorni`;
     }
+  }
+
+  isAlertActive(reminder: Reminder): boolean {
+    if (reminder.completed) return false;
+    if (!reminder.alertBeforeUnit || reminder.alertBeforeUnit === 'none' || !reminder.alertBeforeValue) return false;
+    
+    let offsetMs = 0;
+    const val = reminder.alertBeforeValue;
+    switch (reminder.alertBeforeUnit) {
+      case 'minutes':
+        offsetMs = val * 60 * 1000;
+        break;
+      case 'hours':
+        offsetMs = val * 60 * 60 * 1000;
+        break;
+      case 'days':
+        offsetMs = val * 24 * 60 * 60 * 1000;
+        break;
+    }
+    
+    const now = Date.now();
+    const targetTime = reminder.date.toDate().getTime();
+    const alertTime = targetTime - offsetMs;
+    
+    return now >= alertTime && now < targetTime;
+  }
+
+  getAlertDescription(reminder: Reminder): string {
+    if (!reminder.alertBeforeUnit || reminder.alertBeforeUnit === 'none' || !reminder.alertBeforeValue) return '';
+    const unitLabel = reminder.alertBeforeUnit === 'minutes' ? 'minuti' : 
+                      reminder.alertBeforeUnit === 'hours' ? 'ore' : 'giorni';
+    return `Avviso impostato: ${reminder.alertBeforeValue} ${unitLabel} prima`;
   }
 
   getColorStyle(colorHex: string) {

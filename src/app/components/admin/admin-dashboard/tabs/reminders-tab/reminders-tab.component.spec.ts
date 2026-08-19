@@ -50,4 +50,35 @@ describe('RemindersTabComponent', () => {
     expect(tilt0).toBe('rotate(-2deg)');
     expect(tilt1).toBe('rotate(1.5deg)');
   });
+
+  it('should identify when early alert is active', () => {
+    // Current time is now. Event is in 10 minutes. Early alert is set for 15 minutes before the event.
+    // Therefore, the early alert is active!
+    const futureDate = new Date(Date.now() + 10 * 60 * 1000); // 10 mins from now
+    const mockReminder = {
+      text: 'Test early alert',
+      date: Timestamp.fromDate(futureDate),
+      alertBeforeValue: 15,
+      alertBeforeUnit: 'minutes' as 'minutes',
+      completed: false
+    };
+
+    expect(component.isAlertActive(mockReminder)).toBeTrue();
+
+    // If completed is true, alert should not be active
+    mockReminder.completed = true;
+    expect(component.isAlertActive(mockReminder)).toBeFalse();
+  });
+
+  it('should generate correct alert description', () => {
+    const mockReminder = {
+      text: 'Test description',
+      date: Timestamp.now(),
+      alertBeforeValue: 2,
+      alertBeforeUnit: 'hours' as 'hours'
+    };
+
+    const desc = component.getAlertDescription(mockReminder);
+    expect(desc).toBe('Avviso impostato: 2 ore prima');
+  });
 });

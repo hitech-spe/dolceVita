@@ -199,6 +199,18 @@
     align-items: center;
     margin-bottom: 1rem;
 
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      .alert-bell-icon {
+        color: #d97706; // Elegant alarm yellow-orange
+        font-size: 1.15rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+    }
+
     .btn-check {
       background: none;
       border: none;
@@ -299,6 +311,28 @@
       display: flex;
       align-items: center;
       gap: 4px;
+    }
+
+    .alert-setup-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      opacity: 0.8;
+      border-top: 1px dashed rgba(0,0,0,0.04);
+      padding-top: 0.3rem;
+      margin-top: 2px;
+
+      &.alert-active {
+        color: #d97706;
+        font-weight: 700;
+        opacity: 1;
+
+        i {
+          animation: bell-ring 1s infinite alternate;
+        }
+      }
     }
   }
 }
@@ -512,4 +546,85 @@
 
 .mt-4 {
   margin-top: 1.5rem;
+}
+
+/* Early Alert Form styles */
+.checkbox-field {
+  margin: 1.25rem 0 !important;
+
+  .toggle-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    color: #1e293b;
+    cursor: pointer;
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+  }
+}
+
+.alert-config-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+  .col-6 {
+    flex: 1;
+  }
+
+  select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-family: var(--font-main);
+    font-size: 0.95rem;
+    outline: none;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.2s;
+
+    &:focus {
+      border-color: var(--accent);
+    }
+  }
+
+  input[type="number"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-family: var(--font-main);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+
+    &:focus {
+      border-color: var(--accent);
+    }
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bell-ring {
+  0% { transform: rotate(-10deg); }
+  100% { transform: rotate(10deg); }
 }

@@ -2,9 +2,19 @@
 
     <header class="dashboard-header glass-card">
         <div class="header-content">
-            <div>
-                <h1>Gestionale Operativo</h1>
-                <p class="subtitle">Amministrazione La Dolce Vita Rent</p>
+            <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+                <div>
+                    <h1>Gestionale Operativo</h1>
+                    <p class="subtitle">Amministrazione La Dolce Vita Rent</p>
+                </div>
+
+                @if (activeAlertsCount > 0) {
+                    <div class="global-alert-badge animate-pulse" (click)="onTabChange('reminders')" title="Ci sono promemoria urgenti in scadenza! Clicca per visualizzare la bacheca.">
+                        <i class="fa-solid fa-bell fa-bounce"></i>
+                        <span class="badge-count">{{ activeAlertsCount }}</span>
+                        <span class="badge-text hide-mobile">Avvisi Attivi!</span>
+                    </div>
+                }
             </div>
 
             <div class="filter-group">
@@ -65,4 +75,31 @@
             <app-reminders-tab />
         }
     </main>
+
+    <!-- High-Impact Early Alert Popup Modal -->
+    @if (currentPopupAlert) {
+        <div class="alert-popup-overlay">
+            <div class="alert-popup-card animate-scale-up">
+                <div class="alert-popup-header">
+                    <i class="fa-solid fa-triangle-exclamation fa-bounce alert-warn-icon"></i>
+                    <h2>PROMEMORIA IN SCADENZA!</h2>
+                </div>
+                <div class="alert-popup-body">
+                    <div class="alert-info-box">
+                        <p class="alert-text">"{{ currentPopupAlert.text }}"</p>
+                        <div class="alert-time-detail">
+                            <i class="fa-regular fa-clock"></i> Scadenza: <strong>{{ formatAlertDate(currentPopupAlert.date) }}</strong>
+                        </div>
+                    </div>
+                    <p class="alert-helper-text">Questo avviso compare in base al preavviso di {{ currentPopupAlert.alertBeforeValue }} {{ currentPopupAlert.alertBeforeUnit === 'minutes' ? 'minuti' : currentPopupAlert.alertBeforeUnit === 'hours' ? 'ore' : 'giorni' }} impostato.</p>
+                </div>
+                <div class="alert-popup-footer">
+                    <button class="btn-popup-dismiss" (click)="dismissPopupAlert()">Nascondi Avviso</button>
+                    <button class="btn-popup-complete" (click)="completePopupAlert(currentPopupAlert)">
+                        <i class="fa-solid fa-check"></i> Segna come Completato
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
 </div>

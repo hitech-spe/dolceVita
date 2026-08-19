@@ -122,6 +122,8 @@ export interface Reminder {
   date: Timestamp;
   completed?: boolean;
   color?: string; // Hex or CSS color string for the post-it background
+  alertBeforeValue?: number; // offset value
+  alertBeforeUnit?: 'minutes' | 'hours' | 'days' | 'none'; // offset unit
   createdAt?: Timestamp;
 }
 

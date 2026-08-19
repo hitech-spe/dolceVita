@@ -33,15 +33,21 @@
                     
                     <!-- Card Header Actions -->
                     <div class="post-it-header">
-                        <button class="btn-check" 
-                                (click)="toggleComplete(rem, $event)" 
-                                [title]="rem.completed ? 'Riapri Promemoria' : 'Segna come Completato'">
-                            @if (rem.completed) {
-                                <i class="fa-solid fa-circle-check"></i>
-                            } @else {
-                                <i class="fa-regular fa-circle"></i>
+                        <div class="header-left">
+                            <button class="btn-check" 
+                                    (click)="toggleComplete(rem, $event)" 
+                                    [title]="rem.completed ? 'Riapri Promemoria' : 'Segna come Completato'">
+                                @if (rem.completed) {
+                                    <i class="fa-solid fa-circle-check"></i>
+                                } @else {
+                                    <i class="fa-regular fa-circle"></i>
+                                }
+                            </button>
+                            
+                            @if (isAlertActive(rem)) {
+                                <i class="fa-solid fa-bell fa-bounce alert-bell-icon" [title]="getAlertDescription(rem)"></i>
                             }
-                        </button>
+                        </div>
                         
                         <div class="post-it-actions">
                             <button class="btn-edit-note" (click)="openModal(rem)" title="Modifica">
@@ -72,6 +78,18 @@
                         } @else if (!rem.completed) {
                             <div class="relative-time-badge">
                                 {{ getRelativeTime(rem.date, rem.completed) }}
+                            </div>
+                        }
+
+                        <!-- Early Alert Setting indicator -->
+                        @if (rem.alertBeforeUnit && rem.alertBeforeUnit !== 'none' && !rem.completed) {
+                            <div class="alert-setup-badge" [class.alert-active]="isAlertActive(rem)" [title]="getAlertDescription(rem)">
+                                @if (isAlertActive(rem)) {
+                                    <i class="fa-solid fa-bell fa-shake"></i>
+                                } @else {
+                                    <i class="fa-regular fa-bell"></i>
+                                }
+                                Preavviso: {{ rem.alertBeforeValue }} {{ rem.alertBeforeUnit === 'minutes' ? 'min' : rem.alertBeforeUnit === 'hours' ? 'ore' : 'giorni' }}
                             </div>
                         }
                     </div>
@@ -122,6 +140,37 @@
                                    name="date" 
                                    required />
                         </div>
+
+                        <!-- Early Alert (Avviso Anticipato) Configuration -->
+                        <div class="form-field checkbox-field">
+                            <label class="toggle-container">
+                                <input type="checkbox" [(ngModel)]="hasAlert" name="hasAlert" />
+                                <span class="checkmark"></span>
+                                Attiva Avviso Anticipato (Alert)
+                            </label>
+                        </div>
+
+                        @if (hasAlert) {
+                            <div class="form-row alert-config-row">
+                                <div class="form-field col-6">
+                                    <label for="alertValue">Preavviso</label>
+                                    <input type="number" 
+                                           id="alertValue" 
+                                           [(ngModel)]="alertValue" 
+                                           name="alertValue" 
+                                           min="1" 
+                                           required />
+                                </div>
+                                <div class="form-field col-6">
+                                    <label for="alertUnit">Unità</label>
+                                    <select id="alertUnit" [(ngModel)]="alertUnit" name="alertUnit">
+                                        <option value="minutes">Minuti prima</option>
+                                        <option value="hours">Ore prima</option>
+                                        <option value="days">Giorni prima</option>
+                                    </select>
+                                </div>
+                            </div>
+                        }
 
                         <!-- Post-it Color Picker -->
                         <div class="form-field">
