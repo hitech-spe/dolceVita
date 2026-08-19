@@ -36,6 +36,9 @@
             <button [class.active]="currentTab === 'maintenance'" (click)="onTabChange('maintenance')">
                 <i class="fa-solid fa-wrench"></i> Manutenzione
             </button>
+            <button [class.active]="currentTab === 'reminders'" (click)="onTabChange('reminders')">
+                <i class="fa-solid fa-note-sticky"></i> Promemoria
+            </button>
         </div>
     </header>
 
@@ -57,6 +60,9 @@
         }
         @if (currentTab === 'maintenance') {
             <app-maintenance-tab />
+        }
+        @if (currentTab === 'reminders') {
+            <app-reminders-tab />
         }
     </main>
 </div>

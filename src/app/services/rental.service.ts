@@ -116,6 +116,15 @@ export interface Customer {
   createdAt?: Timestamp;
 }
 
+export interface Reminder {
+  id?: string;
+  text: string;
+  date: Timestamp;
+  completed?: boolean;
+  color?: string; // Hex or CSS color string for the post-it background
+  createdAt?: Timestamp;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -555,5 +564,30 @@ export class RentalService {
     maintenancesSnap.forEach(d => batch.delete(d.ref));
 
     return batch.commit();
+  }
+
+  // ==========================================
+  // GESTIONE PROMEMORIA (REMINDERS)
+  // ==========================================
+
+  getReminders(): Observable<Reminder[]> {
+    const ref = collection(this.firestore, 'reminders');
+    const q = query(ref, orderBy('date', 'asc'));
+    return collectionData(q, { idField: 'id' }) as Observable<Reminder[]>;
+  }
+
+  async addReminder(reminder: Reminder) {
+    const ref = collection(this.firestore, 'reminders');
+    return addDoc(ref, { ...reminder, createdAt: Timestamp.now() });
+  }
+
+  async updateReminder(id: string, data: Partial<Reminder>) {
+    const docRef = doc(this.firestore, `reminders/${id}`);
+    return updateDoc(docRef, data);
+  }
+
+  async deleteReminder(id: string) {
+    const docRef = doc(this.firestore, `reminders/${id}`);
+    return deleteDoc(docRef);
   }
 }
