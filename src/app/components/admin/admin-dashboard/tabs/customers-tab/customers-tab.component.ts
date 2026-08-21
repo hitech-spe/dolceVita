@@ -35,11 +35,13 @@ export class CustomersTabComponent implements OnInit {
       // Convertiamo i Timestamp in stringhe YYYY-MM-DD per l'input date
       const birthDate = customer.birthDate && (customer.birthDate as any).toDate ? (customer.birthDate as any).toDate().toISOString().split('T')[0] : '';
       const licenseExpiry = customer.licenseExpiry && (customer.licenseExpiry as any).toDate ? (customer.licenseExpiry as any).toDate().toISOString().split('T')[0] : '';
+      const licenseIssueDate = customer.licenseIssueDate && (customer.licenseIssueDate as any).toDate ? (customer.licenseIssueDate as any).toDate().toISOString().split('T')[0] : '';
       
       this.newCustomer = { 
         ...customer,
         birthDate: birthDate,
-        licenseExpiry: licenseExpiry
+        licenseExpiry: licenseExpiry,
+        licenseIssueDate: licenseIssueDate
       };
       this.pendingAttachments = [...(customer.attachments || [])];
     } else {
@@ -60,6 +62,7 @@ export class CustomersTabComponent implements OnInit {
         ...this.newCustomer,
         birthDate: this.newCustomer.birthDate ? Timestamp.fromDate(new Date(this.newCustomer.birthDate)) : null,
         licenseExpiry: this.newCustomer.licenseExpiry ? Timestamp.fromDate(new Date(this.newCustomer.licenseExpiry)) : null,
+        licenseIssueDate: this.newCustomer.licenseIssueDate ? Timestamp.fromDate(new Date(this.newCustomer.licenseIssueDate)) : null,
         attachments: this.pendingAttachments
       };
 

@@ -49,6 +49,9 @@
             <button [class.active]="currentTab === 'reminders'" (click)="onTabChange('reminders')">
                 <i class="fa-solid fa-note-sticky"></i> Promemoria
             </button>
+            <button [class.active]="currentTab === 'contracts'" (click)="onTabChange('contracts')">
+                <i class="fa-solid fa-file-contract"></i> Contratti
+            </button>
         </div>
     </header>
 
@@ -73,6 +76,9 @@
         }
         @if (currentTab === 'reminders') {
             <app-reminders-tab />
+        }
+        @if (currentTab === 'contracts') {
+            <app-contracts-tab />
         }
     </main>
 

@@ -1,0 +1,151 @@
+<div class="panel">
+  <div class="panel-header">
+    <div class="header-title">
+      <h2>Storico Contratti</h2>
+      <p class="subtitle font-main">Archivio dei contratti stipulati ed uniti alle Condizioni Generali</p>
+    </div>
+
+    <div class="panel-actions">
+      <!-- Search Input -->
+      <div class="search-bar">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" 
+               [(ngModel)]="searchTerm" 
+               placeholder="Cerca contratto, cliente, targa..." 
+               class="search-input" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Contracts History Table -->
+  <div class="table-responsive shadow-sm">
+    <table class="modern-table">
+      <thead>
+        <tr>
+          <th>Codice Contratto</th>
+          <th>Cliente / Conducente</th>
+          <th>Veicolo Coinvolto</th>
+          <th>Data Stipula</th>
+          <th>Stato Cargos</th>
+          <th class="text-right">Tariffa Base</th>
+          <th class="text-center">Azioni</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (contract of getFilteredContracts(contracts$ | async); track contract.id) {
+          <tr>
+            <td>
+              <span class="badge-contract"><i class="fa-solid fa-file-invoice"></i> {{ contract.contractNumber }}</span>
+            </td>
+            <td>
+              <div class="customer-info">
+                <span class="customer-name">{{ contract.customerName }}</span>
+                <span class="customer-type">{{ contract.details?.isCompany ? 'Azienda' : 'Privato' }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="vehicle-info">
+                <span class="vehicle-plate"><i class="fa-solid fa-car-side"></i> {{ contract.vehiclePlate }}</span>
+              </div>
+            </td>
+            <td class="font-main">{{ formatDate(contract.date) }}</td>
+            <td>
+              @if (contract.cargos_status === 'SENT') {
+                <span class="badge-cargos badge-cargos-sent" [title]="'Ricevuta Ministeriale: ' + contract.cargos_transaction_id">
+                  <span><i class="fa-solid fa-circle-check"></i> INVIATO</span>
+                  <small style="display: block; font-size: 0.65rem; font-weight: normal; margin-top: 2px; color: #166534;">
+                    ID: {{ contract.cargos_transaction_id }}
+                  </small>
+                </span>
+              } @else if (contract.cargos_status === 'FAILED') {
+                <span class="badge-cargos badge-cargos-failed" [title]="'Errore Polizia: ' + contract.cargos_error">
+                  <span><i class="fa-solid fa-triangle-exclamation"></i> FALLITO</span>
+                  <small style="display: block; font-size: 0.65rem; font-weight: normal; margin-top: 2px; color: #991b1b; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 140px;">
+                    {{ contract.cargos_error }}
+                  </small>
+                </span>
+              } @else if (contract.cargos_status === 'CHECK_SUCCESS') {
+                <span class="badge-cargos badge-cargos-check-success" title="Verifica preventiva superata con successo! Pronto per l'invio definitivo.">
+                  <span><i class="fa-solid fa-square-check"></i> CHECK OK</span>
+                  <small style="display: block; font-size: 0.65rem; font-weight: normal; margin-top: 2px; color: #0369a1;">
+                    Pronto per l'invio
+                  </small>
+                </span>
+              } @else if (contract.cargos_status === 'CHECK_FAILED') {
+                <span class="badge-cargos badge-cargos-check-failed" [title]="'Errore Verifica: ' + contract.cargos_error">
+                  <span><i class="fa-solid fa-circle-xmark"></i> CHECK KO</span>
+                  <small style="display: block; font-size: 0.65rem; font-weight: normal; margin-top: 2px; color: #b45309; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 140px;">
+                    {{ contract.cargos_error }}
+                  </small>
+                </span>
+              } @else {
+                <span class="badge-cargos badge-cargos-pending">
+                  <i class="fa-solid fa-circle-minus"></i> NON INVIATO
+                </span>
+              }
+            </td>
+            <td class="text-right font-main bold-text">
+              {{ (contract.details?.baseRate || 0) | currency:'EUR':'symbol':'1.2-2' }}
+            </td>
+            <td class="text-center">
+              <div class="action-buttons-group">
+                <!-- Print PDF -->
+                <button class="btn-print" 
+                        (click)="printContract(contract)" 
+                        [disabled]="isGeneratingContract[contract.id!]" 
+                        title="Scarica Contratto (PDF)">
+                  @if (isGeneratingContract[contract.id!]) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                  } @else {
+                    <i class="fa-solid fa-file-pdf"></i>
+                  }
+                </button>
+
+                <!-- Cargos Verification Check -->
+                <button class="btn-check" 
+                        (click)="checkCargos(contract.contractNumber)" 
+                        [disabled]="isCheckingContract[contract.contractNumber]" 
+                        title="Verifica Cargos">
+                  @if (isCheckingContract[contract.contractNumber]) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                  } @else {
+                    <i class="fa-solid fa-clipboard-check"></i>
+                  }
+                </button>
+
+                <!-- Cargos Real Send -->
+                <button class="btn-send" 
+                        (click)="sendCargos(contract.contractNumber)" 
+                        [disabled]="isSendingContract[contract.contractNumber]" 
+                        title="Invio Reale Ministero (Cargos)">
+                  @if (isSendingContract[contract.contractNumber]) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                  } @else {
+                    <i class="fa-solid fa-paper-plane"></i>
+                  }
+                </button>
+
+                <!-- Delete from Archive -->
+                <button class="btn-delete" 
+                        (click)="deleteContract(contract.id!)" 
+                        title="Elimina dallo Storico">
+                  <i class="fa-regular fa-trash-can"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="text-center no-data-row">
+              <div class="empty-state-container">
+                <i class="fa-solid fa-folder-open empty-icon"></i>
+                <h3>Nessun contratto trovato</h3>
+                <p>Non ci sono contratti stipulati registrati nello storico che corrispondono ai criteri di ricerca.</p>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -316,6 +316,15 @@
             </div>
           </div>
           <div class="modal-actions">
+            @if (isEditMode && editingRentalId) {
+              <button type="button" class="btn-accent" (click)="openContractModal(newRental)" style="margin-right: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                <i class="fa-solid fa-file-pdf"></i> Stipula Contratto (PDF)
+              </button>
+            } @else {
+              <button type="button" class="btn-accent" (click)="saveAndStipulateContract()" style="margin-right: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                <i class="fa-solid fa-file-pdf"></i> Salva e Stipula Contratto (PDF)
+              </button>
+            }
             <button type="button" class="btn-utility" (click)="closeModals()">Annulla</button>
             <button type="submit" class="btn-primary">Salva Noleggio</button>
           </div>
@@ -550,6 +559,208 @@
           <div class="modal-actions">
             <button type="button" class="btn-utility" (click)="closeModals()">Annulla</button>
             <button type="submit" class="btn-danger">Registra Vendita</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Modal Stipula Contratto (PDF Customizer) -->
+  @if (isContractModalOpen) {
+    <div class="modal-overlay" (click)="closeContractModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()" style="max-width: 700px; width: 95%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+          <h3 style="margin: 0; color: #0f172a; font-weight: 800;"><i class="fa-solid fa-file-invoice text-gradient"></i> Stipula Contratto di Noleggio</h3>
+          <button type="button" (click)="closeContractModal()" style="background: none; border: none; font-size: 1.3rem; color: #64748b; cursor: pointer;">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <form (submit)="generateContract()" class="rental-form" style="max-height: 70vh; overflow-y: auto; padding-right: 5px;">
+          <!-- SECTION 1: DATI BASE CONTRATTO -->
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; border-left: 3px solid var(--accent); padding-left: 8px; margin-bottom: 1rem;">Dati Base Contratto</h4>
+          <div class="form-grid" style="margin-bottom: 1.5rem;">
+            <div class="form-group">
+              <label>Codice Contratto *</label>
+              <input type="text" [(ngModel)]="contractDetails.contractNumber" name="contractNumber" required>
+            </div>
+            <div class="form-group">
+              <label>Km Uscita (Attuali) *</label>
+              <input type="number" [(ngModel)]="contractDetails.kmOut" name="kmOut" required>
+            </div>
+            <div class="form-group">
+              <label>Chilometri Inclusi *</label>
+              <input type="text" [(ngModel)]="contractDetails.kmIncluded" name="kmIncluded" placeholder="Es. 2999 km totali o Senza Limiti" required>
+            </div>
+            <div class="form-group">
+              <label>Orario di Uscita *</label>
+              <input type="text" [(ngModel)]="contractDetails.timeOut" name="timeOut" placeholder="HH:MM" required>
+            </div>
+            <div class="form-group">
+              <label>Orario di Rientro *</label>
+              <input type="text" [(ngModel)]="contractDetails.timeIn" name="timeIn" placeholder="HH:MM" required>
+            </div>
+            <div class="form-group">
+              <label>Livello Carburante (Uscita) *</label>
+              <select [(ngModel)]="contractDetails.fuelLevel" name="fuelLevel" required>
+                <option value="12/12">12/12 (Pieno)</option>
+                <option value="10/12">10/12</option>
+                <option value="8/12">8/12</option>
+                <option value="6/12">6/12</option>
+                <option value="4/12">4/12</option>
+                <option value="2/12">2/12</option>
+                <option value="0/12">0/12 (Riserva)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Alimentazione Veicolo (Carburante) *</label>
+              <select [(ngModel)]="contractDetails.vehicleFuelType" name="vehicleFuelType" required>
+                <option value="Diesel">Diesel</option>
+                <option value="Benzina">Benzina</option>
+                <option value="Ibrido">Ibrido</option>
+                <option value="GPL">GPL</option>
+                <option value="Metano">Metano</option>
+                <option value="Elettrico">Elettrico</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- SECTION 2: OPZIONE AZIENDA / CONDUCENTI -->
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; border-left: 3px solid var(--accent); padding-left: 8px; margin-bottom: 1rem;">Locatario & Conducenti</h4>
+          <div class="form-group full-width" style="display: flex; align-items: center; gap: 8px; margin-bottom: 1.25rem;">
+            <input type="checkbox" id="isCompanyCheckbox" [(ngModel)]="contractDetails.isCompany" name="isCompany" (change)="onCompanyCheckboxChange()" style="width: auto; cursor: pointer; margin-bottom: 0;">
+            <label for="isCompanyCheckbox" style="cursor: pointer; margin-bottom: 0; font-weight: 700; color: #1e293b;">Il Cliente è un'Azienda / Società (Locatario Persona Giuridica)</label>
+          </div>
+
+          @if (contractDetails.isCompany) {
+            <!-- Company fields -->
+            <div class="form-grid" style="background: #f8fafc; padding: 1.2rem; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 1.5rem;">
+              <div class="form-group">
+                <label>Ragione Sociale Azienda *</label>
+                <input type="text" [(ngModel)]="contractDetails.companyName" name="companyName" placeholder="Denominazione S.r.l. / S.p.a." required>
+              </div>
+              <div class="form-group">
+                <label>Partita IVA / Codice Fiscale *</label>
+                <input type="text" [(ngModel)]="contractDetails.companyVat" name="companyVat" required>
+              </div>
+              <div class="form-group">
+                <label>Indirizzo Sede Legale *</label>
+                <input type="text" [(ngModel)]="contractDetails.companyAddress" name="companyAddress" placeholder="Via, Città, CAP" required>
+              </div>
+              <div class="form-group">
+                <label>Telefono Azienda</label>
+                <input type="text" [(ngModel)]="contractDetails.companyPhone" name="companyPhone">
+              </div>
+              <div class="form-group full-width">
+                <label>PEC / Codice Univoco (Fatturazione)</label>
+                <input type="text" [(ngModel)]="contractDetails.companyPec" name="companyPec" placeholder="Es. pec@pec.it o SDI 5EUO82D">
+              </div>
+            </div>
+
+            <!-- Primary Driver dropdown if Company is checked -->
+            <div class="form-grid" style="margin-bottom: 1.5rem;">
+              <div class="form-group">
+                <label>Conducente Principale *</label>
+                <select [(ngModel)]="contractDetails.mainDriverId" name="mainDriverId" (change)="onMainDriverChange()" required>
+                  <option value="" disabled>Seleziona conducente principale...</option>
+                  @for (c of availableCustomers; track c.id) {
+                    <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+          } @else {
+            <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); padding: 10px; border-radius: 6px; color: #065f46; font-size: 0.8rem; margin-bottom: 1.25rem;">
+              <i class="fa-solid fa-circle-info"></i> Il cliente privato <strong>{{ contractCustomer?.firstName }} {{ contractCustomer?.lastName }}</strong> viene impostato automaticamente come <strong>Conducente Principale</strong>.
+            </div>
+          }
+
+          <!-- Dati Anagrafici & Patente Conducente Principale -->
+          @if (contractDetails.mainDriverId) {
+            <div style="background: #f8fafc; padding: 1.2rem; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 1.5rem;">
+              <h5 style="font-size: 0.85rem; font-weight: 700; color: #1e293b; margin-top: 0; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                <i class="fa-solid fa-address-card text-gradient"></i> Dati Anagrafici & Patente Conducente
+              </h5>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Luogo di Nascita *</label>
+                  <input type="text" [(ngModel)]="contractDetails.driverBirthPlace" name="driverBirthPlace" placeholder="Es. Mottola (TA)" required>
+                </div>
+                <div class="form-group">
+                  <label>Data di Nascita *</label>
+                  <input type="date" [(ngModel)]="contractDetails.driverBirthDate" name="driverBirthDate" required>
+                </div>
+                <div class="form-group">
+                  <label>Numero Patente *</label>
+                  <input type="text" [(ngModel)]="contractDetails.driverLicenseNumber" name="driverLicenseNumber" placeholder="Es. U1234567A" required>
+                </div>
+                <div class="form-group">
+                  <label>Data Rilascio Patente *</label>
+                  <input type="date" [(ngModel)]="contractDetails.driverLicenseIssueDate" name="driverLicenseIssueDate" required>
+                </div>
+                <div class="form-group">
+                  <label>Data Scadenza Patente *</label>
+                  <input type="date" [(ngModel)]="contractDetails.driverLicenseExpiry" name="driverLicenseExpiry" required>
+                </div>
+                <div class="form-group">
+                  <label>Comune Rilascio Patente *</label>
+                  <input type="text" [(ngModel)]="contractDetails.driverLicenseReleasedBy" name="driverLicenseReleasedBy" placeholder="Es. Mottola o Taranto" required>
+                </div>
+                <div class="form-group">
+                  <label>Paese Rilascio Patente *</label>
+                  <input type="text" [(ngModel)]="contractDetails.driverLicenseCountry" name="driverLicenseCountry" placeholder="Es. Italia" required>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Additional Drivers (Both options are available) -->
+          <div class="form-grid" style="margin-bottom: 1.5rem;">
+            <div class="form-group">
+              <label>Conducente Aggiuntivo 1 (Opzionale)</label>
+              <select [(ngModel)]="contractDetails.additionalDriver1Id" name="additionalDriver1Id">
+                <option value="">Nessuno</option>
+                @for (c of availableCustomers; track c.id) {
+                  @if (c.id !== contractDetails.mainDriverId) {
+                    <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
+                  }
+                }
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Conducente Aggiuntivo 2 (Opzionale)</label>
+              <select [(ngModel)]="contractDetails.additionalDriver2Id" name="additionalDriver2Id">
+                <option value="">Nessuno</option>
+                @for (c of availableCustomers; track c.id) {
+                  @if (c.id !== contractDetails.mainDriverId && c.id !== contractDetails.additionalDriver1Id) {
+                    <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
+                  }
+                }
+              </select>
+            </div>
+          </div>
+
+          <!-- SECTION 3: FRANCHIGIA -->
+          <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; border-left: 3px solid var(--accent); padding-left: 8px; margin-top: 1.5rem; margin-bottom: 1rem;">Limitazione di Responsabilità (Franchigia)</h4>
+          <div class="form-grid" style="margin-bottom: 1.5rem;">
+            <div class="form-group">
+              <label>Franchigia Selezionata (€) *</label>
+              <input type="number" [(ngModel)]="contractDetails.franchise" name="franchise" min="0" required>
+            </div>
+          </div>
+
+
+
+          <!-- SUBMIT ACTIONS -->
+          <div class="modal-actions" style="border-top: 1px solid #e2e8f0; padding-top: 1rem; margin-top: 2rem;">
+            <button type="button" class="btn-utility" (click)="closeContractModal()">Annulla</button>
+            <button type="submit" class="btn-accent" [disabled]="isGeneratingContract" style="min-width: 180px;">
+              @if (isGeneratingContract) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Generazione in corso...
+              } @else {
+                <i class="fa-solid fa-file-invoice"></i> Genera Contratto (PDF)
+              }
+            </button>
           </div>
         </form>
       </div>

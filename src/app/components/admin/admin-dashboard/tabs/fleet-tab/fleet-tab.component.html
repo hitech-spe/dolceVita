@@ -151,6 +151,17 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Alimentazione (Carburante)</label>
+                    <select [(ngModel)]="newVehicle.fuelType">
+                        <option value="Diesel">Diesel</option>
+                        <option value="Benzina">Benzina</option>
+                        <option value="Ibrido">Ibrido</option>
+                        <option value="GPL">GPL</option>
+                        <option value="Metano">Metano</option>
+                        <option value="Elettrico">Elettrico</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Stato</label>
                     <select [(ngModel)]="newVehicle.status">
                         <option value="Attivo">Attivo</option>

@@ -1,9 +1,10 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, Injector, runInInjectionContext } from '@angular/core';
 import {
   Firestore,
   collection,
   collectionData,
   addDoc,
+  setDoc,
   query,
   where,
   doc,
@@ -15,6 +16,7 @@ import {
   writeBatch
 } from '@angular/fire/firestore';
 import { Observable, map } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 
 // --- INTERFACCE ---
 export interface Vehicle {
@@ -26,6 +28,7 @@ export interface Vehicle {
   category: string; // es. 'Segmento A', 'Furgoni', ecc.
   status: 'Attivo' | 'Manutenzione' | 'Venduto';
   dailyPrice?: number;
+  fuelType?: string; // es. 'Diesel', 'Benzina', 'Ibrido', 'Elettrico', ecc.
   soldDate?: Timestamp;
   createdAt?: Timestamp;
 }
@@ -107,9 +110,12 @@ export interface Customer {
   firstName: string;
   lastName: string;
   birthDate?: Timestamp;
+  birthPlace?: string;
   licenseNumber?: string;
+  licenseIssueDate?: Timestamp;
   licenseExpiry?: Timestamp;
   licenseReleasedBy?: string;
+  licenseCountry?: string;
   phone?: string;
   address?: string;
   attachments?: { name: string, data: string }[]; // Base64 attachments
@@ -127,11 +133,30 @@ export interface Reminder {
   createdAt?: Timestamp;
 }
 
+export interface ContractDocument {
+  id?: string;
+  contractNumber: string;
+  rentalId: string;
+  customerId: string;
+  customerName: string;
+  vehicleId: string;
+  vehiclePlate: string;
+  date: Timestamp;
+  details: any; // Serialized ContractDetails
+  createdAt?: Timestamp;
+  cargos_status?: 'SENT' | 'FAILED' | string;
+  cargos_transaction_id?: string;
+  cargos_sync_time?: Timestamp;
+  cargos_error?: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class RentalService {
   private firestore = inject(Firestore);
+  private http = inject(HttpClient);
+  private injector = inject(Injector);
 
   // ==========================================
   // GESTIONE VEICOLI (IL PARCO MEZZI)
@@ -369,7 +394,9 @@ export class RentalService {
 
   getTemporaryTransfers(): Observable<TemporaryTransfer[]> {
     const ref = collection(this.firestore, 'temporary_transfers');
-    return collectionData(ref, { idField: 'id' }) as Observable<TemporaryTransfer[]>;
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(ref, { idField: 'id' }) as Observable<TemporaryTransfer[]>;
+    });
   }
 
   async addTemporaryTransfer(transfer: TemporaryTransfer) {
@@ -384,7 +411,9 @@ export class RentalService {
 
   getMaintenancePeriods(): Observable<MaintenancePeriod[]> {
     const ref = collection(this.firestore, 'maintenance_periods');
-    return collectionData(ref, { idField: 'id' }) as Observable<MaintenancePeriod[]>;
+    return runInInjectionContext(this.injector, () => {
+      return collectionData(ref, { idField: 'id' }) as Observable<MaintenancePeriod[]>;
+    });
   }
 
   async addMaintenancePeriod(period: MaintenancePeriod) {
@@ -591,5 +620,204 @@ export class RentalService {
   async deleteReminder(id: string) {
     const docRef = doc(this.firestore, `reminders/${id}`);
     return deleteDoc(docRef);
+  }
+
+  // ==========================================
+  // GESTIONE CONTRATTI (CONTRACTS HISTORY)
+  // ==========================================
+
+  getContracts(): Observable<ContractDocument[]> {
+    const ref = collection(this.firestore, 'contracts');
+    const q = query(ref, orderBy('date', 'desc'));
+    return collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>;
+  }
+
+  getNextContractNumber(): Observable<number> {
+    return this.getContracts().pipe(
+      map(contracts => {
+        if (!contracts || contracts.length === 0) {
+          return 731; // Start at 731 as in the original example
+        }
+        const nums = contracts
+          .map(c => parseInt(c.contractNumber, 10))
+          .filter(n => !isNaN(n));
+        const max = nums.length > 0 ? Math.max(...nums) : 730;
+        return max + 1;
+      })
+    );
+  }
+
+  async createContract(contract: ContractDocument, cargosData?: any) {
+    const docRef = doc(this.firestore, `contracts/${contract.contractNumber}`);
+    const dataToSave = {
+      ...contract,
+      ...(cargosData || {}),
+      createdAt: Timestamp.now()
+    };
+    return setDoc(docRef, dataToSave);
+  }
+
+  async deleteContract(id: string) {
+    const docRef = doc(this.firestore, `contracts/${id}`);
+    return deleteDoc(docRef);
+  }
+
+  // --- CARGOS INTEGRATION HELPER METHODS ---
+
+  mapToCargosFormat(rental: Rental, vehicle: Vehicle, customer: Customer, details: any, date: Timestamp): any {
+    const formatDateTime = (d: any): string => {
+      if (!d) return '';
+      let dateObj: Date;
+      if (d instanceof Date) {
+        dateObj = d;
+      } else if (d instanceof Timestamp) {
+        dateObj = d.toDate();
+      } else if (d && typeof d.toDate === 'function') {
+        dateObj = d.toDate();
+      } else if (d && typeof d.seconds === 'number') {
+        dateObj = new Date(d.seconds * 1000);
+      } else {
+        dateObj = new Date(d);
+      }
+      if (isNaN(dateObj.getTime())) dateObj = new Date();
+      const dd = String(dateObj.getDate()).padStart(2, '0');
+      const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const yyyy = dateObj.getFullYear();
+      const hh = String(dateObj.getHours()).padStart(2, '0');
+      const min = String(dateObj.getMinutes()).padStart(2, '0');
+      return `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+    };
+
+    const formatTimestampWithTime = (t: any, timeStr?: string): string => {
+      if (!t) return `20/08/2026 ${timeStr || '12:00'}`;
+      let d: Date;
+      if (t instanceof Timestamp) {
+        d = t.toDate();
+      } else if (t && typeof t.toDate === 'function') {
+        d = t.toDate();
+      } else if (t && typeof t.seconds === 'number') {
+        d = new Date(t.seconds * 1000);
+      } else {
+        d = new Date(t);
+      }
+      if (isNaN(d.getTime())) d = new Date();
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const time = timeStr || '12:00';
+      return `${dd}/${mm}/${yyyy} ${time}`;
+    };
+
+    const formatBirthDate = (dVal: any): string => {
+      if (!dVal) return '15/05/1985'; // Default fallback birthdate
+      let d: Date;
+      if (dVal instanceof Timestamp) {
+        d = dVal.toDate();
+      } else if (dVal.toDate) {
+        d = dVal.toDate();
+      } else if (dVal && typeof dVal.seconds === 'number') {
+        d = new Date(dVal.seconds * 1000);
+      } else {
+        d = new Date(dVal);
+      }
+      if (isNaN(d.getTime())) return '15/05/1985';
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    };
+
+    const branchAddresses: { [key: string]: string } = {
+      'Mottola': 'Via S. Allende 1, Mottola (TA)',
+      'Massafra': 'Viale Marconi, Massafra (TA)',
+      'Grottaglie': 'Via Taranto, Grottaglie (TA)'
+    };
+
+    const checkOutAddr = branchAddresses[rental.location] || 'Via S. Allende 1, Mottola (TA)';
+    const checkInAddr = branchAddresses[rental.returnLocation || rental.location] || checkOutAddr;
+
+    const categoryLower = (vehicle.category || '').toLowerCase();
+    let veicoloTipoDesc = 'autovetture';
+    
+    if (categoryLower.includes('autocaravan') || categoryLower.includes('camper')) {
+      veicoloTipoDesc = 'autocaravan';
+    } else if (categoryLower.includes('autobus')) {
+      veicoloTipoDesc = 'autobus';
+    } else if (
+      categoryLower.includes('autocarro') ||
+      categoryLower.includes('cassone') ||
+      categoryLower.includes('cassa') ||
+      categoryLower.includes('sponda') ||
+      categoryLower.includes('ribaltabile') ||
+      categoryLower.includes('refrigerato') ||
+      categoryLower.includes('l3h3') ||
+      categoryLower.includes('l4h3')
+    ) {
+      veicoloTipoDesc = 'autocarri';
+    } else if (
+      categoryLower.includes('furgon') ||
+      categoryLower.includes('van') ||
+      categoryLower.includes('l1h1') ||
+      categoryLower.includes('l2h1') ||
+      categoryLower.includes('l2h2')
+    ) {
+      veicoloTipoDesc = 'furgoni';
+    }
+
+    const veicoloTipo = (veicoloTipoDesc === 'furgoni' || veicoloTipoDesc === 'autocarri') ? '1' : '2';
+    const licenseNum = details.driverLicenseNumber || customer.licenseNumber || 'PA987654321';
+
+    const checkoutLuogo = rental.location || 'Mottola';
+    const checkinLuogo = rental.returnLocation || rental.location || 'Mottola';
+    const nascitaLuogo = customer.birthPlace || details.driverBirthPlace || 'Mottola';
+    const rilascioLuogo = details.driverLicenseReleasedBy || customer.licenseReleasedBy || customer.birthPlace || details.driverBirthPlace || rental.location || 'Mottola';
+
+    const patentePaese = details.driverLicenseCountry || customer.licenseCountry || 'Italia';
+
+    return {
+      contratto_id: details.contractNumber || '',
+      contratto_data: formatDateTime(date),
+      contratto_tipop: "0",
+      contratto_checkout_data: formatTimestampWithTime(rental.startDate, details.timeOut),
+      contratto_checkout_luogo: checkoutLuogo,
+      contratto_checkout_indirizzo: checkOutAddr,
+      contratto_checkin_data: formatTimestampWithTime(rental.endDate, details.timeIn),
+      contratto_checkin_luogo: checkinLuogo,
+      contratto_checkin_indirizzo: checkInAddr,
+      operatore_id: "OPER_LEO",
+      agenzia_id: "AG-0012",
+      agenzia_nome: "LEO RENT",
+      agenzia_luogo: "Mottola",
+      agenzia_indirizzo: "Piazza Duomo 1, Milano",
+      agenzia_recapito_tel: "02123456",
+      veicolo_tipo: veicoloTipo,
+      veicolo_tipo_desc: veicoloTipoDesc,
+      veicolo_marca: vehicle.brand || 'Fiat',
+      veicolo_modello: vehicle.model || 'Panda',
+      veicolo_targa: vehicle.plate || 'AB123CD',
+      conducente_contraente_cognome: (customer.lastName || 'ROSSI').toUpperCase(),
+      conducente_contraente_nome: (customer.firstName || 'MARIO').toUpperCase(),
+      conducente_contraente_nascita_data: formatBirthDate(customer.birthDate),
+      conducente_contraente_nascita_luogo: nascitaLuogo,
+      conducente_contraente_cittadinanza: "Italia",
+      conducente_contraente_docide_tipo_cod: "PATENTE DI GUIDA",
+      conducente_contraente_docide_numero: licenseNum,
+      conducente_contraente_docide_luogoril: rilascioLuogo,
+      conducente_contraente_docide_luogoril_paese: patentePaese,
+      conducente_contraente_patente_numero: licenseNum,
+      conducente_contraente_patente_luogoril: rilascioLuogo,
+      conducente_contraente_patente_luogoril_paese: patentePaese,
+      conducente_contraente_recapito: customer.phone || '+393331234567'
+    };
+  }
+
+  checkCargosContract(contractNumber: string): Observable<any> {
+    const url = `http://localhost:8080/api/v1/cargos/contracts/${contractNumber}/check`;
+    return this.http.post(url, {});
+  }
+
+  sendCargosContract(contractNumber: string): Observable<any> {
+    const url = `http://localhost:8080/api/v1/cargos/contracts/${contractNumber}/send`;
+    return this.http.post(url, {});
   }
 }

@@ -7,6 +7,7 @@ import { routes } from './app.routes';
 import { getFirestore, provideFirestore } from "@angular/fire/firestore";
 import { getAuth, provideAuth } from "@angular/fire/auth";
 import { initializeApp, provideFirebaseApp } from "@angular/fire/app";
+import { LogLevel, setLogLevel } from '@angular/fire';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, './assets/i18n/', '.json');
@@ -21,6 +22,8 @@ const firebaseConfig = {
   appId: "1:712144549486:web:882e5cc8394490cabe987f",
   measurementId: "G-WGTXTVCWN1"
 };
+
+setLogLevel(LogLevel.SILENT);
 
 export const appConfig: ApplicationConfig = {
   providers: [

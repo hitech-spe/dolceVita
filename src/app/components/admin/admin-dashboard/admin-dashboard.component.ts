@@ -8,11 +8,12 @@ import { InsuranceTabComponent } from './tabs/insurance-tab/insurance-tab.compon
 import { InspectionTabComponent } from './tabs/inspection-tab/inspection-tab.component';
 import { MaintenanceTabComponent } from './tabs/maintenance-tab/maintenance-tab.component';
 import { RemindersTabComponent } from './tabs/reminders-tab/reminders-tab.component';
+import { ContractsTabComponent } from './tabs/contracts-tab/contracts-tab.component';
 import { RentalService, Reminder } from '../../../services/rental.service';
 
 import { CalendarTabComponent } from './tabs/calendar-tab/calendar-tab.component';
 
-type Tab = 'calendar' | 'fleet' | 'insurance' | 'inspection' | 'maintenance' | 'customers' | 'reminders';
+type Tab = 'calendar' | 'fleet' | 'insurance' | 'inspection' | 'maintenance' | 'customers' | 'reminders' | 'contracts';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -26,7 +27,8 @@ type Tab = 'calendar' | 'fleet' | 'insurance' | 'inspection' | 'maintenance' | '
     InsuranceTabComponent,
     InspectionTabComponent,
     MaintenanceTabComponent,
-    RemindersTabComponent
+    RemindersTabComponent,
+    ContractsTabComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.scss']
