@@ -5,11 +5,12 @@ import { Observable, combineLatest, map, switchMap, BehaviorSubject } from 'rxjs
 import { Rental, RentalService, Vehicle, Customer, TemporaryTransfer, MaintenancePeriod, Maintenance, ContractDocument } from "../../../../../services/rental.service";
 import { ContractPdfService, ContractDetails } from "../../../../../services/contract-pdf.service";
 import { Timestamp } from '@angular/fire/firestore';
+import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/vehicle-select.component";
 
 @Component({
   selector: 'app-calendar-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, VehicleSelectComponent],
   templateUrl: './calendar-tab.component.html',
   styleUrls: ['./calendar-tab.component.scss']
 })

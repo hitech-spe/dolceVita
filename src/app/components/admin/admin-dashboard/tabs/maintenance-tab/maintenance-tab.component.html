@@ -115,12 +115,8 @@
             <div class="form-grid">
                 <div class="form-group">
                     <label>Veicolo</label>
-                    <select [(ngModel)]="newMaintenance.vehicleId">
-                        <option value="" disabled selected>Seleziona veicolo...</option>
-                        @for (v of availableVehicles; track v.id) {
-                            <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }})</option>
-                        }
-                    </select>
+                    <app-vehicle-select [(vehicleId)]="newMaintenance.vehicleId" [vehicles]="availableVehicles" placeholder="Cerca veicolo..."></app-vehicle-select>
+                    <input type="hidden" [(ngModel)]="newMaintenance.vehicleId" name="vehicleId" required />
                 </div>
                 <div class="form-group"><label>Data</label><input type="date" [(ngModel)]="newMaintenance.date"></div>
                 <div class="form-group"><label>Descrizione Intervento</label><input type="text" [(ngModel)]="newMaintenance.description"></div>

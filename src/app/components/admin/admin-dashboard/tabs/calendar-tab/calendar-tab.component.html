@@ -222,11 +222,8 @@
           <div class="form-grid">
             <div class="form-group">
               <label>Veicolo</label>
-              <select [(ngModel)]="newRental.vehicleId" name="vehicleId" required>
-                @for (v of availableVehicles; track v.id) {
-                  <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }})</option>
-                }
-              </select>
+              <app-vehicle-select [(vehicleId)]="newRental.vehicleId" [vehicles]="availableVehicles" placeholder="Cerca veicolo..."></app-vehicle-select>
+              <input type="hidden" [(ngModel)]="newRental.vehicleId" name="vehicleId" required />
             </div>
             <div class="form-group full-width" style="display: flex; flex-direction: row; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
               <input type="checkbox" id="isQuickCustomer" [(ngModel)]="isQuickCustomer" name="isQuickCustomer" style="width: auto; cursor: pointer; margin-bottom: 0;">
@@ -342,11 +339,8 @@
           <div class="form-grid">
             <div class="form-group">
               <label>Veicolo</label>
-              <select [(ngModel)]="newMaintenance.vehicleId" name="vehicleId" required>
-                @for (v of availableVehicles; track v.id) {
-                  <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }})</option>
-                }
-              </select>
+              <app-vehicle-select [(vehicleId)]="newMaintenance.vehicleId" [vehicles]="availableVehicles" placeholder="Cerca veicolo..."></app-vehicle-select>
+              <input type="hidden" [(ngModel)]="newMaintenance.vehicleId" name="vehicleId" required />
             </div>
             <div class="form-group">
               <label>Data Inizio</label>
@@ -379,11 +373,8 @@
           <div class="form-grid">
             <div class="form-group">
               <label>Veicolo</label>
-              <select [(ngModel)]="newTransfer.vehicleId" name="vehicleId" required>
-                @for (v of availableVehicles; track v.id) {
-                  <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }})</option>
-                }
-              </select>
+              <app-vehicle-select [(vehicleId)]="newTransfer.vehicleId" [vehicles]="availableVehicles" placeholder="Cerca veicolo..."></app-vehicle-select>
+              <input type="hidden" [(ngModel)]="newTransfer.vehicleId" name="vehicleId" required />
             </div>
             <div class="form-group">
               <label>Nuova Sede (Temporanea)</label>
@@ -542,14 +533,8 @@
           <div class="form-grid">
             <div class="form-group">
               <label>Veicolo</label>
-              <select [(ngModel)]="newSale.vehicleId" name="vehicleId" required>
-                <option value="" disabled selected>Seleziona un veicolo...</option>
-                @for (v of availableVehicles; track v.id) {
-                  @if (v.status !== 'Venduto') {
-                    <option [value]="v.id">{{ v.brand }} {{ v.model }} ({{ v.plate }})</option>
-                  }
-                }
-              </select>
+              <app-vehicle-select [(vehicleId)]="newSale.vehicleId" [vehicles]="availableVehicles" placeholder="Cerca veicolo..."></app-vehicle-select>
+              <input type="hidden" [(ngModel)]="newSale.vehicleId" name="vehicleId" required />
             </div>
             <div class="form-group">
               <label>Data Vendita</label>

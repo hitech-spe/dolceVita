@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { Maintenance, RentalService, Vehicle } from '../../../../../services/rental.service';
 import { Timestamp } from '@angular/fire/firestore';
+import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/vehicle-select.component";
 
 @Component({
   selector: 'app-maintenance-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, CurrencyPipe],
+  imports: [CommonModule, FormsModule, CurrencyPipe, VehicleSelectComponent],
   templateUrl: './maintenance-tab.component.html'
 })
 export class MaintenanceTabComponent implements OnInit {

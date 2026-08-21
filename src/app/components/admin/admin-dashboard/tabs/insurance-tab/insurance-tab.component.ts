@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { Insurance, RentalService, Vehicle } from '../../../../../services/rental.service';
 import { Timestamp } from '@angular/fire/firestore';
+import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/vehicle-select.component";
 
 @Component({
   selector: 'app-insurance-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, VehicleSelectComponent],
   templateUrl: './insurance-tab.component.html'
 })
 export class InsuranceTabComponent implements OnInit {

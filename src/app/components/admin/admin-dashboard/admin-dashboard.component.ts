@@ -48,11 +48,40 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   private remindersSub?: Subscription;
   private timerId?: any;
 
+  // Technical expirations (insurance, inspections)
+  expiringInsurances: any[] = [];
+  expiringInspections: any[] = [];
+  showScadenzeDetails = true;
+
+  private vehiclesSub?: Subscription;
+  private insurancesSub?: Subscription;
+  private inspectionsSub?: Subscription;
+
+  private allVehicles: any[] = [];
+  private allInsurances: any[] = [];
+  private allInspections: any[] = [];
+
   ngOnInit() {
     // Subscribe to reminders
     this.remindersSub = this.rentalService.getReminders().subscribe(reminders => {
       this.allReminders = reminders;
       this.recalculateAlerts();
+    });
+
+    // Subscribe to vehicles, insurances, inspections to compute auto-warnings
+    this.vehiclesSub = this.rentalService.getVehicles().subscribe(vehicles => {
+      this.allVehicles = vehicles;
+      this.recalculateExpirations();
+    });
+
+    this.insurancesSub = this.rentalService.getInsurances().subscribe(insurances => {
+      this.allInsurances = insurances;
+      this.recalculateExpirations();
+    });
+
+    this.inspectionsSub = this.rentalService.getInspections().subscribe(inspections => {
+      this.allInspections = inspections;
+      this.recalculateExpirations();
     });
 
     // Check periodically (every 10 seconds for ultra-immediate detection) because time advances and alerts can become active
@@ -64,6 +93,15 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.remindersSub) {
       this.remindersSub.unsubscribe();
+    }
+    if (this.vehiclesSub) {
+      this.vehiclesSub.unsubscribe();
+    }
+    if (this.insurancesSub) {
+      this.insurancesSub.unsubscribe();
+    }
+    if (this.inspectionsSub) {
+      this.inspectionsSub.unsubscribe();
     }
     if (this.timerId) {
       clearInterval(this.timerId);
@@ -107,6 +145,83 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     }
 
     this.activeAlertsCount = count;
+  }
+
+  recalculateExpirations() {
+    if (!this.allInsurances || !this.allInspections) return;
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(now.getDate() + 30);
+    thirtyDaysFromNow.setHours(23, 59, 59, 999);
+
+    // Filter insurances expiring in 30 days or less (or already expired), excluding sold vehicles
+    this.expiringInsurances = this.allInsurances.filter(ins => {
+      if (!ins.expiryDate) return false;
+      
+      // If vehicle exists and status is Venduto, ignore
+      if (ins.vehicleId && this.allVehicles.length > 0) {
+        const v = this.allVehicles.find(x => x.id === ins.vehicleId);
+        if (v && v.status === 'Venduto') return false;
+      }
+      
+      const expiry = ins.expiryDate.toDate ? ins.expiryDate.toDate() : new Date(ins.expiryDate);
+      return expiry <= thirtyDaysFromNow;
+    });
+
+    // Filter inspections expiring in 30 days or less (or already expired), excluding sold vehicles
+    this.expiringInspections = this.allInspections.filter(insp => {
+      if (!insp.expiryDate) return false;
+
+      // If vehicle exists and status is Venduto, ignore
+      if (insp.vehicleId && this.allVehicles.length > 0) {
+        const v = this.allVehicles.find(x => x.id === insp.vehicleId);
+        if (v && v.status === 'Venduto') return false;
+      }
+
+      const expiry = insp.expiryDate.toDate ? insp.expiryDate.toDate() : new Date(insp.expiryDate);
+      return expiry <= thirtyDaysFromNow;
+    });
+  }
+
+  isPastDate(timestamp: any): boolean {
+    if (!timestamp) return false;
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return date < now;
+  }
+
+  getDaysLeftText(timestamp: any): string {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    const diffTime = date.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return `scaduto da ${Math.abs(diffDays)} gg`;
+    } else if (diffDays === 0) {
+      return 'scade oggi';
+    } else if (diffDays === 1) {
+      return 'scade domani';
+    } else {
+      return `mancano ${diffDays} gg`;
+    }
+  }
+
+  formatDate(timestamp: any): string {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const options: Intl.DateTimeFormatOptions = {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    };
+    return date.toLocaleDateString('it-IT', options);
   }
 
   get currentPopupAlert(): Reminder | null {

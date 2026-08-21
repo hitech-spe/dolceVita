@@ -340,3 +340,137 @@
     transform: scale(1);
   }
 }
+
+/* Collapsible Scadenze Alert Banner */
+.scadenze-alert-banner {
+  background: rgba(239, 68, 68, 0.04);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+
+  &.glass-card {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .alert-banner-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    user-select: none;
+    background: rgba(239, 68, 68, 0.05);
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.08);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: #b91c1c;
+      font-size: 0.95rem;
+
+      .alert-warn-icon {
+        font-size: 1.2rem;
+        color: var(--accent);
+        animation: pulse 2s infinite;
+      }
+    }
+
+    .btn-toggle-scadenze {
+      background: none;
+      border: none;
+      color: #b91c1c;
+      font-weight: 600;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .alert-banner-body {
+    padding: 1.25rem 1.5rem;
+    background: var(--bg-white);
+    border-top: 1px solid rgba(239, 68, 68, 0.15);
+  }
+
+  .scadenze-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+  }
+
+  .scadenza-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      border-color: #cbd5e1;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+
+      &.badge-ins {
+        background: rgba(59, 130, 246, 0.1);
+        color: #1d4ed8;
+      }
+
+      &.badge-insp {
+        background: rgba(147, 51, 234, 0.1);
+        color: #7e22ce;
+      }
+    }
+
+    .vehicle-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-main);
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .expiry-date {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+
+      &.expired {
+        color: #b91c1c;
+        font-weight: 600;
+      }
+
+      .days-remaining {
+        color: #dc2626;
+        margin-left: 0.25rem;
+      }
+    }
+  }
+}
+

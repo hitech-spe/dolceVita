@@ -8,10 +8,10 @@
                     <p class="subtitle">Amministrazione La Dolce Vita Rent</p>
                 </div>
 
-                @if (activeAlertsCount > 0) {
-                    <div class="global-alert-badge animate-pulse" (click)="onTabChange('reminders')" title="Ci sono promemoria urgenti in scadenza! Clicca per visualizzare la bacheca.">
+                @if (activeAlertsCount > 0 || expiringInsurances.length > 0 || expiringInspections.length > 0) {
+                    <div class="global-alert-badge animate-pulse" (click)="onTabChange('reminders')" title="Ci sono promemoria urgenti o scadenze imminenti dei veicoli! Clicca per visualizzare i dettagli.">
                         <i class="fa-solid fa-bell fa-bounce"></i>
-                        <span class="badge-count">{{ activeAlertsCount }}</span>
+                        <span class="badge-count">{{ activeAlertsCount + expiringInsurances.length + expiringInspections.length }}</span>
                         <span class="badge-text hide-mobile">Avvisi Attivi!</span>
                     </div>
                 }
@@ -54,6 +54,47 @@
             </button>
         </div>
     </header>
+
+    @if (expiringInsurances.length > 0 || expiringInspections.length > 0) {
+        <div class="scadenze-alert-banner glass-card">
+            <div class="alert-banner-header" (click)="showScadenzeDetails = !showScadenzeDetails">
+                <div class="header-left">
+                    <i class="fa-solid fa-triangle-exclamation alert-warn-icon"></i>
+                    <span><strong>Attenzione!</strong> Ci sono <strong>{{ expiringInsurances.length + expiringInspections.length }}</strong> scadenze imminenti (entro 30 giorni) o già superate:</span>
+                </div>
+                <button class="btn-toggle-scadenze">
+                    {{ showScadenzeDetails ? 'Nascondi' : 'Mostra Dettagli' }}
+                    <i class="fa-solid" [class.fa-chevron-up]="showScadenzeDetails" [class.fa-chevron-down]="!showScadenzeDetails"></i>
+                </button>
+            </div>
+            @if (showScadenzeDetails) {
+                <div class="alert-banner-body">
+                    <div class="scadenze-grid">
+                        @for (ins of expiringInsurances; track ins.id) {
+                            <div class="scadenza-item insurance" (click)="onTabChange('insurance')" title="Vai alla scheda Assicurazioni">
+                                <span class="badge badge-ins">Assicurazione</span>
+                                <span class="vehicle-name">{{ ins.vehiclePlate }}</span>
+                                <span class="expiry-date" [class.expired]="isPastDate(ins.expiryDate)">
+                                    Scade il: {{ formatDate(ins.expiryDate) }} 
+                                    <strong class="days-remaining">({{ getDaysLeftText(ins.expiryDate) }})</strong>
+                                </span>
+                            </div>
+                        }
+                        @for (insp of expiringInspections; track insp.id) {
+                            <div class="scadenza-item inspection" (click)="onTabChange('inspection')" title="Vai alla scheda Revisioni">
+                                <span class="badge badge-insp">Revisione</span>
+                                <span class="vehicle-name">{{ insp.vehiclePlate }}</span>
+                                <span class="expiry-date" [class.expired]="isPastDate(insp.expiryDate)">
+                                    Scade il: {{ formatDate(insp.expiryDate) }} 
+                                    <strong class="days-remaining">({{ getDaysLeftText(insp.expiryDate) }})</strong>
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
 
     <main class="dashboard-content">
         @if (currentTab === 'calendar') {
