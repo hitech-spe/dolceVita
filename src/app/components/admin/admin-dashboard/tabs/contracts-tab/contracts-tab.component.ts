@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { RentalService, ContractDocument, Customer, Vehicle, Rental } from '../../../../../services/rental.service';
 import { ContractPdfService } from '../../../../../services/contract-pdf.service';
 import { Firestore, doc, getDoc, Timestamp } from '@angular/fire/firestore';
+import { API_CONFIG } from '../../../../../config/api.config';
 
 @Component({
   selector: 'app-contracts-tab',
@@ -174,7 +175,7 @@ export class ContractsTabComponent implements OnInit {
       error: (error) => {
         this.isCheckingContract[contractNumber] = false;
         console.error('Errore durante il check Cargos:', error);
-        alert(`Si è verificato un errore durante la chiamata a Cargos (Microservizio non raggiungibile a localhost:8080 o errore server).\nDettaglio: ${error.message || error}`);
+        alert(`Si è verificato un errore durante la chiamata a Cargos (Microservizio non raggiungibile a ${API_CONFIG.baseUrl} o errore server).\nDettaglio: ${error.message || error}`);
       }
     });
   }

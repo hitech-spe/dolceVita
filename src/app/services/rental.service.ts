@@ -17,6 +17,7 @@ import {
 } from '@angular/fire/firestore';
 import { Observable, map } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
+import { API_CONFIG } from '../config/api.config';
 
 // --- INTERFACCE ---
 export interface Vehicle {
@@ -812,12 +813,12 @@ export class RentalService {
   }
 
   checkCargosContract(contractNumber: string): Observable<any> {
-    const url = `http://localhost:8080/api/v1/cargos/contracts/${contractNumber}/check`;
+    const url = `${API_CONFIG.baseUrl}/api/v1/cargos/contracts/${contractNumber}/check`;
     return this.http.post(url, {});
   }
 
   sendCargosContract(contractNumber: string): Observable<any> {
-    const url = `http://localhost:8080/api/v1/cargos/contracts/${contractNumber}/send`;
+    const url = `${API_CONFIG.baseUrl}/api/v1/cargos/contracts/${contractNumber}/send`;
     return this.http.post(url, {});
   }
 }
