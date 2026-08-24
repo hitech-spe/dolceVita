@@ -250,12 +250,7 @@
             } @else {
               <div class="form-group">
                 <label>Cliente</label>
-                <select [(ngModel)]="newRental.customerId" name="customerId" required>
-                  <option value="" disabled selected>Seleziona un cliente...</option>
-                  @for (c of availableCustomers; track c.id) {
-                    <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
-                  }
-                </select>
+                <app-customer-select [(customerId)]="newRental.customerId" [customers]="availableCustomers" placeholder="Cerca o seleziona un cliente..."></app-customer-select>
               </div>
             }
             <div class="form-group">
@@ -646,12 +641,7 @@
             <div class="form-grid" style="margin-bottom: 1.5rem;">
               <div class="form-group">
                 <label>Conducente Principale *</label>
-                <select [(ngModel)]="contractDetails.mainDriverId" name="mainDriverId" (change)="onMainDriverChange()" required>
-                  <option value="" disabled>Seleziona conducente principale...</option>
-                  @for (c of availableCustomers; track c.id) {
-                    <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
-                  }
-                </select>
+                <app-customer-select [(customerId)]="contractDetails.mainDriverId" (customerIdChange)="onMainDriverChange()" [customers]="availableCustomers" placeholder="Cerca conducente principale..."></app-customer-select>
               </div>
             </div>
           } @else {

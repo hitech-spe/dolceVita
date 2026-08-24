@@ -242,6 +242,19 @@
     }
   }
 
+  .btn-edit {
+    background-color: rgba(14, 165, 233, 0.08);
+    color: #0ea5e9;
+    border: 1px solid rgba(14, 165, 233, 0.15);
+
+    &:hover:not(:disabled) {
+      background-color: #0ea5e9;
+      color: white;
+      transform: scale(1.1);
+      box-shadow: 0 4px 10px rgba(14, 165, 233, 0.25);
+    }
+  }
+
   .btn-print {
     background-color: rgba(220, 38, 38, 0.08);
     color: var(--accent);
