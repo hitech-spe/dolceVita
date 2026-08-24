@@ -701,7 +701,7 @@ export class CalendarTabComponent implements OnInit {
     }
   }
 
-  getRentalBarClass(rental: any, day: Date): string {
+  getRentalBarClass(rental: any, day: Date, allRentals: any[] = []): string {
     const d = new Date(day);
     d.setHours(0,0,0,0);
     const time = d.getTime();
@@ -711,6 +711,18 @@ export class CalendarTabComponent implements OnInit {
 
     const isStart = time === start.getTime();
     const isEnd = time === end.getTime();
+
+    // Check if another rental starts or ends on this exact day for this vehicle
+    const hasOverlapTransition = allRentals && allRentals.some((r: any) => {
+      if (r.id === rental.id || r.status === 'Cancellato') return false;
+      const s = r.startDate.toDate(); s.setHours(0,0,0,0);
+      const e = r.endDate.toDate(); e.setHours(0,0,0,0);
+      return (isEnd && s.getTime() === time) || (isStart && e.getTime() === time);
+    });
+
+    if (hasOverlapTransition) {
+      return 'rental-same-day'; // Orange turnover/transition day!
+    }
 
     if (isStart && isEnd) {
       return 'rental-same-day';
@@ -727,7 +739,7 @@ export class CalendarTabComponent implements OnInit {
     return this.getLocationClass(rental.location);
   }
 
-  getRentalDayLabel(rental: any, day: Date): string {
+  getRentalDayLabel(rental: any, day: Date, allRentals: any[] = []): string {
     const d = new Date(day);
     d.setHours(0,0,0,0);
     const time = d.getTime();
@@ -745,6 +757,25 @@ export class CalendarTabComponent implements OnInit {
 
     const startP = formatPeriod(rental.startPeriod || 'Mat');
     const endP = formatPeriod(rental.endPeriod || 'Mat');
+
+    // Check if another rental transitions here
+    const transitionRental = allRentals && allRentals.find((r: any) => {
+      if (r.id === rental.id || r.status === 'Cancellato') return false;
+      const s = r.startDate.toDate(); s.setHours(0,0,0,0);
+      const e = r.endDate.toDate(); e.setHours(0,0,0,0);
+      return (isEnd && s.getTime() === time) || (isStart && e.getTime() === time);
+    });
+
+    if (transitionRental) {
+      const otherStartP = formatPeriod(transitionRental.startPeriod || 'Mat');
+      const otherEndP = formatPeriod(transitionRental.endPeriod || 'Mat');
+      
+      if (isEnd) {
+        return `⇄ ${endP}/${otherStartP}`;
+      } else {
+        return `⇄ ${otherEndP}/${startP}`;
+      }
+    }
 
     if (isStart && isEnd) {
       if (startP === endP) return startP;

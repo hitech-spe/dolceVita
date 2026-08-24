@@ -183,10 +183,10 @@
                   style="cursor: pointer;">
                 @if (status.type === 'rental') {
                   <div class="calendar-bar rental-bar" 
-                       [ngClass]="getRentalBarClass(status.data, day.date)" 
+                       [ngClass]="getRentalBarClass(status.data, day.date, item.rentals)" 
                        [title]="getFormattedTooltip('rental', status.data)"
                        (click)="$event.stopPropagation(); selectCell(item, day.date); openRentalModal(status.data)">
-                    <span class="rental-day-label">{{ getRentalDayLabel(status.data, day.date) }}</span>
+                    <span class="rental-day-label">{{ getRentalDayLabel(status.data, day.date, item.rentals) }}</span>
                   </div>
                 } @else if (status.type === 'maintenance') {
                   <div class="calendar-bar maintenance-bar" 

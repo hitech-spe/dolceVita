@@ -188,11 +188,7 @@ export class ContractsTabComponent implements OnInit {
     this.rentalService.downloadContractPdf(contract.contractNumber).subscribe({
       next: (pdfBlob: Blob) => {
         const url = window.URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Contratto_Noleggio_${contract.contractNumber}.pdf`;
-        link.click();
-        window.URL.revokeObjectURL(url);
+        window.open(url, '_blank');
         if (contract.id) {
           this.isGeneratingContract[contract.id] = false;
         }
