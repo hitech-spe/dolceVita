@@ -71,7 +71,7 @@
                 <div class="alert-banner-body">
                     <div class="scadenze-grid">
                         @for (ins of expiringInsurances; track ins.id) {
-                            <div class="scadenza-item insurance" (click)="onTabChange('insurance')" title="Vai alla scheda Assicurazioni">
+                            <div class="scadenza-item insurance" (click)="navigateToInsurance(ins)" title="Vai alla scheda Assicurazioni">
                                 <span class="badge badge-ins">Assicurazione</span>
                                 <span class="vehicle-name">{{ ins.vehiclePlate }}</span>
                                 <span class="expiry-date" [class.expired]="isPastDate(ins.expiryDate)">
@@ -81,7 +81,7 @@
                             </div>
                         }
                         @for (insp of expiringInspections; track insp.id) {
-                            <div class="scadenza-item inspection" (click)="onTabChange('inspection')" title="Vai alla scheda Revisioni">
+                            <div class="scadenza-item inspection" (click)="navigateToInspection(insp)" title="Vai alla scheda Revisioni">
                                 <span class="badge badge-insp">Revisione</span>
                                 <span class="vehicle-name">{{ insp.vehiclePlate }}</span>
                                 <span class="expiry-date" [class.expired]="isPastDate(insp.expiryDate)">
@@ -107,10 +107,10 @@
             <app-customers-tab />
         }
         @if (currentTab === 'insurance') {
-            <app-insurance-tab />
+            <app-insurance-tab [searchTerm]="insuranceSearchTerm" [highlightedId]="insuranceHighlightedId" />
         }
         @if (currentTab === 'inspection') {
-            <app-inspection-tab />
+            <app-inspection-tab [searchTerm]="inspectionSearchTerm" [highlightedId]="inspectionHighlightedId" />
         }
         @if (currentTab === 'maintenance') {
             <app-maintenance-tab />

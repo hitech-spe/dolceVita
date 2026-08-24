@@ -1,7 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ContractsTabComponent } from './contracts-tab.component';
 import { RentalService } from '../../../../../services/rental.service';
-import { ContractPdfService } from '../../../../../services/contract-pdf.service';
 import { Firestore } from '@angular/fire/firestore';
 import { of } from 'rxjs';
 
@@ -9,18 +8,16 @@ describe('ContractsTabComponent', () => {
   let component: ContractsTabComponent;
   let fixture: ComponentFixture<ContractsTabComponent>;
   let mockRentalService: any;
-  let mockContractPdfService: any;
   let mockFirestore: any;
 
   beforeEach(async () => {
     mockRentalService = {
       getContracts: jasmine.createSpy('getContracts').and.returnValue(of([])),
       getCustomers: jasmine.createSpy('getCustomers').and.returnValue(of([])),
-      deleteContract: jasmine.createSpy('deleteContract').and.returnValue(Promise.resolve())
-    };
-
-    mockContractPdfService = {
-      generateContractAndMerge: jasmine.createSpy('generateContractAndMerge').and.returnValue(Promise.resolve(new Blob()))
+      deleteContract: jasmine.createSpy('deleteContract').and.returnValue(Promise.resolve()),
+      updateContract: jasmine.createSpy('updateContract').and.returnValue(Promise.resolve()),
+      sendBulkContracts: jasmine.createSpy('sendBulkContracts').and.returnValue(of([])),
+      downloadContractPdf: jasmine.createSpy('downloadContractPdf').and.returnValue(of(new Blob()))
     };
 
     mockFirestore = {};
@@ -29,7 +26,6 @@ describe('ContractsTabComponent', () => {
       imports: [ContractsTabComponent],
       providers: [
         { provide: RentalService, useValue: mockRentalService },
-        { provide: ContractPdfService, useValue: mockContractPdfService },
         { provide: Firestore, useValue: mockFirestore }
       ]
     }).compileComponents();
@@ -78,5 +74,129 @@ describe('ContractsTabComponent', () => {
     filtered = component.getFilteredContracts(mockContracts);
     expect(filtered.length).toBe(1);
     expect(filtered[0].contractNumber).toBe('22345');
+  });
+
+  it('should initialize editing state correctly unless cargos_status is SENT', () => {
+    const mockContractSent = {
+      id: 'c1',
+      contractNumber: '100',
+      cargos_status: 'SENT',
+      details: { baseRate: 150 }
+    } as any;
+
+    const mockContractUnsent = {
+      id: 'c2',
+      contractNumber: '101',
+      cargos_status: 'CHECK_SUCCESS',
+      details: { baseRate: 120 }
+    } as any;
+
+    // SENT contract should not be editable
+    spyOn(window, 'alert');
+    component.editContract(mockContractSent);
+    expect(component.isEditModalOpen).toBeFalse();
+    expect(window.alert).toHaveBeenCalledWith('Non puoi modificare un contratto che è già stato inviato con successo a Cargos!');
+
+    // Unsent contract should be editable
+    component.editContract(mockContractUnsent);
+    expect(component.isEditModalOpen).toBeTrue();
+    expect(component.editingContract).toBe(mockContractUnsent);
+    expect(component.editedDetails.baseRate).toBe(120);
+  });
+
+  it('should auto-populate driver details on driver change', () => {
+    component.availableCustomers = [
+      {
+        id: 'cust_999',
+        firstName: 'Franco',
+        lastName: 'Neri',
+        birthPlace: 'Mottola',
+        birthDate: { toDate: () => new Date('1990-01-01') } as any,
+        licenseNumber: 'PAT123',
+        licenseIssueDate: { toDate: () => new Date('2010-01-01') } as any,
+        licenseExpiry: { toDate: () => new Date('2030-01-01') } as any,
+        licenseReleasedBy: 'MCTC',
+        licenseCountry: 'Italia'
+      }
+    ];
+
+    component.editedDetails = { mainDriverId: 'cust_999' };
+    component.onEditMainDriverChange();
+
+    expect(component.editedDetails.driverBirthPlace).toBe('Mottola');
+    expect(component.editedDetails.driverBirthDate).toBe('1990-01-01');
+    expect(component.editedDetails.driverLicenseNumber).toBe('PAT123');
+    expect(component.editedDetails.driverLicenseCountry).toBe('Italia');
+  });
+
+  it('should save edited contract, updating customerName and resetting Cargos status', async () => {
+    component.availableCustomers = [
+      { id: 'c_xyz', firstName: 'Luigi', lastName: 'Bianchi' }
+    ];
+
+    const mockContract = {
+      id: 'c_id_1',
+      contractNumber: '555',
+      details: { baseRate: 100, mainDriverId: 'c_xyz' }
+    } as any;
+
+    component.editingContract = mockContract;
+    component.editedDetails = { baseRate: 190, mainDriverId: 'c_xyz' };
+    component.isEditModalOpen = true;
+
+    await component.saveContractEdit();
+
+    expect(mockRentalService.updateContract).toHaveBeenCalledWith('c_id_1', {
+      details: { baseRate: 190, mainDriverId: 'c_xyz' },
+      cargos_status: null as any,
+      cargos_transaction_id: null as any,
+      cargos_error: null as any,
+      cargos_sync_time: null as any,
+      customerName: 'Luigi Bianchi'
+    });
+    expect(component.isEditModalOpen).toBeFalse();
+  });
+
+  it('should manage bulk selections and trigger bulk sending correctly', () => {
+    const mockContracts = [
+      { id: '1', contractNumber: '100', cargos_status: 'CHECK_SUCCESS' },
+      { id: '2', contractNumber: '101', cargos_status: 'SENT' },
+      { id: '3', contractNumber: '102', cargos_status: 'FAILED' }
+    ] as any[];
+
+    component.allContracts = mockContracts;
+
+    // Single selection toggling
+    component.toggleSelectContract('1');
+    expect(component.isContractSelected('1')).toBeTrue();
+    expect(component.isContractSelected('2')).toBeFalse();
+
+    component.toggleSelectContract('1');
+    expect(component.isContractSelected('1')).toBeFalse();
+
+    // Select-all logic (excluding already SENT)
+    component.toggleSelectAll();
+    expect(component.isAllSelected()).toBeTrue();
+    expect(component.isContractSelected('1')).toBeTrue();
+    expect(component.isContractSelected('2')).toBeFalse();
+    expect(component.isContractSelected('3')).toBeTrue();
+
+    // Deselect-all logic
+    component.toggleSelectAll();
+    expect(component.isAllSelected()).toBeFalse();
+    expect(component.isContractSelected('1')).toBeFalse();
+    expect(component.isContractSelected('3')).toBeFalse();
+
+    // Bulk Send
+    component.toggleSelectContract('1');
+    component.toggleSelectContract('3');
+    spyOn(window, 'confirm').and.returnValue(true);
+    spyOn(window, 'alert');
+
+    component.sendBulkContracts();
+
+    expect(mockRentalService.sendBulkContracts).toHaveBeenCalledWith(['1', '3']);
+    expect(component.isSendingBulk).toBeFalse();
+    expect(component.selectedContractIds.size).toBe(0);
   });
 });

@@ -2,15 +2,15 @@ import { Component, Input, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable, combineLatest, map, switchMap, BehaviorSubject } from 'rxjs';
-import { Rental, RentalService, Vehicle, Customer, TemporaryTransfer, MaintenancePeriod, Maintenance, ContractDocument } from "../../../../../services/rental.service";
-import { ContractPdfService, ContractDetails } from "../../../../../services/contract-pdf.service";
+import { Rental, RentalService, Vehicle, Customer, TemporaryTransfer, MaintenancePeriod, Maintenance, ContractDocument, ContractDetails } from "../../../../../services/rental.service";
 import { Timestamp } from '@angular/fire/firestore';
 import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/vehicle-select.component";
+import { CustomerSelectComponent } from "../../../../../shared/customer-select/customer-select.component";
 
 @Component({
   selector: 'app-calendar-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, VehicleSelectComponent],
+  imports: [CommonModule, FormsModule, VehicleSelectComponent, CustomerSelectComponent],
   templateUrl: './calendar-tab.component.html',
   styleUrls: ['./calendar-tab.component.scss']
 })
@@ -18,7 +18,6 @@ export class CalendarTabComponent implements OnInit {
   @Input() selectedLocation$!: Observable<string>;
   
   private rentalService = inject(RentalService);
-  private contractPdfService = inject(ContractPdfService);
   
   vehiclesData$!: Observable<{
     vehicle: Vehicle, 
@@ -1235,14 +1234,6 @@ export class CalendarTabComponent implements OnInit {
         }
       }
 
-      const pdfBlob = await this.contractPdfService.generateContractAndMerge(
-        this.contractRental,
-        this.contractVehicle,
-        this.contractCustomer,
-        this.contractDetails,
-        this.availableCustomers
-      );
-
       // Persist contract metadata in Firestore
       const contractDoc: ContractDocument = {
         contractNumber: this.contractDetails.contractNumber || 'CONTRATTO',
@@ -1264,16 +1255,24 @@ export class CalendarTabComponent implements OnInit {
       );
       await this.rentalService.createContract(contractDoc, cargosData);
 
-      // Open in a new browser tab/window as requested (no auto-download)
-      const url = window.URL.createObjectURL(pdfBlob);
-      window.open(url, '_blank');
-      
-      this.closeContractModal();
-      alert('Contratto PDF generato, salvato in archivio ed aperto in una nuova scheda browser!');
+      // Download generated PDF from microservice and open in new tab
+      this.rentalService.downloadContractPdf(contractDoc.contractNumber).subscribe({
+        next: (pdfBlob: Blob) => {
+          const url = window.URL.createObjectURL(pdfBlob);
+          window.open(url, '_blank');
+          this.closeContractModal();
+          alert('Contratto PDF generato, salvato in archivio ed aperto in una nuova scheda browser!');
+          this.isGeneratingContract = false;
+        },
+        error: (error) => {
+          console.error('Errore durante il recupero del PDF dal server:', error);
+          alert('Contratto salvato in archivio, ma si è verificato un errore durante la generazione/recupero del PDF dal server.');
+          this.isGeneratingContract = false;
+        }
+      });
     } catch (error) {
       console.error('Errore durante la generazione del contratto:', error);
-      alert('Si è verificato un errore durante la generazione del contratto PDF.');
-    } finally {
+      alert('Si è verificato un errore durante la generazione del contratto.');
       this.isGeneratingContract = false;
     }
   }

@@ -14,6 +14,7 @@ describe('RemindersTabComponent', () => {
       getReminders: jasmine.createSpy('getReminders').and.returnValue(of([])),
       addReminder: jasmine.createSpy('addReminder').and.returnValue(Promise.resolve()),
       updateReminder: jasmine.createSpy('updateReminder').and.returnValue(Promise.resolve()),
+      toggleReminderCompletion: jasmine.createSpy('toggleReminderCompletion').and.returnValue(Promise.resolve()),
       deleteReminder: jasmine.createSpy('deleteReminder').and.returnValue(Promise.resolve())
     };
 

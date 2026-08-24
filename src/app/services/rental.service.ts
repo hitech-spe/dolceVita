@@ -131,7 +131,39 @@ export interface Reminder {
   color?: string; // Hex or CSS color string for the post-it background
   alertBeforeValue?: number; // offset value
   alertBeforeUnit?: 'minutes' | 'hours' | 'days' | 'none'; // offset unit
+  repeat?: 'none' | 'hourly' | 'every_2_hours' | 'every_4_hours' | 'every_8_hours' | 'every_12_hours' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   createdAt?: Timestamp;
+}
+
+export interface ContractDetails {
+  contractNumber?: string;
+  kmOut?: number;
+  kmIncluded?: string; // e.g. "Senza Limiti", "2000 km totali", etc.
+  timeOut?: string;    // e.g. "09:30"
+  timeIn?: string;     // e.g. "18:30"
+  isCompany?: boolean;
+  companyName?: string;
+  companyVat?: string;
+  companyAddress?: string;
+  companyPhone?: string;
+  companyPec?: string;
+  mainDriverId?: string;
+  driverBirthPlace?: string;
+  driverBirthDate?: string;
+  driverLicenseNumber?: string;
+  driverLicenseIssueDate?: string;
+  driverLicenseExpiry?: string;
+  driverLicenseReleasedBy?: string;
+  driverLicenseCountry?: string;
+  additionalDriver1Id?: string;
+  additionalDriver2Id?: string;
+  baseRate?: number;
+  extraKmPrice?: number; // default 0.24
+  deposit?: number;      // default 0
+  advance?: number;      // default 0
+  fuelLevel?: string;    // default "12/12"
+  franchise?: number;    // single customizable franchise
+  vehicleFuelType?: string; // e.g. "Diesel", "Benzina", etc.
 }
 
 export interface ContractDocument {
@@ -143,7 +175,7 @@ export interface ContractDocument {
   vehicleId: string;
   vehiclePlate: string;
   date: Timestamp;
-  details: any; // Serialized ContractDetails
+  details: ContractDetails; // Serialized ContractDetails
   createdAt?: Timestamp;
   cargos_status?: 'SENT' | 'FAILED' | string;
   cargos_transaction_id?: string;
@@ -618,6 +650,61 @@ export class RentalService {
     return updateDoc(docRef, data);
   }
 
+  async toggleReminderCompletion(reminder: Reminder) {
+    if (!reminder.id) return;
+
+    const isCurrentlyCompleted = !!reminder.completed;
+
+    if (!isCurrentlyCompleted && reminder.repeat && reminder.repeat !== 'none') {
+      // It's a recurring reminder being marked as completed.
+      // Advance the active reminder's date.
+      const nextDate = this.calculateNextOccurrence(reminder.date.toDate(), reminder.repeat);
+      await this.updateReminder(reminder.id, {
+        date: Timestamp.fromDate(nextDate),
+        completed: false // make sure it remains active
+      });
+    } else {
+      // Normal toggle (either non-recurring, or historical completed being reopened)
+      await this.updateReminder(reminder.id, {
+        completed: !isCurrentlyCompleted
+      });
+    }
+  }
+
+  private calculateNextOccurrence(currentDate: Date, repeat: string): Date {
+    const next = new Date(currentDate);
+    switch (repeat) {
+      case 'hourly':
+        next.setHours(next.getHours() + 1);
+        break;
+      case 'every_2_hours':
+        next.setHours(next.getHours() + 2);
+        break;
+      case 'every_4_hours':
+        next.setHours(next.getHours() + 4);
+        break;
+      case 'every_8_hours':
+        next.setHours(next.getHours() + 8);
+        break;
+      case 'every_12_hours':
+        next.setHours(next.getHours() + 12);
+        break;
+      case 'daily':
+        next.setDate(next.getDate() + 1);
+        break;
+      case 'weekly':
+        next.setDate(next.getDate() + 7);
+        break;
+      case 'monthly':
+        next.setMonth(next.getMonth() + 1);
+        break;
+      case 'yearly':
+        next.setFullYear(next.getFullYear() + 1);
+        break;
+    }
+    return next;
+  }
+
   async deleteReminder(id: string) {
     const docRef = doc(this.firestore, `reminders/${id}`);
     return deleteDoc(docRef);
@@ -661,6 +748,11 @@ export class RentalService {
   async deleteContract(id: string) {
     const docRef = doc(this.firestore, `contracts/${id}`);
     return deleteDoc(docRef);
+  }
+
+  async updateContract(id: string, data: Partial<ContractDocument>) {
+    const docRef = doc(this.firestore, `contracts/${id}`);
+    return updateDoc(docRef, data);
   }
 
   // --- CARGOS INTEGRATION HELPER METHODS ---
@@ -820,5 +912,15 @@ export class RentalService {
   sendCargosContract(contractNumber: string): Observable<any> {
     const url = `${API_CONFIG.baseUrl}/api/v1/cargos/contracts/${contractNumber}/send`;
     return this.http.post(url, {});
+  }
+
+  sendBulkContracts(contractIds: string[]): Observable<any> {
+    const url = `${API_CONFIG.baseUrl}/api/v1/cargos/contracts/send-bulk`;
+    return this.http.post(url, contractIds);
+  }
+
+  downloadContractPdf(contractNumber: string): Observable<Blob> {
+    const url = `${API_CONFIG.baseUrl}/api/v1/contracts/${contractNumber}/pdf`;
+    return this.http.get(url, { responseType: 'blob' });
   }
 }

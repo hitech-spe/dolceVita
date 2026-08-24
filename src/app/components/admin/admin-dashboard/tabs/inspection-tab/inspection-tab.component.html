@@ -29,7 +29,7 @@
             </thead>
             <tbody>
                 @for (insp of getFiltered(inspections$ | async); track insp.id) {
-                    <tr>
+                    <tr [class.highlighted-item]="insp.id === highlightedId">
                         <td class="fw-bold">
                             @let vName = getVehicleName(insp.vehicleId);
                             @if (vName) {
@@ -64,7 +64,7 @@
     <div class="mobile-cards show-mobile">
         @for (insp of getFiltered(inspections$ | async); track insp.id) {
             @let vName = getVehicleName(insp.vehicleId);
-            <div class="rental-card-mobile">
+            <div class="rental-card-mobile" [class.highlighted-item]="insp.id === highlightedId">
                 <div class="card-header">
                     <span class="customer-name">
                         @if (vName) {

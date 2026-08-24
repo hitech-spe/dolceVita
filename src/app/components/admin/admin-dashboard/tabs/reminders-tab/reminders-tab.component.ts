@@ -27,6 +27,7 @@ export class RemindersTabComponent implements OnInit {
   newReminderText = '';
   newReminderDate = '';
   newReminderColor = '#fef08a'; // Pastel Yellow default
+  newReminderRepeat: 'none' | 'hourly' | 'every_2_hours' | 'every_4_hours' | 'every_8_hours' | 'every_12_hours' | 'daily' | 'weekly' | 'monthly' | 'yearly' = 'none';
 
   // Early alert configuration
   hasAlert = false;
@@ -71,6 +72,7 @@ export class RemindersTabComponent implements OnInit {
       this.editingReminderId = reminder.id;
       this.newReminderText = reminder.text;
       this.newReminderColor = reminder.color || '#fef08a';
+      this.newReminderRepeat = reminder.repeat || 'none';
       
       // Load alert info
       if (reminder.alertBeforeUnit && reminder.alertBeforeUnit !== 'none') {
@@ -98,6 +100,7 @@ export class RemindersTabComponent implements OnInit {
       this.editingReminderId = undefined;
       this.newReminderText = '';
       this.newReminderColor = '#fef08a';
+      this.newReminderRepeat = 'none';
       this.hasAlert = false;
       this.alertValue = 15;
       this.alertUnit = 'minutes';
@@ -115,6 +118,7 @@ export class RemindersTabComponent implements OnInit {
     this.newReminderText = '';
     this.newReminderDate = '';
     this.newReminderColor = '#fef08a';
+    this.newReminderRepeat = 'none';
     this.editingReminderId = undefined;
     this.hasAlert = false;
     this.alertValue = 15;
@@ -135,7 +139,8 @@ export class RemindersTabComponent implements OnInit {
         color: this.newReminderColor,
         completed: this.isEditMode ? false : false, // New or edited defaults/resets to not completed
         alertBeforeValue: this.hasAlert ? this.alertValue : 0,
-        alertBeforeUnit: this.hasAlert ? this.alertUnit : 'none'
+        alertBeforeUnit: this.hasAlert ? this.alertUnit : 'none',
+        repeat: this.newReminderRepeat
       };
 
       if (this.isEditMode && this.editingReminderId) {
@@ -154,9 +159,7 @@ export class RemindersTabComponent implements OnInit {
     event.stopPropagation(); // Avoid triggering any other click
     if (!reminder.id) return;
     try {
-      await this.rentalService.updateReminder(reminder.id, {
-        completed: !reminder.completed
-      });
+      await this.rentalService.toggleReminderCompletion(reminder);
     } catch (error) {
       console.error('Errore nell\'aggiornamento del promemoria:', error);
     }
@@ -249,6 +252,21 @@ export class RemindersTabComponent implements OnInit {
     const unitLabel = reminder.alertBeforeUnit === 'minutes' ? 'minuti' : 
                       reminder.alertBeforeUnit === 'hours' ? 'ore' : 'giorni';
     return `Avviso impostato: ${reminder.alertBeforeValue} ${unitLabel} prima`;
+  }
+
+  getRepeatDescription(repeat?: string): string {
+    switch (repeat) {
+      case 'hourly': return 'Ripetizione: Ogni ora';
+      case 'every_2_hours': return 'Ripetizione: Ogni 2 ore';
+      case 'every_4_hours': return 'Ripetizione: Ogni 4 ore';
+      case 'every_8_hours': return 'Ripetizione: Ogni 8 ore';
+      case 'every_12_hours': return 'Ripetizione: Ogni 12 ore';
+      case 'daily': return 'Ripetizione: Ogni giorno';
+      case 'weekly': return 'Ripetizione: Ogni settimana';
+      case 'monthly': return 'Ripetizione: Ogni mese';
+      case 'yearly': return 'Ripetizione: Ogni anno';
+      default: return '';
+    }
   }
 
   getColorStyle(colorHex: string) {

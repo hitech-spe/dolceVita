@@ -5,11 +5,11 @@ import { from, switchMap, catchError, of } from 'rxjs';
 
 /**
  * Interceptor to automatically add the Firebase ID token in the Authorization header
- * for any outgoing HTTP requests targeting the cargos API backend (/api/v1/cargos/**).
+ * for any outgoing HTTP requests targeting the cargos or contracts API backend (/api/v1/cargos/**, /api/v1/contracts/**).
  */
 export const cargosAuthInterceptor: HttpInterceptorFn = (req, next) => {
-  // Check if the request is targeting the cargos API endpoints
-  if (req.url.includes('/api/v1/cargos/')) {
+  // Check if the request is targeting our microservice endpoints
+  if (req.url.includes('/api/v1/')) {
     const auth = inject(Auth);
     const currentUser = auth.currentUser;
 

@@ -40,6 +40,12 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   locations = ['Tutte', 'Mottola', 'Massafra', 'Grottaglie'];
   selectedLocation$ = new BehaviorSubject<string>('Tutte');
 
+  insuranceSearchTerm = '';
+  insuranceHighlightedId = '';
+
+  inspectionSearchTerm = '';
+  inspectionHighlightedId = '';
+
   // Early alert global notifications
   activeAlertsCount = 0;
   pendingPopupAlerts: Reminder[] = [];
@@ -231,7 +237,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   async completePopupAlert(reminder: Reminder) {
     if (!reminder.id) return;
     try {
-      await this.rentalService.updateReminder(reminder.id, { completed: true });
+      await this.rentalService.toggleReminderCompletion(reminder);
       this.dismissPopupAlert();
     } catch (error) {
       console.error('Errore nel completamento del promemoria da popup:', error);
@@ -259,6 +265,52 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
   onTabChange(tab: Tab) {
     this.currentTab = tab;
+    // Clear filters and highlights when changing tabs manually
+    if (tab === 'insurance') {
+      this.insuranceSearchTerm = '';
+      this.insuranceHighlightedId = '';
+    } else if (tab === 'inspection') {
+      this.inspectionSearchTerm = '';
+      this.inspectionHighlightedId = '';
+    }
+  }
+
+  getVehiclePlate(item: any): string {
+    const v = this.allVehicles.find(x => x.id === item.vehicleId);
+    if (v) return v.plate;
+    if (item.vehiclePlate && item.vehiclePlate.includes('(') && item.vehiclePlate.includes(')')) {
+      const parts = item.vehiclePlate.split('(');
+      return parts[parts.length - 1].replace(')', '').trim();
+    }
+    return item.vehiclePlate || '';
+  }
+
+  navigateToInsurance(ins: any) {
+    const plate = this.getVehiclePlate(ins);
+    this.insuranceSearchTerm = plate;
+    this.insuranceHighlightedId = ins.id || '';
+    this.currentTab = 'insurance';
+
+    // Auto-clear highlight after 5 seconds
+    setTimeout(() => {
+      if (this.insuranceHighlightedId === ins.id) {
+        this.insuranceHighlightedId = '';
+      }
+    }, 5000);
+  }
+
+  navigateToInspection(insp: any) {
+    const plate = this.getVehiclePlate(insp);
+    this.inspectionSearchTerm = plate;
+    this.inspectionHighlightedId = insp.id || '';
+    this.currentTab = 'inspection';
+
+    // Auto-clear highlight after 5 seconds
+    setTimeout(() => {
+      if (this.inspectionHighlightedId === insp.id) {
+        this.inspectionHighlightedId = '';
+      }
+    }, 5000);
   }
 
   changeLocationFilter(loc: string) {

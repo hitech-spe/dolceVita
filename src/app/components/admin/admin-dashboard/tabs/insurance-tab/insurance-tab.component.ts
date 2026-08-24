@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
@@ -18,7 +18,8 @@ export class InsuranceTabComponent implements OnInit {
   insurances$!: Observable<Insurance[]>;
   availableVehicles: Vehicle[] = [];
 
-  searchTerm = '';
+  @Input() searchTerm = '';
+  @Input() highlightedId = '';
   sortOrder: 'newest' | 'oldest' | 'expiryDate' = 'newest';
 
   isModalOpen = false;

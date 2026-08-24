@@ -47,6 +47,10 @@
                             @if (isAlertActive(rem)) {
                                 <i class="fa-solid fa-bell fa-bounce alert-bell-icon" [title]="getAlertDescription(rem)"></i>
                             }
+
+                            @if (rem.repeat && rem.repeat !== 'none') {
+                                <i class="fa-solid fa-repeat alert-bell-icon" style="color: #64748b; margin-left: 0.5rem;" [title]="getRepeatDescription(rem.repeat)"></i>
+                            }
                         </div>
                         
                         <div class="post-it-actions">
@@ -139,6 +143,23 @@
                                    [(ngModel)]="newReminderDate" 
                                    name="date" 
                                    required />
+                        </div>
+
+                        <!-- Recurrence/Ripetizione -->
+                        <div class="form-field">
+                            <label for="reminderRepeat">Ripetizione (Stile Sveglia)</label>
+                            <select id="reminderRepeat" [(ngModel)]="newReminderRepeat" name="repeat" style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid #cbd5e1; outline: none; background-color: white;">
+                                <option value="none">Nessuna</option>
+                                <option value="hourly">Ogni ora</option>
+                                <option value="every_2_hours">Ogni 2 ore</option>
+                                <option value="every_4_hours">Ogni 4 ore</option>
+                                <option value="every_8_hours">Ogni 8 ore</option>
+                                <option value="every_12_hours">Ogni 12 ore</option>
+                                <option value="daily">Ogni giorno (Giornaliera)</option>
+                                <option value="weekly">Ogni settimana (Settimanale)</option>
+                                <option value="monthly">Ogni mese (Mensile)</option>
+                                <option value="yearly">Ogni anno (Annuale)</option>
+                            </select>
                         </div>
 
                         <!-- Early Alert (Avviso Anticipato) Configuration -->
