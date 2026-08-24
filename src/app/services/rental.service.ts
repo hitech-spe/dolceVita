@@ -156,7 +156,11 @@ export interface ContractDetails {
   driverLicenseReleasedBy?: string;
   driverLicenseCountry?: string;
   additionalDriver1Id?: string;
+  additionalDriver1Address?: string;
+  additionalDriver1Phone?: string;
   additionalDriver2Id?: string;
+  additionalDriver2Address?: string;
+  additionalDriver2Phone?: string;
   baseRate?: number;
   extraKmPrice?: number; // default 0.24
   deposit?: number;      // default 0
@@ -181,6 +185,7 @@ export interface ContractDocument {
   cargos_transaction_id?: string;
   cargos_sync_time?: Timestamp;
   cargos_error?: string | null;
+  pdfBase64?: string | null;
 }
 
 @Injectable({

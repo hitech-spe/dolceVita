@@ -152,6 +152,7 @@ describe('ContractsTabComponent', () => {
       cargos_transaction_id: null as any,
       cargos_error: null as any,
       cargos_sync_time: null as any,
+      pdfBase64: null as any,
       customerName: 'Luigi Bianchi'
     });
     expect(component.isEditModalOpen).toBeFalse();

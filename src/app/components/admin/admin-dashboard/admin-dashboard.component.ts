@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BehaviorSubject, Subscription } from 'rxjs';
@@ -35,6 +35,7 @@ type Tab = 'calendar' | 'fleet' | 'insurance' | 'inspection' | 'maintenance' | '
 })
 export class AdminDashboardComponent implements OnInit, OnDestroy {
   private rentalService = inject(RentalService);
+  private cdr = inject(ChangeDetectorRef);
 
   currentTab: Tab = 'calendar';
   locations = ['Tutte', 'Mottola', 'Massafra', 'Grottaglie'];
@@ -72,27 +73,32 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     this.remindersSub = this.rentalService.getReminders().subscribe(reminders => {
       this.allReminders = reminders;
       this.recalculateAlerts();
+      this.cdr.detectChanges();
     });
 
     // Subscribe to vehicles, insurances, inspections to compute auto-warnings
     this.vehiclesSub = this.rentalService.getVehicles().subscribe(vehicles => {
       this.allVehicles = vehicles;
       this.recalculateExpirations();
+      this.cdr.detectChanges();
     });
 
     this.insurancesSub = this.rentalService.getInsurances().subscribe(insurances => {
       this.allInsurances = insurances;
       this.recalculateExpirations();
+      this.cdr.detectChanges();
     });
 
     this.inspectionsSub = this.rentalService.getInspections().subscribe(inspections => {
       this.allInspections = inspections;
       this.recalculateExpirations();
+      this.cdr.detectChanges();
     });
 
     // Check periodically (every 10 seconds for ultra-immediate detection) because time advances and alerts can become active
     this.timerId = setInterval(() => {
       this.recalculateAlerts();
+      this.cdr.detectChanges();
     }, 10000);
   }
 

@@ -99,6 +99,30 @@ export class ContractsTabComponent implements OnInit {
     }
   }
 
+  onEditAdditionalDriver1Change() {
+    const driverId = this.editedDetails.additionalDriver1Id;
+    const driver = this.availableCustomers.find(c => c.id === driverId);
+    if (driver) {
+      this.editedDetails.additionalDriver1Address = driver.address || '';
+      this.editedDetails.additionalDriver1Phone = driver.phone || '';
+    } else {
+      this.editedDetails.additionalDriver1Address = '';
+      this.editedDetails.additionalDriver1Phone = '';
+    }
+  }
+
+  onEditAdditionalDriver2Change() {
+    const driverId = this.editedDetails.additionalDriver2Id;
+    const driver = this.availableCustomers.find(c => c.id === driverId);
+    if (driver) {
+      this.editedDetails.additionalDriver2Address = driver.address || '';
+      this.editedDetails.additionalDriver2Phone = driver.phone || '';
+    } else {
+      this.editedDetails.additionalDriver2Address = '';
+      this.editedDetails.additionalDriver2Phone = '';
+    }
+  }
+
   async saveContractEdit() {
     if (!this.editingContract || !this.editingContract.id) return;
 
@@ -108,7 +132,8 @@ export class ContractsTabComponent implements OnInit {
         cargos_status: null as any,
         cargos_transaction_id: null as any,
         cargos_error: null as any,
-        cargos_sync_time: null as any
+        cargos_sync_time: null as any,
+        pdfBase64: null as any
       };
 
       if (this.editedDetails.mainDriverId) {

@@ -328,16 +328,44 @@
 
             <!-- SECTION 4: CONDUCENTI AGGIUNTIVI -->
             <h4 class="modal-section-title">Conducenti Aggiuntivi (Opzionali)</h4>
-            <div class="form-grid-2">
+            <div class="form-grid-2" style="margin-bottom: 0.5rem;">
               <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
                 <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Secondo Conducente</label>
-                <app-customer-select [(customerId)]="editedDetails.additionalDriver1Id" [customers]="availableCustomers" placeholder="Nessun secondo conducente..."></app-customer-select>
+                <app-customer-select [(customerId)]="editedDetails.additionalDriver1Id" (customerIdChange)="onEditAdditionalDriver1Change()" [customers]="availableCustomers" placeholder="Nessun secondo conducente..."></app-customer-select>
               </div>
               <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
                 <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Terzo Conducente</label>
-                <app-customer-select [(customerId)]="editedDetails.additionalDriver2Id" [customers]="availableCustomers" placeholder="Nessun terzo conducente..."></app-customer-select>
+                <app-customer-select [(customerId)]="editedDetails.additionalDriver2Id" (customerIdChange)="onEditAdditionalDriver2Change()" [customers]="availableCustomers" placeholder="Nessun terzo conducente..."></app-customer-select>
               </div>
             </div>
+
+            <!-- Dati Aggiuntivi Conducente 1 -->
+            @if (editedDetails.additionalDriver1Id) {
+              <div class="form-grid-2" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem; gap: 1rem;">
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                  <label style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Residenza Conducente Aggiuntivo 1</label>
+                  <input type="text" [(ngModel)]="editedDetails.additionalDriver1Address" name="additionalDriver1Address" style="padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; background: white;" />
+                </div>
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                  <label style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Telefono Conducente Aggiuntivo 1</label>
+                  <input type="text" [(ngModel)]="editedDetails.additionalDriver1Phone" name="additionalDriver1Phone" style="padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; background: white;" />
+                </div>
+              </div>
+            }
+
+            <!-- Dati Aggiuntivi Conducente 2 -->
+            @if (editedDetails.additionalDriver2Id) {
+              <div class="form-grid-2" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; gap: 1rem;">
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                  <label style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Residenza Conducente Aggiuntivo 2</label>
+                  <input type="text" [(ngModel)]="editedDetails.additionalDriver2Address" name="additionalDriver2Address" style="padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; background: white;" />
+                </div>
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                  <label style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Telefono Conducente Aggiuntivo 2</label>
+                  <input type="text" [(ngModel)]="editedDetails.additionalDriver2Phone" name="additionalDriver2Phone" style="padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; background: white;" />
+                </div>
+              </div>
+            }
 
             <!-- Footer Actions -->
             <div class="form-actions mt-4" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.2rem;">

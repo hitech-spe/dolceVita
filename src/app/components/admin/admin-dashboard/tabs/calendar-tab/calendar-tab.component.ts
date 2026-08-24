@@ -1166,6 +1166,30 @@ export class CalendarTabComponent implements OnInit {
     }
   }
 
+  onAdditionalDriver1Change() {
+    const driverId = this.contractDetails.additionalDriver1Id;
+    const driver = this.availableCustomers.find(c => c.id === driverId);
+    if (driver) {
+      this.contractDetails.additionalDriver1Address = driver.address || '';
+      this.contractDetails.additionalDriver1Phone = driver.phone || '';
+    } else {
+      this.contractDetails.additionalDriver1Address = '';
+      this.contractDetails.additionalDriver1Phone = '';
+    }
+  }
+
+  onAdditionalDriver2Change() {
+    const driverId = this.contractDetails.additionalDriver2Id;
+    const driver = this.availableCustomers.find(c => c.id === driverId);
+    if (driver) {
+      this.contractDetails.additionalDriver2Address = driver.address || '';
+      this.contractDetails.additionalDriver2Phone = driver.phone || '';
+    } else {
+      this.contractDetails.additionalDriver2Address = '';
+      this.contractDetails.additionalDriver2Phone = '';
+    }
+  }
+
   onCompanyCheckboxChange() {
     if (!this.contractDetails.isCompany && this.contractRental) {
       this.contractDetails.mainDriverId = this.contractRental.customerId;

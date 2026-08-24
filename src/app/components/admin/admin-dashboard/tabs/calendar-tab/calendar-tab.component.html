@@ -597,6 +597,7 @@
               <select [(ngModel)]="contractDetails.vehicleFuelType" name="vehicleFuelType" required>
                 <option value="Diesel">Diesel</option>
                 <option value="Benzina">Benzina</option>
+                <option value="Benzina/GPL">Benzina/GPL</option>
                 <option value="Ibrido">Ibrido</option>
                 <option value="GPL">GPL</option>
                 <option value="Metano">Metano</option>
@@ -690,29 +691,50 @@
           }
 
           <!-- Additional Drivers (Both options are available) -->
-          <div class="form-grid" style="margin-bottom: 1.5rem;">
-            <div class="form-group">
-              <label>Conducente Aggiuntivo 1 (Opzionale)</label>
-              <select [(ngModel)]="contractDetails.additionalDriver1Id" name="additionalDriver1Id">
-                <option value="">Nessuno</option>
-                @for (c of availableCustomers; track c.id) {
-                  @if (c.id !== contractDetails.mainDriverId) {
-                    <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
-                  }
-                }
-              </select>
+          <div style="background: #f8fafc; padding: 1.2rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+            <h5 style="margin: 0; font-size: 0.9rem; color: #1e293b; font-weight: 700;"><i class="fa-solid fa-users"></i> Conducenti Aggiuntivi (Opzionali)</h5>
+            
+            <div class="form-grid" style="margin-bottom: 0;">
+              <!-- Conducente Aggiuntivo 1 -->
+              <div class="form-group">
+                <label>Conducente Aggiuntivo 1</label>
+                <app-customer-select [(customerId)]="contractDetails.additionalDriver1Id" (customerIdChange)="onAdditionalDriver1Change()" [customers]="availableCustomers" placeholder="Cerca secondo conducente..."></app-customer-select>
+              </div>
+              
+              <!-- Conducente Aggiuntivo 2 -->
+              <div class="form-group">
+                <label>Conducente Aggiuntivo 2</label>
+                <app-customer-select [(customerId)]="contractDetails.additionalDriver2Id" (customerIdChange)="onAdditionalDriver2Change()" [customers]="availableCustomers" placeholder="Cerca terzo conducente..."></app-customer-select>
+              </div>
             </div>
-            <div class="form-group">
-              <label>Conducente Aggiuntivo 2 (Opzionale)</label>
-              <select [(ngModel)]="contractDetails.additionalDriver2Id" name="additionalDriver2Id">
-                <option value="">Nessuno</option>
-                @for (c of availableCustomers; track c.id) {
-                  @if (c.id !== contractDetails.mainDriverId && c.id !== contractDetails.additionalDriver1Id) {
-                    <option [value]="c.id">{{ c.firstName }} {{ c.lastName }}</option>
-                  }
-                }
-              </select>
-            </div>
+
+            <!-- Dati Aggiuntivi Conducente 1 -->
+            @if (contractDetails.additionalDriver1Id) {
+              <div class="form-grid" style="background: white; padding: 0.8rem; border-radius: 6px; border: 1px solid #cbd5e1; margin-bottom: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                <div class="form-group">
+                  <label>Residenza Conducente Aggiuntivo 1</label>
+                  <input type="text" [(ngModel)]="contractDetails.additionalDriver1Address" name="additionalDriver1Address" placeholder="Indirizzo di residenza">
+                </div>
+                <div class="form-group">
+                  <label>Telefono Conducente Aggiuntivo 1</label>
+                  <input type="text" [(ngModel)]="contractDetails.additionalDriver1Phone" name="additionalDriver1Phone" placeholder="Numero di telefono">
+                </div>
+              </div>
+            }
+
+            <!-- Dati Aggiuntivi Conducente 2 -->
+            @if (contractDetails.additionalDriver2Id) {
+              <div class="form-grid" style="background: white; padding: 0.8rem; border-radius: 6px; border: 1px solid #cbd5e1; margin-bottom: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                <div class="form-group">
+                  <label>Residenza Conducente Aggiuntivo 2</label>
+                  <input type="text" [(ngModel)]="contractDetails.additionalDriver2Address" name="additionalDriver2Address" placeholder="Indirizzo di residenza">
+                </div>
+                <div class="form-group">
+                  <label>Telefono Conducente Aggiuntivo 2</label>
+                  <input type="text" [(ngModel)]="contractDetails.additionalDriver2Phone" name="additionalDriver2Phone" placeholder="Numero di telefono">
+                </div>
+              </div>
+            }
           </div>
 
           <!-- SECTION 3: FRANCHIGIA -->
