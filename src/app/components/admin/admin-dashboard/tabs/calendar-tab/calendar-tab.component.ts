@@ -1114,8 +1114,10 @@ export class CalendarTabComponent implements OnInit {
       contractNumber: '...', // will be filled by observable subscription
       kmOut: undefined, // km uscita non valorizzato inizialmente
       kmIncluded: '2999 km totali', // km inclusi default
-      timeOut: rental.startPeriod === 'Mat' ? '09:00' : '15:30',
-      timeIn: rental.endPeriod === 'Mat' ? '09:00' : '15:30',
+      timeOut: '', // Prevalorizzato a vuoto
+      timeIn: '',  // Prevalorizzato a vuoto
+      deposit: undefined, // Deposito cauzionale inizialmente vuoto
+      depositType: '',    // Tipologia deposito inizialmente vuoto
       isCompany: false,
       companyName: '',
       companyVat: '',
@@ -1134,7 +1136,6 @@ export class CalendarTabComponent implements OnInit {
       additionalDriver2Id: '',
       baseRate: 0,
       extraKmPrice: 0,
-      deposit: 0,
       advance: 0,
       fuelLevel: '12/12',
       franchise: 1350,

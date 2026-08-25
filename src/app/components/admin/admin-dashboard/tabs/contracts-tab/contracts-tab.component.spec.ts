@@ -15,6 +15,8 @@ describe('ContractsTabComponent', () => {
       getContracts: jasmine.createSpy('getContracts').and.returnValue(of([])),
       getCustomers: jasmine.createSpy('getCustomers').and.returnValue(of([])),
       getCompanies: jasmine.createSpy('getCompanies').and.returnValue(of([])),
+      getRentals: jasmine.createSpy('getRentals').and.returnValue(of([])),
+      updateRental: jasmine.createSpy('updateRental').and.returnValue(Promise.resolve()),
       addCompany: jasmine.createSpy('addCompany').and.returnValue(Promise.resolve()),
       deleteContract: jasmine.createSpy('deleteContract').and.returnValue(Promise.resolve()),
       updateContract: jasmine.createSpy('updateContract').and.returnValue(Promise.resolve()),

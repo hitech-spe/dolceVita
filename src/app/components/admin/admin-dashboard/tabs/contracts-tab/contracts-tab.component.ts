@@ -26,10 +26,12 @@ export class ContractsTabComponent implements OnInit {
 
   availableCustomers: Customer[] = [];
   availableCompanies: Company[] = [];
+  allRentals: Rental[] = [];
 
   companySearchTerm = '';
   isCompanyDropdownOpen = false;
   editedContractDate = '';
+  editedRentalEndDate = '';
 
   isEditModalOpen = false;
   editingContract: ContractDocument | null = null;
@@ -53,6 +55,11 @@ export class ContractsTabComponent implements OnInit {
     // Cache companies list for autocomplete in edit modal
     this.rentalService.getCompanies().subscribe(companies => {
       this.availableCompanies = companies;
+    });
+
+    // Cache rentals list for editing end dates
+    this.rentalService.getRentals().subscribe(rentals => {
+      this.allRentals = rentals || [];
     });
   }
 
@@ -79,6 +86,16 @@ export class ContractsTabComponent implements OnInit {
     this.editingContract = contract;
     this.editedDetails = { ...contract.details };
     this.editedContractDate = contract.date ? (contract.date as any).toDate().toISOString().split('T')[0] : '';
+    
+    // Recupera la data di fine noleggio dal noleggio associato
+    const associatedRental = this.allRentals.find(r => r.id === contract.rentalId);
+    if (associatedRental && associatedRental.endDate) {
+      const dateObj = (associatedRental.endDate as any).toDate ? (associatedRental.endDate as any).toDate() : new Date(associatedRental.endDate as any);
+      this.editedRentalEndDate = dateObj.toISOString().split('T')[0];
+    } else {
+      this.editedRentalEndDate = '';
+    }
+
     this.companySearchTerm = this.editedDetails.isCompany ? (this.editedDetails.companyName || '') : '';
     this.isCompanyDropdownOpen = false;
     this.isEditModalOpen = true;
@@ -89,6 +106,7 @@ export class ContractsTabComponent implements OnInit {
     this.editingContract = null;
     this.editedDetails = {};
     this.editedContractDate = '';
+    this.editedRentalEndDate = '';
     this.companySearchTerm = '';
     this.isCompanyDropdownOpen = false;
   }
@@ -177,19 +195,41 @@ export class ContractsTabComponent implements OnInit {
     if (!this.editingContract || !this.editingContract.id) return;
 
     try {
+      let datePostponed = false;
+      const associatedRental = this.allRentals.find(r => r.id === this.editingContract!.rentalId);
+      if (associatedRental && this.editedRentalEndDate) {
+        const oldEndDateObj = (associatedRental.endDate as any).toDate ? (associatedRental.endDate as any).toDate() : new Date(associatedRental.endDate as any);
+        const oldEndDateStr = oldEndDateObj.toISOString().split('T')[0];
+        const newEndDateStr = this.editedRentalEndDate;
+        
+        if (newEndDateStr !== oldEndDateStr) {
+          if (newEndDateStr > oldEndDateStr) {
+            datePostponed = true;
+          }
+          
+          // Aggiorna il noleggio su Firestore e sul Calendario
+          const newEndDateObj = new Date(newEndDateStr);
+          await this.rentalService.updateRental(associatedRental.id!, {
+            endDate: Timestamp.fromDate(newEndDateObj)
+          });
+        }
+      }
+
       const birthDateFormatted = this.editedDetails.driverBirthDate 
         ? this.editedDetails.driverBirthDate.split('-').reverse().join('/') 
         : '15/05/1985';
 
+      // Formatta la data di rientro per Cargos se modificata
+      const checkinDateStr = this.editedRentalEndDate 
+        ? this.editedRentalEndDate.split('-').reverse().join('/') 
+        : (this.editingContract.contratto_checkin_data ? this.editingContract.contratto_checkin_data.split(' ')[0] : '25/08/2026');
+      const checkinTimeStr = this.editedDetails.timeIn || '12:00';
+
       const updatedContract: Partial<ContractDocument> = {
         details: this.editedDetails,
-        cargos_status: null as any,
-        cargos_transaction_id: null as any,
-        cargos_error: null as any,
-        cargos_sync_time: null as any,
-        pdfBase64: null as any,
 
         // Aggiorna anche i campi flat di Cargos a livello root
+        contratto_checkin_data: `${checkinDateStr} ${checkinTimeStr}`,
         conducente_contraente_nascita_luogo: this.editedDetails.driverBirthPlace || 'Mottola',
         conducente_contraente_nascita_data: birthDateFormatted,
         conducente_contraente_patente_numero: this.editedDetails.driverLicenseNumber || 'PA987654321',
@@ -199,6 +239,25 @@ export class ContractsTabComponent implements OnInit {
         conducente_contraente_docide_luogoril: this.editedDetails.driverLicenseReleasedBy || this.editedDetails.driverBirthPlace || 'Mottola',
         conducente_contraente_docide_luogoril_paese: this.editedDetails.driverLicenseCountry || 'Italia'
       };
+
+      // Se posticipa la data (o se il contratto non era ancora stato inviato), resettiamo lo stato di Cargos.
+      // Altrimenti, se anticipa o non cambia la data ed era già SENT, manteniamo lo stato SENT.
+      const shouldResetCargos = datePostponed || (this.editingContract.cargos_status !== 'SENT');
+
+      if (shouldResetCargos) {
+        updatedContract.cargos_status = null as any;
+        updatedContract.cargos_transaction_id = null as any;
+        updatedContract.cargos_error = null as any;
+        updatedContract.cargos_sync_time = null as any;
+        updatedContract.pdfBase64 = null as any;
+      } else {
+        // Mantieni lo stato corrente di invio
+        updatedContract.cargos_status = this.editingContract.cargos_status;
+        updatedContract.cargos_transaction_id = this.editingContract.cargos_transaction_id;
+        updatedContract.cargos_error = this.editingContract.cargos_error;
+        updatedContract.cargos_sync_time = this.editingContract.cargos_sync_time;
+        updatedContract.pdfBase64 = this.editingContract.pdfBase64;
+      }
 
       if (this.editedContractDate) {
         const dateObj = new Date(this.editedContractDate);

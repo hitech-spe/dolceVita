@@ -141,6 +141,8 @@ export interface ContractDetails {
   kmIncluded?: string; // e.g. "Senza Limiti", "2000 km totali", etc.
   timeOut?: string;    // e.g. "09:30"
   timeIn?: string;     // e.g. "18:30"
+  depositAmount?: number; // Deposito Cauzionale (€)
+  depositType?: string;   // Tipologia Deposito (es. Carta, Contanti, ecc.)
   isCompany?: boolean;
   companyName?: string;
   companyVat?: string;
@@ -189,6 +191,7 @@ export interface ContractDocument {
 
   // Flat root fields for Cargos integration
   contratto_data?: string;
+  contratto_checkin_data?: string;
   conducente_contraente_nascita_luogo?: string;
   conducente_contraente_nascita_data?: string;
   conducente_contraente_patente_numero?: string;
@@ -786,6 +789,26 @@ export class RentalService {
     );
   }
 
+  private cleanUndefined(obj: any): any {
+    if (obj === null || obj === undefined) {
+      return null;
+    }
+    if (typeof obj !== 'object') {
+      return obj;
+    }
+    if (obj instanceof Timestamp || obj instanceof Date) {
+      return obj;
+    }
+    const result: any = Array.isArray(obj) ? [] : {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (val !== undefined) {
+        result[key] = this.cleanUndefined(val);
+      }
+    }
+    return result;
+  }
+
   async createContract(contract: ContractDocument, cargosData?: any) {
     const docRef = doc(this.firestore, `contracts/${contract.contractNumber}`);
     const dataToSave = {
@@ -793,7 +816,7 @@ export class RentalService {
       ...(cargosData || {}),
       createdAt: Timestamp.now()
     };
-    return setDoc(docRef, dataToSave);
+    return setDoc(docRef, this.cleanUndefined(dataToSave));
   }
 
   async deleteContract(id: string) {
@@ -803,7 +826,7 @@ export class RentalService {
 
   async updateContract(id: string, data: Partial<ContractDocument>) {
     const docRef = doc(this.firestore, `contracts/${id}`);
-    return updateDoc(docRef, data);
+    return updateDoc(docRef, this.cleanUndefined(data));
   }
 
   // --- CARGOS INTEGRATION HELPER METHODS ---
@@ -928,9 +951,9 @@ export class RentalService {
       contratto_checkin_data: formatTimestampWithTime(rental.endDate, details.timeIn),
       contratto_checkin_luogo: checkinLuogo,
       contratto_checkin_indirizzo: checkInAddr,
-      operatore_id: "OPER_LEO",
+      operatore_id: "ROMANELLI MINA",
       agenzia_id: "AG-0012",
-      agenzia_nome: "LEO RENT",
+      agenzia_nome: "LA DOLCE VITA",
       agenzia_luogo: "Mottola",
       agenzia_indirizzo: "Piazza Duomo 1, Milano",
       agenzia_recapito_tel: "02123456",

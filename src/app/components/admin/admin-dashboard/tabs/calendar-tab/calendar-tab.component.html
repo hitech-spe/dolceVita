@@ -604,6 +604,21 @@
                 <option value="Elettrico">Elettrico</option>
               </select>
             </div>
+            <div class="form-group">
+              <label>Deposito Cauzionale (€)</label>
+              <input type="number" [(ngModel)]="contractDetails.deposit" name="deposit" min="0" placeholder="Es. 500">
+            </div>
+            <div class="form-group">
+              <label>Tipologia Deposito</label>
+              <select [(ngModel)]="contractDetails.depositType" name="depositType">
+                <option value="">-- Seleziona --</option>
+                <option value="Contanti">Contanti</option>
+                <option value="Carta di Credito">Carta di Credito</option>
+                <option value="Pre-autorizzazione">Pre-autorizzazione</option>
+                <option value="Bonifico">Bonifico</option>
+                <option value="Altro">Altro</option>
+              </select>
+            </div>
           </div>
 
           <!-- SECTION 2: OPZIONE AZIENDA / CONDUCENTI -->

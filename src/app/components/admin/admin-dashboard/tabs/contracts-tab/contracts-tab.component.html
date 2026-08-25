@@ -216,6 +216,10 @@
                 <input type="date" [(ngModel)]="editedContractDate" name="contractDate" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
               </div>
               <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Data Fine Noleggio (Rientro) *</label>
+                <input type="date" [(ngModel)]="editedRentalEndDate" name="rentalEndDate" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
                 <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Tariffa Base (€) *</label>
                 <input type="number" [(ngModel)]="editedDetails.baseRate" name="baseRate" min="0" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
               </div>
@@ -246,6 +250,17 @@
               <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
                 <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Deposito Cauzionale (€)</label>
                 <input type="number" [(ngModel)]="editedDetails.deposit" name="deposit" min="0" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Tipologia Deposito</label>
+                <select [(ngModel)]="editedDetails.depositType" name="depositType" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc; height: 45px;">
+                  <option value="">-- Seleziona --</option>
+                  <option value="Contanti">Contanti</option>
+                  <option value="Carta di Credito">Carta di Credito</option>
+                  <option value="Pre-autorizzazione">Pre-autorizzazione</option>
+                  <option value="Bonifico">Bonifico</option>
+                  <option value="Altro">Altro</option>
+                </select>
               </div>
               <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
                 <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Franchigia (€)</label>
