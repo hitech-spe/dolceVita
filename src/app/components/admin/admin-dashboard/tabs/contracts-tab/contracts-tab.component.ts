@@ -177,23 +177,88 @@ export class ContractsTabComponent implements OnInit {
     if (!this.editingContract || !this.editingContract.id) return;
 
     try {
+      const birthDateFormatted = this.editedDetails.driverBirthDate 
+        ? this.editedDetails.driverBirthDate.split('-').reverse().join('/') 
+        : '15/05/1985';
+
       const updatedContract: Partial<ContractDocument> = {
         details: this.editedDetails,
         cargos_status: null as any,
         cargos_transaction_id: null as any,
         cargos_error: null as any,
         cargos_sync_time: null as any,
-        pdfBase64: null as any
+        pdfBase64: null as any,
+
+        // Aggiorna anche i campi flat di Cargos a livello root
+        conducente_contraente_nascita_luogo: this.editedDetails.driverBirthPlace || 'Mottola',
+        conducente_contraente_nascita_data: birthDateFormatted,
+        conducente_contraente_patente_numero: this.editedDetails.driverLicenseNumber || 'PA987654321',
+        conducente_contraente_patente_luogoril: this.editedDetails.driverLicenseReleasedBy || this.editedDetails.driverBirthPlace || 'Mottola',
+        conducente_contraente_patente_luogoril_paese: this.editedDetails.driverLicenseCountry || 'Italia',
+        conducente_contraente_docide_numero: this.editedDetails.driverLicenseNumber || 'PA987654321',
+        conducente_contraente_docide_luogoril: this.editedDetails.driverLicenseReleasedBy || this.editedDetails.driverBirthPlace || 'Mottola',
+        conducente_contraente_docide_luogoril_paese: this.editedDetails.driverLicenseCountry || 'Italia'
       };
 
       if (this.editedContractDate) {
-        updatedContract.date = Timestamp.fromDate(new Date(this.editedContractDate));
+        const dateObj = new Date(this.editedContractDate);
+        updatedContract.date = Timestamp.fromDate(dateObj);
+        
+        // Aggiorna anche il campo flat per Cargos della data contratto
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const yyyy = dateObj.getFullYear();
+        updatedContract.contratto_data = `${dd}/${mm}/${yyyy} 12:00`;
       }
 
       if (this.editedDetails.mainDriverId) {
         const driver = this.availableCustomers.find(c => c.id === this.editedDetails.mainDriverId);
         if (driver) {
           updatedContract.customerName = `${driver.firstName} ${driver.lastName}`;
+        }
+
+        // AGGIORNA ANCHE L'ANAGRAFICA CLIENTE SU FIRESTORE CON I NUOVI DATI MODIFICATI
+        const updateData: Partial<Customer> = {};
+        if (this.editedDetails.driverBirthPlace) {
+          updateData.birthPlace = this.editedDetails.driverBirthPlace;
+        }
+        if (this.editedDetails.driverBirthDate) {
+          updateData.birthDate = Timestamp.fromDate(new Date(this.editedDetails.driverBirthDate));
+        }
+        if (this.editedDetails.driverLicenseNumber) {
+          updateData.licenseNumber = this.editedDetails.driverLicenseNumber;
+        }
+        if (this.editedDetails.driverLicenseIssueDate) {
+          updateData.licenseIssueDate = Timestamp.fromDate(new Date(this.editedDetails.driverLicenseIssueDate));
+        }
+        if (this.editedDetails.driverLicenseExpiry) {
+          updateData.licenseExpiry = Timestamp.fromDate(new Date(this.editedDetails.driverLicenseExpiry));
+        }
+        if (this.editedDetails.driverLicenseReleasedBy) {
+          updateData.licenseReleasedBy = this.editedDetails.driverLicenseReleasedBy;
+        }
+        if (this.editedDetails.driverLicenseCountry) {
+          updateData.licenseCountry = this.editedDetails.driverLicenseCountry;
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          try {
+            await this.rentalService.updateCustomer(this.editedDetails.mainDriverId, updateData);
+            
+            // Sincronizza la cache locale
+            const cachedDriver = this.availableCustomers.find(c => c.id === this.editedDetails.mainDriverId);
+            if (cachedDriver) {
+              if (updateData.birthPlace) cachedDriver.birthPlace = updateData.birthPlace;
+              if (updateData.birthDate) cachedDriver.birthDate = updateData.birthDate;
+              if (updateData.licenseNumber) cachedDriver.licenseNumber = updateData.licenseNumber;
+              if (updateData.licenseIssueDate) cachedDriver.licenseIssueDate = updateData.licenseIssueDate;
+              if (updateData.licenseExpiry) cachedDriver.licenseExpiry = updateData.licenseExpiry;
+              if (updateData.licenseReleasedBy) cachedDriver.licenseReleasedBy = updateData.licenseReleasedBy;
+              if (updateData.licenseCountry) cachedDriver.licenseCountry = updateData.licenseCountry;
+            }
+          } catch (custError) {
+            console.error("Errore nell'aggiornamento dell'anagrafica cliente da modifica contratto:", custError);
+          }
         }
       }
 

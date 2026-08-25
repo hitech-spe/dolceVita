@@ -186,6 +186,17 @@ export interface ContractDocument {
   cargos_sync_time?: Timestamp;
   cargos_error?: string | null;
   pdfBase64?: string | null;
+
+  // Flat root fields for Cargos integration
+  contratto_data?: string;
+  conducente_contraente_nascita_luogo?: string;
+  conducente_contraente_nascita_data?: string;
+  conducente_contraente_patente_numero?: string;
+  conducente_contraente_patente_luogoril?: string;
+  conducente_contraente_patente_luogoril_paese?: string;
+  conducente_contraente_docide_numero?: string;
+  conducente_contraente_docide_luogoril?: string;
+  conducente_contraente_docide_luogoril_paese?: string;
 }
 
 export interface Company {

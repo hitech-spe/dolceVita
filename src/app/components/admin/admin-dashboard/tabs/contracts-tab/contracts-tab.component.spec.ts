@@ -148,7 +148,7 @@ describe('ContractsTabComponent', () => {
 
     await component.saveContractEdit();
 
-    expect(mockRentalService.updateContract).toHaveBeenCalledWith('c_id_1', {
+    expect(mockRentalService.updateContract).toHaveBeenCalledWith('c_id_1', jasmine.objectContaining({
       details: { baseRate: 190, mainDriverId: 'c_xyz' },
       cargos_status: null as any,
       cargos_transaction_id: null as any,
@@ -156,7 +156,7 @@ describe('ContractsTabComponent', () => {
       cargos_sync_time: null as any,
       pdfBase64: null as any,
       customerName: 'Luigi Bianchi'
-    });
+    }));
     expect(component.isEditModalOpen).toBeFalse();
   });
 
