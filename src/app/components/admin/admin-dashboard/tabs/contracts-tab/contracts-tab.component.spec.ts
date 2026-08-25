@@ -14,6 +14,8 @@ describe('ContractsTabComponent', () => {
     mockRentalService = {
       getContracts: jasmine.createSpy('getContracts').and.returnValue(of([])),
       getCustomers: jasmine.createSpy('getCustomers').and.returnValue(of([])),
+      getCompanies: jasmine.createSpy('getCompanies').and.returnValue(of([])),
+      addCompany: jasmine.createSpy('addCompany').and.returnValue(Promise.resolve()),
       deleteContract: jasmine.createSpy('deleteContract').and.returnValue(Promise.resolve()),
       updateContract: jasmine.createSpy('updateContract').and.returnValue(Promise.resolve()),
       sendBulkContracts: jasmine.createSpy('sendBulkContracts').and.returnValue(of([])),

@@ -188,6 +188,16 @@ export interface ContractDocument {
   pdfBase64?: string | null;
 }
 
+export interface Company {
+  id?: string;
+  name: string;
+  vat: string;
+  address?: string;
+  phone?: string;
+  pec?: string;
+  createdAt?: Timestamp;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -594,6 +604,31 @@ export class RentalService {
 
   async deleteCustomer(id: string) {
     const docRef = doc(this.firestore, `customers/${id}`);
+    return deleteDoc(docRef);
+  }
+
+  // ==========================================
+  // GESTIONE AZIENDE
+  // ==========================================
+
+  getCompanies(): Observable<Company[]> {
+    const ref = collection(this.firestore, 'companies');
+    const q = query(ref, orderBy('name'));
+    return collectionData(q, { idField: 'id' }) as Observable<Company[]>;
+  }
+
+  async addCompany(company: Company) {
+    const ref = collection(this.firestore, 'companies');
+    return addDoc(ref, { ...company, createdAt: Timestamp.now() });
+  }
+
+  async updateCompany(id: string, data: Partial<Company>) {
+    const docRef = doc(this.firestore, `companies/${id}`);
+    return updateDoc(docRef, data);
+  }
+
+  async deleteCompany(id: string) {
+    const docRef = doc(this.firestore, `companies/${id}`);
     return deleteDoc(docRef);
   }
 

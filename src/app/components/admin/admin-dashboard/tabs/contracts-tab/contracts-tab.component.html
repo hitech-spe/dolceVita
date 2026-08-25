@@ -212,6 +212,10 @@
             <h4 class="modal-section-title">Dati Noleggio & Tariffe</h4>
             <div class="form-grid-3">
               <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Data Stipula Contratto *</label>
+                <input type="date" [(ngModel)]="editedContractDate" name="contractDate" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
                 <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Tariffa Base (€) *</label>
                 <input type="number" [(ngModel)]="editedDetails.baseRate" name="baseRate" min="0" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
               </div>
@@ -260,26 +264,59 @@
             <!-- SECTION 2: DATI SOCIETÀ / AZIENDA (SE APPLICABILE) -->
             @if (editedDetails.isCompany) {
               <h4 class="modal-section-title">Dati Azienda / Società</h4>
-              <div class="form-grid-2">
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Ragione Sociale Azienda *</label>
-                  <input type="text" [(ngModel)]="editedDetails.companyName" name="companyName" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              <div style="background: #f8fafc; padding: 1.2rem; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 1.5rem; position: relative;">
+                <!-- Sezione Ricerca/Autocompletamento Aziende -->
+                <div class="form-group" style="margin-bottom: 1.25rem; position: relative; display: flex; flex-direction: column; gap: 0.4rem;">
+                  <label style="font-size: 0.85rem; font-weight: 700; color: var(--accent);">Cerca Azienda Registrata (per Nome o P.IVA)</label>
+                  <div style="position: relative; display: flex; align-items: center;">
+                    <input type="text"
+                           [(ngModel)]="companySearchTerm"
+                           name="companySearchTerm"
+                           placeholder="Cerca per Ragione Sociale o Partita IVA..."
+                           (focus)="isCompanyDropdownOpen = true"
+                           (blur)="onCompanySearchBlur()"
+                           autocomplete="off"
+                           style="width: 100%; padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #fff;">
+                    @if (companySearchTerm) {
+                      <button type="button" (click)="clearCompanySearch()" style="position: absolute; right: 10px; background: none; border: none; color: #64748b; cursor: pointer; padding: 5px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid fa-circle-xmark" style="font-size: 1.1rem;"></i>
+                      </button>
+                    }
+                  </div>
+                  
+                  @if (isCompanyDropdownOpen && filteredCompanies.length > 0) {
+                    <div class="company-dropdown-panel">
+                      @for (comp of filteredCompanies; track comp.id) {
+                        <div class="company-dropdown-item" (mousedown)="selectCompany(comp)">
+                          <span style="font-weight: 600; color: #0f172a; font-size: 0.95rem;">{{ comp.name }}</span>
+                          <span style="font-size: 0.8rem; color: #64748b;">P.IVA: {{ comp.vat }} @if (comp.address) { | {{ comp.address }} }</span>
+                        </div>
+                      }
+                    </div>
+                  }
                 </div>
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Partita IVA / Cod. Fiscale *</label>
-                  <input type="text" [(ngModel)]="editedDetails.companyVat" name="companyVat" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
-                </div>
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Indirizzo Sede Legale *</label>
-                  <input type="text" [(ngModel)]="editedDetails.companyAddress" name="companyAddress" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
-                </div>
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Telefono Azienda</label>
-                  <input type="text" [(ngModel)]="editedDetails.companyPhone" name="companyPhone" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
-                </div>
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
-                  <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">PEC / SDI Codice Destinatario</label>
-                  <input type="text" [(ngModel)]="editedDetails.companyPec" name="companyPec" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+
+                <div class="form-grid-2" style="margin-top: 1rem;">
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Ragione Sociale Azienda *</label>
+                    <input type="text" [(ngModel)]="editedDetails.companyName" name="companyName" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+                  </div>
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Partita IVA / Cod. Fiscale *</label>
+                    <input type="text" [(ngModel)]="editedDetails.companyVat" name="companyVat" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+                  </div>
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Indirizzo Sede Legale *</label>
+                    <input type="text" [(ngModel)]="editedDetails.companyAddress" name="companyAddress" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+                  </div>
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Telefono Azienda</label>
+                    <input type="text" [(ngModel)]="editedDetails.companyPhone" name="companyPhone" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+                  </div>
+                  <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem; grid-column: span 2;">
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">PEC / SDI Codice Destinatario</label>
+                    <input type="text" [(ngModel)]="editedDetails.companyPec" name="companyPec" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+                  </div>
                 </div>
               </div>
             }

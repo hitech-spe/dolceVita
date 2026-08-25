@@ -2,7 +2,7 @@ import { Component, Input, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable, combineLatest, map, switchMap, BehaviorSubject } from 'rxjs';
-import { Rental, RentalService, Vehicle, Customer, TemporaryTransfer, MaintenancePeriod, Maintenance, ContractDocument, ContractDetails } from "../../../../../services/rental.service";
+import { Rental, RentalService, Vehicle, Customer, TemporaryTransfer, MaintenancePeriod, Maintenance, ContractDocument, ContractDetails, Company } from "../../../../../services/rental.service";
 import { Timestamp } from '@angular/fire/firestore';
 import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/vehicle-select.component";
 import { CustomerSelectComponent } from "../../../../../shared/customer-select/customer-select.component";
@@ -75,6 +75,10 @@ export class CalendarTabComponent implements OnInit {
 
   availableVehicles: Vehicle[] = [];
   availableCustomers: Customer[] = [];
+  availableCompanies: Company[] = [];
+
+  companySearchTerm = '';
+  isCompanyDropdownOpen = false;
 
   readonly CATEGORY_ORDER = [
     'A', 'B', 'C', 'D', 'E', 'F', '7 posti', 'Van 9 posti', 
@@ -99,6 +103,7 @@ export class CalendarTabComponent implements OnInit {
     
     this.rentalService.getVehicles().subscribe(v => this.availableVehicles = v);
     this.rentalService.getCustomers().subscribe(c => this.availableCustomers = c);
+    this.rentalService.getCompanies().subscribe(companies => this.availableCompanies = companies);
     this.rentalService.getMaintenances().subscribe(m => this.allMaintenances = m);
 
     this.vehiclesData$ = combineLatest([
@@ -1102,9 +1107,12 @@ export class CalendarTabComponent implements OnInit {
     this.contractVehicle = this.availableVehicles.find(v => v.id === rental.vehicleId);
     this.contractCustomer = this.availableCustomers.find(c => c.id === rental.customerId);
     
+    this.companySearchTerm = '';
+    this.isCompanyDropdownOpen = false;
+
     this.contractDetails = {
       contractNumber: '...', // will be filled by observable subscription
-      kmOut: 141869, // km uscita default
+      kmOut: undefined, // km uscita non valorizzato inizialmente
       kmIncluded: '2999 km totali', // km inclusi default
       timeOut: rental.startPeriod === 'Mat' ? '09:00' : '15:30',
       timeIn: rental.endPeriod === 'Mat' ? '09:00' : '15:30',
@@ -1129,7 +1137,7 @@ export class CalendarTabComponent implements OnInit {
       deposit: 0,
       advance: 0,
       fuelLevel: '12/12',
-      franchise: 1500,
+      franchise: 1350,
       vehicleFuelType: this.contractVehicle?.fuelType || 'Diesel'
     };
 
@@ -1142,6 +1150,40 @@ export class CalendarTabComponent implements OnInit {
     this.onMainDriverChange();
 
     this.isContractModalOpen = true;
+  }
+
+  get filteredCompanies(): Company[] {
+    const term = this.companySearchTerm ? this.companySearchTerm.toLowerCase().trim() : '';
+    if (!term) return this.availableCompanies;
+    return this.availableCompanies.filter(comp =>
+      comp.name.toLowerCase().includes(term) ||
+      comp.vat.toLowerCase().includes(term)
+    );
+  }
+
+  selectCompany(comp: Company) {
+    this.contractDetails.companyName = comp.name;
+    this.contractDetails.companyVat = comp.vat;
+    this.contractDetails.companyAddress = comp.address || '';
+    this.contractDetails.companyPhone = comp.phone || '';
+    this.contractDetails.companyPec = comp.pec || '';
+    this.companySearchTerm = comp.name;
+    this.isCompanyDropdownOpen = false;
+  }
+
+  clearCompanySearch() {
+    this.companySearchTerm = '';
+    this.contractDetails.companyName = '';
+    this.contractDetails.companyVat = '';
+    this.contractDetails.companyAddress = '';
+    this.contractDetails.companyPhone = '';
+    this.contractDetails.companyPec = '';
+  }
+
+  onCompanySearchBlur() {
+    setTimeout(() => {
+      this.isCompanyDropdownOpen = false;
+    }, 250);
   }
 
   onMainDriverChange() {
@@ -1285,6 +1327,33 @@ export class CalendarTabComponent implements OnInit {
             this.contractVehicle.fuelType = this.contractDetails.vehicleFuelType;
           } catch (vehError) {
             console.error("Errore nell'aggiornamento dell'alimentazione veicolo:", vehError);
+          }
+        }
+      }
+
+      // Se l'utente ha inserito i dettagli dell'azienda, la salviamo in anagrafica se non esiste già
+      if (this.contractDetails.isCompany && this.contractDetails.companyName && this.contractDetails.companyVat) {
+        const nameUpper = this.contractDetails.companyName.trim().toUpperCase();
+        const vatTrimmed = this.contractDetails.companyVat.trim().toUpperCase();
+        
+        const exists = this.availableCompanies.some(comp => 
+          comp.name.trim().toUpperCase() === nameUpper || 
+          comp.vat.trim().toUpperCase() === vatTrimmed
+        );
+        
+        if (!exists) {
+          try {
+            const newCompany: Company = {
+              name: this.contractDetails.companyName.trim(),
+              vat: this.contractDetails.companyVat.trim(),
+              address: this.contractDetails.companyAddress?.trim() || '',
+              phone: this.contractDetails.companyPhone?.trim() || '',
+              pec: this.contractDetails.companyPec?.trim() || ''
+            };
+            await this.rentalService.addCompany(newCompany);
+            console.log('Nuova azienda salvata con successo!');
+          } catch (compError) {
+            console.error('Errore durante il salvataggio automatico dell\'azienda:', compError);
           }
         }
       }

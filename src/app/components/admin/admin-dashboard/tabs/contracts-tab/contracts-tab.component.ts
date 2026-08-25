@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable, tap } from 'rxjs';
-import { RentalService, ContractDocument, Customer, Vehicle, Rental } from '../../../../../services/rental.service';
+import { RentalService, ContractDocument, Customer, Vehicle, Rental, Company } from '../../../../../services/rental.service';
 import { Timestamp } from '@angular/fire/firestore';
 import { API_CONFIG } from '../../../../../config/api.config';
 import { CustomerSelectComponent } from "../../../../../shared/customer-select/customer-select.component";
@@ -25,6 +25,11 @@ export class ContractsTabComponent implements OnInit {
   isSendingContract: { [key: string]: boolean } = {};
 
   availableCustomers: Customer[] = [];
+  availableCompanies: Company[] = [];
+
+  companySearchTerm = '';
+  isCompanyDropdownOpen = false;
+  editedContractDate = '';
 
   isEditModalOpen = false;
   editingContract: ContractDocument | null = null;
@@ -43,6 +48,11 @@ export class ContractsTabComponent implements OnInit {
     // Cache customers list to pass for additional driver select
     this.rentalService.getCustomers().subscribe(custs => {
       this.availableCustomers = custs;
+    });
+
+    // Cache companies list for autocomplete in edit modal
+    this.rentalService.getCompanies().subscribe(companies => {
+      this.availableCompanies = companies;
     });
   }
 
@@ -68,6 +78,9 @@ export class ContractsTabComponent implements OnInit {
     }
     this.editingContract = contract;
     this.editedDetails = { ...contract.details };
+    this.editedContractDate = contract.date ? (contract.date as any).toDate().toISOString().split('T')[0] : '';
+    this.companySearchTerm = this.editedDetails.isCompany ? (this.editedDetails.companyName || '') : '';
+    this.isCompanyDropdownOpen = false;
     this.isEditModalOpen = true;
   }
 
@@ -75,6 +88,43 @@ export class ContractsTabComponent implements OnInit {
     this.isEditModalOpen = false;
     this.editingContract = null;
     this.editedDetails = {};
+    this.editedContractDate = '';
+    this.companySearchTerm = '';
+    this.isCompanyDropdownOpen = false;
+  }
+
+  get filteredCompanies(): Company[] {
+    const term = this.companySearchTerm ? this.companySearchTerm.toLowerCase().trim() : '';
+    if (!term) return this.availableCompanies;
+    return this.availableCompanies.filter(comp =>
+      comp.name.toLowerCase().includes(term) ||
+      comp.vat.toLowerCase().includes(term)
+    );
+  }
+
+  selectCompany(comp: Company) {
+    this.editedDetails.companyName = comp.name;
+    this.editedDetails.companyVat = comp.vat;
+    this.editedDetails.companyAddress = comp.address || '';
+    this.editedDetails.companyPhone = comp.phone || '';
+    this.editedDetails.companyPec = comp.pec || '';
+    this.companySearchTerm = comp.name;
+    this.isCompanyDropdownOpen = false;
+  }
+
+  clearCompanySearch() {
+    this.companySearchTerm = '';
+    this.editedDetails.companyName = '';
+    this.editedDetails.companyVat = '';
+    this.editedDetails.companyAddress = '';
+    this.editedDetails.companyPhone = '';
+    this.editedDetails.companyPec = '';
+  }
+
+  onCompanySearchBlur() {
+    setTimeout(() => {
+      this.isCompanyDropdownOpen = false;
+    }, 250);
   }
 
   onEditMainDriverChange() {
@@ -136,10 +186,41 @@ export class ContractsTabComponent implements OnInit {
         pdfBase64: null as any
       };
 
+      if (this.editedContractDate) {
+        updatedContract.date = Timestamp.fromDate(new Date(this.editedContractDate));
+      }
+
       if (this.editedDetails.mainDriverId) {
         const driver = this.availableCustomers.find(c => c.id === this.editedDetails.mainDriverId);
         if (driver) {
           updatedContract.customerName = `${driver.firstName} ${driver.lastName}`;
+        }
+      }
+
+      // Se l'utente ha inserito/modificato dettagli dell'azienda in modifica, la salviamo se non esiste già
+      if (this.editedDetails.isCompany && this.editedDetails.companyName && this.editedDetails.companyVat) {
+        const nameUpper = this.editedDetails.companyName.trim().toUpperCase();
+        const vatTrimmed = this.editedDetails.companyVat.trim().toUpperCase();
+        
+        const exists = this.availableCompanies.some(comp => 
+          comp.name.trim().toUpperCase() === nameUpper || 
+          comp.vat.trim().toUpperCase() === vatTrimmed
+        );
+        
+        if (!exists) {
+          try {
+            const newCompany: Company = {
+              name: this.editedDetails.companyName.trim(),
+              vat: this.editedDetails.companyVat.trim(),
+              address: this.editedDetails.companyAddress?.trim() || '',
+              phone: this.editedDetails.companyPhone?.trim() || '',
+              pec: this.editedDetails.companyPec?.trim() || ''
+            };
+            await this.rentalService.addCompany(newCompany);
+            console.log('Nuova azienda salvata con successo da modifica contratto!');
+          } catch (compError) {
+            console.error('Errore durante il salvataggio automatico dell\'azienda da modifica:', compError);
+          }
         }
       }
 
