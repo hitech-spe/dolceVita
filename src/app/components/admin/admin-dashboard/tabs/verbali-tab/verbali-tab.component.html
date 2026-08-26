@@ -1,0 +1,553 @@
+<!-- CONTENITORE PRINCIPALE: STILE PREMIUM SAAS -->
+<div class="verbali-container fade-in">
+    
+    <!-- BANNER METRICHE KPI: CRUSCOTTO ANALITICO -->
+    <div class="kpi-grid">
+        <div class="kpi-card gradient-slate">
+            <div class="kpi-icon-box">
+                <i class="fa-solid fa-file-invoice"></i>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-value">{{ getTotaleMulte() }}</span>
+                <span class="kpi-label">Verbali Registrati</span>
+            </div>
+        </div>
+
+        <div class="kpi-card gradient-indigo">
+            <div class="kpi-icon-box">
+                <i class="fa-solid fa-hourglass-half"></i>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-value">{{ getNuoveMulte() }}</span>
+                <span class="kpi-label">In Attesa di PEC</span>
+            </div>
+        </div>
+
+        <div class="kpi-card gradient-emerald">
+            <div class="kpi-icon-box">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-value">{{ getInviateMulte() }}</span>
+                <span class="kpi-label">Inviati via PEC</span>
+            </div>
+        </div>
+
+        <div class="kpi-card gradient-red">
+            <div class="kpi-icon-box">
+                <i class="fa-solid fa-euro-sign"></i>
+            </div>
+            <div class="kpi-data">
+                <span class="kpi-value">€ {{ getImportoMulte() | number:'1.2-2' }}</span>
+                <span class="kpi-label">Totale Sanzioni</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEZIONE TABELLA PRINCIPALE -->
+    <div class="panel">
+        <div class="panel-header">
+            <div class="header-title">
+                <h2>Archivio Verbali e Multe</h2>
+                <p class="subtitle">Associa i verbali cartacei ai conducenti effettivi e rinotifica le violazioni al conducente via PEC</p>
+            </div>
+            <div class="panel-actions">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Cerca per targa, verbale, ente, cliente..." [(ngModel)]="searchTerm">
+                </div>
+                <button class="btn btn-primary animate-hover" (click)="openUploadModal()">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Processa Verbale
+                </button>
+            </div>
+        </div>
+
+        <!-- TABELLA DATI VERBALI -->
+        <div class="table-responsive">
+            @if (getFilteredVerbali().length > 0) {
+                <table class="verbali-table">
+                    <thead>
+                        <tr>
+                            <th>N. Verbale / Ente</th>
+                            <th>Targa Mezzo</th>
+                            <th>Data Infrazione</th>
+                            <th>Associazione Contratto</th>
+                            <th>Importo Sanzione</th>
+                            <th>Stato PEC</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (v of getFilteredVerbali(); track v.id) {
+                            <tr class="table-row-hover">
+                                <td>
+                                    <div class="ticket-info">
+                                        <span class="ticket-number"><i class="fa-solid fa-file-invoice"></i> {{ v.ticketNumber }}</span>
+                                        <span class="authority-name">{{ v.authorityName }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge-plate"><i class="fa-solid fa-car-side"></i> {{ v.plate }}</span>
+                                </td>
+                                <td>
+                                    <div class="date-info">
+                                        <span class="date-val">{{ formatDate(v.violationDate) }}</span>
+                                        @if (v.violationTime) {
+                                            <span class="time-val"><i class="fa-regular fa-clock"></i> {{ v.violationTime }}</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (v.contractNumber) {
+                                        <div class="customer-info">
+                                            <span class="customer-name">{{ v.customerName }}</span>
+                                            <span class="contract-badge"><i class="fa-solid fa-file-contract"></i> Contr. {{ v.contractNumber }}</span>
+                                        </div>
+                                    } @else {
+                                        <span class="no-match-badge"><i class="fa-solid fa-triangle-exclamation"></i> Non Associato</span>
+                                    }
+                                </td>
+                                <td class="bold-text price-cell">
+                                    @if (v.fineAmount) {
+                                        € {{ v.fineAmount | number:'1.2-2' }}
+                                    } @else {
+                                        -
+                                    }
+                                </td>
+                                <td>
+                                    @if (v.status === 'Inviato') {
+                                        <div class="status-wrapper">
+                                            <span class="status-pill status-sent"><i class="fa-solid fa-circle-check"></i> Inviato</span>
+                                            @if (v.pecSentDate) {
+                                                <span class="sent-date">{{ formatDate(v.pecSentDate) }}</span>
+                                            }
+                                        </div>
+                                    } @else {
+                                        <span class="status-pill status-new"><i class="fa-solid fa-clock"></i> Da Inviare</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        @if (v.status !== 'Inviato' && v.authorityPec) {
+                                            <button class="btn-action btn-send-pec" (click)="sendPec(v)" [disabled]="isSendingPec[v.id || '']" title="Invia dichiarazione dati conducente via PEC">
+                                                @if (isSendingPec[v.id || '']) {
+                                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                                } @else {
+                                                    <i class="fa-solid fa-paper-plane"></i> Trasmetti
+                                                }
+                                            </button>
+                                        }
+                                        <button class="btn-action btn-delete" (click)="deleteVerbale(v)" title="Elimina verbale">
+                                            <i class="fa-regular fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            } @else {
+                <div class="empty-state">
+                    <i class="fa-solid fa-file-invoice-dollar empty-icon animate-bounce"></i>
+                    <h3>Nessun verbale presente</h3>
+                    <p>Non abbiamo trovato verbali attivi nel database. Clicca su "Processa Verbale" per scansionare il tuo primo PDF.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- MODALE WIZARD MULTI-STEP: PROCESSAMENTO INTELLIGENTE -->
+@if (isUploadModalOpen) {
+    <div class="modal-overlay">
+        <div class="modal-card wide-modal animate-scale-up">
+            
+            <!-- HEADER MODALE -->
+            <div class="modal-header">
+                <div class="header-left">
+                    <i class="fa-solid fa-wand-magic-sparkles modal-icon-magic"></i>
+                    <div>
+                        <h2>Processamento Assistito Verbale</h2>
+                        <p class="modal-subtitle">Carica il verbale, estrai i dati con l'OCR e compila la notifica PEC</p>
+                    </div>
+                </div>
+                <button class="btn-close" (click)="closeUploadModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- STEP INDICATOR BAR: DESIGN MODERNO -->
+            <div class="wizard-stepper">
+                <div class="step-item" [class.active]="currentStep === 1" [class.completed]="currentStep > 1" (click)="goToStep(1)">
+                    <div class="step-bubble">
+                        @if (currentStep > 1) { <i class="fa-solid fa-check"></i> } @else { 1 }
+                    </div>
+                    <span class="step-label">Scansione PDF</span>
+                </div>
+                <div class="step-line" [class.filled]="currentStep > 1"></div>
+                <div class="step-item" [class.active]="currentStep === 2" [class.completed]="currentStep > 2" (click)="goToStep(2)">
+                    <div class="step-bubble">
+                        @if (currentStep > 2) { <i class="fa-solid fa-check"></i> } @else { 2 }
+                    </div>
+                    <span class="step-label">Dati & Smart Match</span>
+                </div>
+                <div class="step-line" [class.filled]="currentStep > 2"></div>
+                <div class="step-item" [class.active]="currentStep === 3" (click)="goToStep(3)">
+                    <div class="step-bubble">3</div>
+                    <span class="step-label">Bozza PEC</span>
+                </div>
+            </div>
+
+            <!-- CONTENUTO DEL CORPO MODALE -->
+            <div class="modal-body">
+
+                <!-- ================== STEP 1: CARICAMENTO & OCR ================== -->
+                @if (currentStep === 1) {
+                    <div class="step-content animate-fade-in-right">
+                        <div class="upload-container" [class.has-file]="selectedFile">
+                            @if (!selectedFile) {
+                                <div class="dropzone-area" (click)="fileInput.click()">
+                                    <input #fileInput type="file" style="display: none" accept=".pdf" (change)="onFileSelected($event)">
+                                    <div class="dropzone-glow-circle">
+                                        <i class="fa-solid fa-cloud-arrow-up cloud-icon-animated"></i>
+                                    </div>
+                                    <h3>Trascina qui il file PDF del verbale</h3>
+                                    <p>Oppure clicca per sfogliare i documenti locali</p>
+                                    <div class="file-badges-info">
+                                        <span class="file-info-pill">PDF</span>
+                                        <span class="file-info-pill">Max 10MB</span>
+                                    </div>
+                                </div>
+                            } @else {
+                                <div class="file-card-completed">
+                                    <div class="pdf-logo-box">
+                                        <i class="fa-solid fa-file-pdf pdf-pulsing-icon"></i>
+                                        @if (isOcrRunning) {
+                                            <div class="scanning-laser-line"></div>
+                                        }
+                                    </div>
+                                    <div class="file-info-meta">
+                                        <h3 class="file-name">{{ selectedFileName }}</h3>
+                                        <span class="file-size">{{ selectedFileSize }}</span>
+                                        <p class="file-status">
+                                            @if (isOcrRunning) {
+                                                <span class="text-orange animate-pulse"><i class="fa-solid fa-robot"></i> Intelligenza Artificiale sta estraendo i testi...</span>
+                                            } @else {
+                                                <span class="text-green"><i class="fa-solid fa-circle-check"></i> Scansione OCR completata con successo!</span>
+                                            }
+                                        </p>
+                                    </div>
+                                    @if (!isOcrRunning) {
+                                        <button class="btn btn-secondary btn-icon-only" (click)="resetForm()" title="Rimuovi file">
+                                            <i class="fa-solid fa-trash-can"></i> Cambia Documento
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        @if (isOcrRunning) {
+                            <div class="ocr-progress-box">
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" [style.width.%]="uploadProgress"></div>
+                                </div>
+                                <span class="progress-percentage-label">Progresso Analisi: {{ uploadProgress }}%</span>
+                                <div class="ocr-steps-visual">
+                                    <span class="ocr-step-badge active"><i class="fa-solid fa-spinner fa-spin"></i> Lettura File</span>
+                                    <span class="ocr-step-badge" [class.active]="uploadProgress >= 40"><i class="fa-solid fa-eye"></i> Riconoscimento Caratteri</span>
+                                    <span class="ocr-step-badge" [class.active]="uploadProgress >= 80"><i class="fa-solid fa-brain"></i> Estrazione Entità Legali</span>
+                                </div>
+                            </div>
+                        }
+
+                        @if (selectedFile && !isOcrRunning) {
+                            <div class="step-guide-banner">
+                                <i class="fa-solid fa-circle-info banner-icon"></i>
+                                <div class="banner-text">
+                                    <h4>Ottimo lavoro!</h4>
+                                    <p>I dati del verbale sono stati convertiti e processati con successo. Clicca su <strong>"Continua"</strong> per verificare l'abbinamento intelligente col noleggio e personalizzare i dati.</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- ================== STEP 2: DATI & SMART MATCHING ================== -->
+                @if (currentStep === 2) {
+                    <div class="step-content animate-fade-in-right">
+                        <div class="split-grid-modern">
+                            
+                            <!-- SCHEDA FORM DATI VERBALE -->
+                            <div class="form-card-modern">
+                                <div class="card-title-bar">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <h3>Dati Sanitizzati del Verbale</h3>
+                                </div>
+                                <div class="modern-form">
+                                    <div class="form-row-2">
+                                        <div class="form-field">
+                                            <label>Targa Veicolo *</label>
+                                            <div class="input-with-icon">
+                                                <i class="fa-solid fa-car-side input-icon"></i>
+                                                <input type="text" [(ngModel)]="newVerbale.plate" (ngModelChange)="findMatchingRental()" class="input-ctrl text-uppercase" placeholder="ES: AA123BB">
+                                            </div>
+                                        </div>
+                                        <div class="form-field">
+                                            <label>Numero Verbale *</label>
+                                            <div class="input-with-icon">
+                                                <i class="fa-solid fa-file-invoice input-icon"></i>
+                                                <input type="text" [(ngModel)]="newVerbale.ticketNumber" (ngModelChange)="generateEmailDraft()" class="input-ctrl" placeholder="ES: 4930/2026">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row-2">
+                                        <div class="form-field">
+                                            <label>Data Infrazione *</label>
+                                            <div class="input-with-icon">
+                                                <i class="fa-solid fa-calendar-days input-icon"></i>
+                                                <input type="date" [(ngModel)]="violationDateStr" (ngModelChange)="findMatchingRental()" class="input-ctrl">
+                                            </div>
+                                        </div>
+                                        <div class="form-field">
+                                            <label>Ora Infrazione</label>
+                                            <div class="input-with-icon">
+                                                <i class="fa-solid fa-clock input-icon"></i>
+                                                <input type="time" [(ngModel)]="violationTimeStr" (ngModelChange)="findMatchingRental()" class="input-ctrl">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row-2">
+                                        <div class="form-field">
+                                            <label>Importo Sanzione (€)</label>
+                                            <div class="input-with-icon">
+                                                <i class="fa-solid fa-euro-sign input-icon"></i>
+                                                <input type="number" [(ngModel)]="newVerbale.fineAmount" class="input-ctrl" placeholder="0.00">
+                                            </div>
+                                        </div>
+                                        <div class="form-field">
+                                            <label>Organo Accertatore</label>
+                                            <div class="input-with-icon">
+                                                <i class="fa-solid fa-building-shield input-icon"></i>
+                                                <input type="text" [(ngModel)]="newVerbale.authorityName" (ngModelChange)="generateEmailDraft()" class="input-ctrl" placeholder="ES: Polizia Locale">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-field">
+                                        <label>Indirizzo PEC Accertatore *</label>
+                                        <div class="input-with-icon">
+                                            <i class="fa-solid fa-at input-icon"></i>
+                                            <input type="email" [(ngModel)]="newVerbale.authorityPec" (ngModelChange)="generateEmailDraft()" class="input-ctrl" placeholder="ES: ente@pec.it">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-field">
+                                        <label>Note Interne</label>
+                                        <textarea [(ngModel)]="newVerbale.notes" class="input-ctrl text-area-ctrl" rows="3" placeholder="Inserisci eventuali note aggiuntive..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SCHEDA SMART MATCHING - BOARDING PASS STYLE -->
+                            <div class="match-card-modern">
+                                <div class="card-title-bar">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                    <h3>Risultato Abbinamento Noleggio</h3>
+                                </div>
+
+                                @if (matchedContract && matchedCustomer) {
+                                    <div class="boarding-pass">
+                                        <div class="pass-header">
+                                            <div class="pass-badge">
+                                                <i class="fa-solid fa-circle-check"></i> VERIFICATO
+                                            </div>
+                                            <span class="pass-code">CONTRATTO #{{ matchedContract.contractNumber }}</span>
+                                        </div>
+
+                                        <div class="pass-body">
+                                            <div class="pass-section">
+                                                <span class="section-label">Conducente / Locatario</span>
+                                                <span class="section-val">{{ matchedCustomer.lastName }} {{ matchedCustomer.firstName }}</span>
+                                            </div>
+
+                                            <div class="pass-grid-2">
+                                                <div class="pass-section">
+                                                    <span class="section-label">Targa Veicolo</span>
+                                                    <span class="section-val font-mono">{{ matchedContract.vehiclePlate }}</span>
+                                                </div>
+                                                <div class="pass-section">
+                                                    <span class="section-label">Patente di Guida</span>
+                                                    <span class="section-val">{{ matchedCustomer.licenseNumber || matchedContract.details.driverLicenseNumber || '-' }}</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="pass-divider-line">
+                                                <div class="half-circle left"></div>
+                                                <div class="half-circle right"></div>
+                                            </div>
+
+                                            <div class="pass-section">
+                                                <span class="section-label">Periodo di Noleggio Conforme</span>
+                                                <div class="pass-dates">
+                                                    <div>
+                                                        <span class="date-time-micro-label">INIZIO</span>
+                                                        <span class="date-time-micro-val">{{ formatDate(matchedRental?.startDate) }}</span>
+                                                    </div>
+                                                    <i class="fa-solid fa-arrow-right date-arrow-icon"></i>
+                                                    <div>
+                                                        <span class="date-time-micro-label">RIENTRO</span>
+                                                        <span class="date-time-micro-val">{{ formatDate(matchedRental?.endDate) }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                } @else if (matchingSearchDone) {
+                                    <div class="modern-match-empty-box orange-border animate-pulse">
+                                        <i class="fa-solid fa-triangle-exclamation empty-icon-warning"></i>
+                                        <h4>Nessun Noleggio Trovato</h4>
+                                        <p>Nessun contratto di noleggio attivo per la targa <strong>{{ newVerbale.plate || 'N/D' }}</strong> in data <strong>{{ formatItalianDateStr(violationDateStr) || 'N/D' }}</strong>.</p>
+                                        <span class="info-help-text">Puoi comunque forzare la registrazione del verbale e compilare l'e-mail a mano nel prossimo passaggio.</span>
+                                    </div>
+                                } @else {
+                                    <div class="modern-match-empty-box">
+                                        <i class="fa-solid fa-search empty-icon-search"></i>
+                                        <h4>In Attesa di Dati</h4>
+                                        <p>Riempi i campi Targa e Data Infrazione a sinistra per avviare il motore di ricerca di corrispondenze.</p>
+                                    </div>
+                                }
+
+                                <!-- CARD ALLEGATI FISICI -->
+                                <div class="visual-attachments-box">
+                                    <h4 class="attachments-title">Documenti che verranno allegati alla PEC:</h4>
+                                    <div class="allegati-cards-list">
+                                        
+                                        <!-- ALLEGATO 1 -->
+                                        <div class="attachment-pill-card red-pill" [class.disabled]="!selectedFile">
+                                            <div class="pill-icon-box"><i class="fa-solid fa-file-pdf"></i></div>
+                                            <div class="pill-details">
+                                                <span class="pill-name">1. Copia Verbale PDF</span>
+                                                <span class="pill-status-ok"><i class="fa-solid fa-check"></i> Allegato</span>
+                                            </div>
+                                            <input type="checkbox" [(ngModel)]="emailDraft.attachVerbale" [disabled]="!selectedFile" class="pill-checkbox">
+                                        </div>
+
+                                        <!-- ALLEGATO 2 -->
+                                        <div class="attachment-pill-card blue-pill" [class.disabled]="!matchedContract">
+                                            <div class="pill-icon-box"><i class="fa-solid fa-file-contract"></i></div>
+                                            <div class="pill-details">
+                                                <span class="pill-name">2. Contratto di Noleggio @if (matchedContract) { #{{ matchedContract.contractNumber }} }</span>
+                                                <span class="pill-status-ok">@if (matchedContract) { <i class="fa-solid fa-check"></i> Generato PDF } @else { Non Disponibile }</span>
+                                            </div>
+                                            <input type="checkbox" [(ngModel)]="emailDraft.attachContract" [disabled]="!matchedContract" class="pill-checkbox">
+                                        </div>
+
+                                        <!-- ALLEGATO 3 -->
+                                        <div class="attachment-pill-card green-pill" [class.disabled]="!matchedCustomer || !matchedCustomer.attachments?.length">
+                                            <div class="pill-icon-box"><i class="fa-solid fa-address-card"></i></div>
+                                            <div class="pill-details">
+                                                <span class="pill-name">3. Patente / Documenti Cliente</span>
+                                                <span class="pill-status-ok">@if (matchedCustomer && matchedCustomer.attachments?.length) { <i class="fa-solid fa-check"></i> Presente } @else { Nessun allegato in anagrafica }</span>
+                                            </div>
+                                            <input type="checkbox" [(ngModel)]="emailDraft.attachCustomerDoc" [disabled]="!matchedCustomer || !matchedCustomer.attachments?.length" class="pill-checkbox">
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                }
+
+                <!-- ================== STEP 3: ANTEPRIMA EMAIL & PEC ================== -->
+                @if (currentStep === 3) {
+                    <div class="step-content animate-fade-in-right">
+                        
+                        <!-- INTERFACCIA COMPOSITORE CLIENT POSTALE (STILE GMAIL / OUTLOOK) -->
+                        <div class="mail-composer">
+                            <div class="composer-header">
+                                <div class="header-badge-pec">
+                                    <i class="fa-solid fa-shield-halved"></i> INVIO TRAMITE PEC SICURA
+                                </div>
+                                <span class="composer-title">Nuovo Messaggio Legale</span>
+                            </div>
+                            
+                            <div class="composer-fields">
+                                <div class="composer-row">
+                                    <span class="field-label">A (PEC Ente):</span>
+                                    <input type="text" [(ngModel)]="emailDraft.to" class="field-input-text" placeholder="indirizzo.pec@ente.it">
+                                </div>
+                                <div class="composer-row">
+                                    <span class="field-label">Da (PEC LDV):</span>
+                                    <input type="text" value="ladolcevita.rentalsrl@legalmail.it (Server PEC Aziendale)" disabled class="field-input-text disabled-input">
+                                </div>
+                                <div class="composer-row">
+                                    <span class="field-label">Oggetto:</span>
+                                    <input type="text" [(ngModel)]="emailDraft.subject" class="field-input-text font-bold">
+                                </div>
+                            </div>
+
+                            <div class="composer-body">
+                                <textarea [(ngModel)]="emailDraft.body" class="composer-textarea" rows="14" placeholder="Scrivi qui il corpo della PEC..."></textarea>
+                            </div>
+
+                            <div class="composer-footer-attachments">
+                                <span class="attachments-header-label"><i class="fa-solid fa-paperclip"></i> Allegati inclusi nel messaggio:</span>
+                                <div class="composer-attachments-chips">
+                                    @if (emailDraft.attachVerbale && selectedFile) {
+                                        <span class="attachment-chip red-chip"><i class="fa-solid fa-file-pdf"></i> Verbale_Scansione.pdf ({{ selectedFileSize }})</span>
+                                    }
+                                    @if (emailDraft.attachContract && matchedContract) {
+                                        <span class="attachment-chip blue-chip"><i class="fa-solid fa-file-signature"></i> Contratto_Noleggio_{{ matchedContract.contractNumber }}.pdf (A Generazione Dinamica)</span>
+                                    }
+                                    @if (emailDraft.attachCustomerDoc && matchedCustomer && matchedCustomer.attachments?.length) {
+                                        <span class="attachment-chip green-chip"><i class="fa-solid fa-address-card"></i> Doc_Identita_{{ matchedCustomer.lastName }}.jpg</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- BANNER COMPILAZIONE OK -->
+                        <div class="step-guide-banner success-banner">
+                            <i class="fa-solid fa-paper-plane banner-icon"></i>
+                            <div class="banner-text">
+                                <h4>Tutto Pronto per la Trasmissione!</h4>
+                                <p>Puoi salvare il verbale nel tuo storico o procedere direttamente all'invio della PEC con tutti gli allegati. Il sistema contrassegnerà automaticamente il verbale come <strong>"INVIATO"</strong> al completamento.</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+            </div>
+
+            <!-- FOOTER CON CONTROLLI DI NAVIGAZIONE INTELLIGENTI -->
+            <div class="modal-footer-wizard">
+                <div class="footer-left">
+                    @if (currentStep > 1) {
+                        <button class="btn btn-secondary" (click)="prevStep()">
+                            <i class="fa-solid fa-chevron-left"></i> Indietro
+                        </button>
+                    } @else {
+                        <button class="btn btn-secondary" (click)="closeUploadModal()">Annulla</button>
+                    }
+                </div>
+                <div class="footer-right">
+                    @if (currentStep < 3) {
+                        <button class="btn btn-primary" (click)="nextStep()" [disabled]="currentStep === 1 && !selectedFile">
+                            Avanti <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    } @else {
+                        <button class="btn btn-secondary" (click)="saveVerbale(false)">
+                            <i class="fa-solid fa-floppy-disk"></i> Salva in Archivio
+                        </button>
+                        <button class="btn btn-success btn-glow-success" (click)="saveVerbale(true)">
+                            <i class="fa-solid fa-paper-plane animate-pulse"></i> Salva e Trasmetti PEC
+                        </button>
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+}

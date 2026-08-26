@@ -20,6 +20,13 @@ export class ContractsTabComponent implements OnInit {
   contracts$!: Observable<ContractDocument[]>;
   allContracts: ContractDocument[] = [];
   searchTerm = '';
+  statusFilter: 'ALL' | 'SENT' | 'FAILED' | 'NOT_SENT' = 'ALL';
+  sortField: 'date' | 'contractNumber' | 'customerName' = 'date';
+  sortDirection: 'asc' | 'desc' = 'desc';
+
+  toggleSortDirection() {
+    this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+  }
   isGeneratingContract: { [key: string]: boolean } = {};
   isCheckingContract: { [key: string]: boolean } = {};
   isSendingContract: { [key: string]: boolean } = {};
@@ -66,16 +73,51 @@ export class ContractsTabComponent implements OnInit {
   getFilteredContracts(contracts: ContractDocument[] | null): ContractDocument[] {
     if (!contracts) return [];
     
+    // 1. Applica Filtro di Ricerca Testuale
+    let result = contracts;
     const search = this.searchTerm.toLowerCase().trim();
-    if (!search) return contracts;
-
-    return contracts.filter(c => {
-      return (
+    if (search) {
+      result = result.filter(c => 
         c.contractNumber.toLowerCase().includes(search) ||
         c.customerName.toLowerCase().includes(search) ||
-        c.vehiclePlate.toLowerCase().includes(search)
+        (c.vehiclePlate && c.vehiclePlate.toLowerCase().includes(search))
       );
+    }
+
+    // 2. Applica Filtro di Stato Cargos
+    if (this.statusFilter !== 'ALL') {
+      result = result.filter(c => {
+        if (this.statusFilter === 'SENT') {
+          return c.cargos_status === 'SENT';
+        } else if (this.statusFilter === 'FAILED') {
+          return c.cargos_status === 'FAILED';
+        } else if (this.statusFilter === 'NOT_SENT') {
+          return !c.cargos_status || (c.cargos_status !== 'SENT' && c.cargos_status !== 'FAILED');
+        }
+        return true;
+      });
+    }
+
+    // 3. Applica Ordinamento (Sorting)
+    result = [...result].sort((a, b) => {
+      let comparison = 0;
+
+      if (this.sortField === 'date') {
+        const timeA = a.date ? ((a.date as any).seconds || new Date(a.date as any).getTime()) : 0;
+        const timeB = b.date ? ((b.date as any).seconds || new Date(b.date as any).getTime()) : 0;
+        comparison = timeA - timeB;
+      } else if (this.sortField === 'contractNumber') {
+        const numA = parseInt(a.contractNumber, 10) || 0;
+        const numB = parseInt(b.contractNumber, 10) || 0;
+        comparison = numA - numB;
+      } else if (this.sortField === 'customerName') {
+        comparison = a.customerName.localeCompare(b.customerName);
+      }
+
+      return this.sortDirection === 'desc' ? -comparison : comparison;
     });
+
+    return result;
   }
 
   editContract(contract: ContractDocument) {

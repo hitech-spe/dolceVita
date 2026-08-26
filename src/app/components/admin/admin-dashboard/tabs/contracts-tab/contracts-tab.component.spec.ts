@@ -80,6 +80,77 @@ describe('ContractsTabComponent', () => {
     expect(filtered[0].contractNumber).toBe('22345');
   });
 
+  it('should filter by cargos status and sort correctly', () => {
+    const mockContracts = [
+      {
+        id: '1',
+        contractNumber: '10',
+        customerName: 'Zaira Rossi',
+        cargos_status: 'SENT',
+        date: { seconds: 1000 } as any,
+        details: {}
+      },
+      {
+        id: '2',
+        contractNumber: '5',
+        customerName: 'Mario Bianchi',
+        cargos_status: 'FAILED',
+        date: { seconds: 5000 } as any,
+        details: {}
+      },
+      {
+        id: '3',
+        contractNumber: '20',
+        customerName: 'Alessandro Verdi',
+        cargos_status: undefined,
+        date: { seconds: 2000 } as any,
+        details: {}
+      }
+    ] as any[];
+
+    // Test Cargo filter
+    component.statusFilter = 'SENT';
+    let filtered = component.getFilteredContracts(mockContracts);
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].id).toBe('1');
+
+    component.statusFilter = 'FAILED';
+    filtered = component.getFilteredContracts(mockContracts);
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].id).toBe('2');
+
+    component.statusFilter = 'NOT_SENT';
+    filtered = component.getFilteredContracts(mockContracts);
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].id).toBe('3');
+
+    // Reset Cargo filter
+    component.statusFilter = 'ALL';
+
+    // Test Sort by Contract Number Desc
+    component.sortField = 'contractNumber';
+    component.sortDirection = 'desc';
+    filtered = component.getFilteredContracts(mockContracts);
+    expect(filtered[0].contractNumber).toBe('20');
+    expect(filtered[1].contractNumber).toBe('10');
+    expect(filtered[2].contractNumber).toBe('5');
+
+    // Test Sort by Contract Number Asc
+    component.sortDirection = 'asc';
+    filtered = component.getFilteredContracts(mockContracts);
+    expect(filtered[0].contractNumber).toBe('5');
+    expect(filtered[1].contractNumber).toBe('10');
+    expect(filtered[2].contractNumber).toBe('20');
+
+    // Test Sort by Customer Name Asc
+    component.sortField = 'customerName';
+    component.sortDirection = 'asc';
+    filtered = component.getFilteredContracts(mockContracts);
+    expect(filtered[0].customerName).toBe('Alessandro Verdi');
+    expect(filtered[1].customerName).toBe('Mario Bianchi');
+    expect(filtered[2].customerName).toBe('Zaira Rossi');
+  });
+
   it('should initialize editing state correctly unless cargos_status is SENT', () => {
     const mockContractSent = {
       id: 'c1',

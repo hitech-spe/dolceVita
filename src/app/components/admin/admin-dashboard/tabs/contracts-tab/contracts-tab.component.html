@@ -14,6 +14,34 @@
                placeholder="Cerca contratto, cliente, targa..." 
                class="search-input" />
       </div>
+
+      <!-- Filtro Stato Cargos -->
+      <div class="filter-dropdown">
+        <select [(ngModel)]="statusFilter" class="filter-select">
+          <option value="ALL">Tutti i contratti</option>
+          <option value="SENT">Inviati (Cargos)</option>
+          <option value="FAILED">Falliti (Cargos)</option>
+          <option value="NOT_SENT">Da Inviare (Cargos)</option>
+        </select>
+      </div>
+
+      <!-- Ordinamento Field -->
+      <div class="filter-dropdown">
+        <select [(ngModel)]="sortField" class="filter-select">
+          <option value="date">Ordina per: Data</option>
+          <option value="contractNumber">Ordina per: Numero</option>
+          <option value="customerName">Ordina per: Cliente</option>
+        </select>
+      </div>
+
+      <!-- Direzione Ordinamento -->
+      <button class="btn-sort-dir" (click)="toggleSortDirection()" [title]="sortDirection === 'desc' ? 'Ordinamento Decrescente' : 'Ordinamento Crescente'">
+        @if (sortDirection === 'desc') {
+          <i class="fa-solid fa-arrow-down-9-1"></i>
+        } @else {
+          <i class="fa-solid fa-arrow-up-1-9"></i>
+        }
+      </button>
     </div>
   </div>
 

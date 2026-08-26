@@ -52,6 +52,9 @@
             <button [class.active]="currentTab === 'contracts'" (click)="onTabChange('contracts')">
                 <i class="fa-solid fa-file-contract"></i> Contratti
             </button>
+            <!--button [class.active]="currentTab === 'verbali'" (click)="onTabChange('verbali')">
+                <i class="fa-solid fa-file-invoice"></i> Verbali
+            </button-->
         </div>
     </header>
 
@@ -120,6 +123,9 @@
         }
         @if (currentTab === 'contracts') {
             <app-contracts-tab />
+        }
+        @if (currentTab === 'verbali') {
+            <app-verbali-tab />
         }
     </main>
 

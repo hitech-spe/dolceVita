@@ -212,6 +212,25 @@ export interface Company {
   createdAt?: Timestamp;
 }
 
+export interface Verbale {
+  id?: string;
+  plate: string;
+  violationDate: Timestamp;
+  violationTime?: string;
+  ticketNumber: string;
+  fineAmount?: number;
+  authorityName: string;
+  authorityPec: string;
+  status: 'Nuovo' | 'In Corso' | 'Inviato' | 'Errore';
+  rentalId?: string;
+  contractNumber?: string;
+  customerName?: string;
+  pecSentDate?: Timestamp;
+  pdfBase64?: string | null;
+  notes?: string;
+  createdAt?: Timestamp;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -996,5 +1015,48 @@ export class RentalService {
   downloadContractPdf(contractNumber: string): Observable<Blob> {
     const url = `${API_CONFIG.baseUrl}/api/v1/contracts/${contractNumber}/pdf`;
     return this.http.get(url, { responseType: 'blob' });
+  }
+
+  // ==========================================
+  // GESTIONE VERBALI (TRAFFIC VIOLATIONS)
+  // ==========================================
+
+  getVerbali(): Observable<Verbale[]> {
+    const ref = collection(this.firestore, 'verbali');
+    const q = query(ref, orderBy('createdAt', 'desc'));
+    return collectionData(q, { idField: 'id' }) as Observable<Verbale[]>;
+  }
+
+  async createVerbale(verbale: Verbale) {
+    const ref = collection(this.firestore, 'verbali');
+    return addDoc(ref, { ...verbale, createdAt: Timestamp.now() });
+  }
+
+  async updateVerbale(id: string, updates: Partial<Verbale>) {
+    const docRef = doc(this.firestore, `verbali/${id}`);
+    return updateDoc(docRef, updates);
+  }
+
+  async deleteVerbale(id: string) {
+    const docRef = doc(this.firestore, `verbali/${id}`);
+    return deleteDoc(docRef);
+  }
+
+  parseVerbalePdf(file: File): Observable<any> {
+    const url = `${API_CONFIG.baseUrl}/api/v1/verbali/parse`;
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post(url, formData);
+  }
+
+  sendVerbalePec(payload: {
+    verbaleId?: string;
+    authorityPec: string;
+    subject: string;
+    body: string;
+    attachments: { name: string; data: string; type: string }[];
+  }): Observable<any> {
+    const url = `${API_CONFIG.baseUrl}/api/v1/verbali/send-pec`;
+    return this.http.post(url, payload);
   }
 }

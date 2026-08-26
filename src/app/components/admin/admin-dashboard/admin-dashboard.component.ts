@@ -9,11 +9,12 @@ import { InspectionTabComponent } from './tabs/inspection-tab/inspection-tab.com
 import { MaintenanceTabComponent } from './tabs/maintenance-tab/maintenance-tab.component';
 import { RemindersTabComponent } from './tabs/reminders-tab/reminders-tab.component';
 import { ContractsTabComponent } from './tabs/contracts-tab/contracts-tab.component';
+import { VerbaliTabComponent } from './tabs/verbali-tab/verbali-tab.component';
 import { RentalService, Reminder } from '../../../services/rental.service';
 
 import { CalendarTabComponent } from './tabs/calendar-tab/calendar-tab.component';
 
-type Tab = 'calendar' | 'fleet' | 'insurance' | 'inspection' | 'maintenance' | 'customers' | 'reminders' | 'contracts';
+type Tab = 'calendar' | 'fleet' | 'insurance' | 'inspection' | 'maintenance' | 'customers' | 'reminders' | 'contracts' | 'verbali';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -28,7 +29,8 @@ type Tab = 'calendar' | 'fleet' | 'insurance' | 'inspection' | 'maintenance' | '
     InspectionTabComponent,
     MaintenanceTabComponent,
     RemindersTabComponent,
-    ContractsTabComponent
+    ContractsTabComponent,
+    VerbaliTabComponent
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.scss']
