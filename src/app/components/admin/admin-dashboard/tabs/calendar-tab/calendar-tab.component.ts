@@ -1099,6 +1099,22 @@ export class CalendarTabComponent implements OnInit {
     }
   }
 
+  async deleteRentalFromModal(rentalId: string | undefined) {
+    if (!rentalId) return;
+
+    const confirmMsg = `Sei sicuro di voler eliminare definitivamente questo noleggio?`;
+    if (confirm(confirmMsg)) {
+      try {
+        await this.rentalService.deleteRental(rentalId);
+        alert('Noleggio eliminato con successo!');
+        this.closeModals();
+      } catch (error) {
+        console.error("Errore durante l'eliminazione del noleggio dalla modale:", error);
+        alert("Si è verificato un errore durante l'eliminazione.");
+      }
+    }
+  }
+
   // --- CONTROLLER CONTRATTI (PDF) ---
 
   openContractModal(rental: Rental) {

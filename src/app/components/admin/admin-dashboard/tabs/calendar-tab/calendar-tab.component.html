@@ -312,6 +312,9 @@
               <button type="button" class="btn-accent" (click)="openContractModal(newRental)" style="margin-right: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
                 <i class="fa-solid fa-file-pdf"></i> Stipula Contratto (PDF)
               </button>
+              <button type="button" class="btn-danger" (click)="deleteRentalFromModal(editingRentalId)">
+                <i class="fa-regular fa-trash-can"></i> Elimina Noleggio
+              </button>
             } @else {
               <button type="button" class="btn-accent" (click)="saveAndStipulateContract()" style="margin-right: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
                 <i class="fa-solid fa-file-pdf"></i> Salva e Stipula Contratto (PDF)

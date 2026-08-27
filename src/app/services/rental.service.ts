@@ -8,6 +8,7 @@ import {
   query,
   where,
   doc,
+  getDoc,
   updateDoc,
   deleteDoc,
   Timestamp,
@@ -542,9 +543,35 @@ export class RentalService {
     }
   }
 
-  /** Elimina un noleggio (se inserito per sbaglio) */
+  /** Elimina un noleggio (se inserito per sbaglio) e ripristina lo stato/sede precedente del veicolo */
   async deleteRental(id: string) {
     const docRef = doc(this.firestore, `rentals/${id}`);
+    
+    try {
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const rental = snap.data() as Rental;
+        if (rental.vehicleId && rental.location) {
+          // Ripristina la sede originale del veicolo prima del noleggio
+          await this.updateVehicle(rental.vehicleId, { location: rental.location });
+        }
+      }
+    } catch (e) {
+      console.error("Impossibile recuperare i dettagli del noleggio per ripristinare il veicolo:", e);
+    }
+
+    // Trova ed elimina anche eventuali contratti associati a questo rentalId
+    try {
+      const contractsRef = collection(this.firestore, 'contracts');
+      const q = query(contractsRef, where('rentalId', '==', id));
+      const contractsSnap = await getDocs(q);
+      for (const contractDoc of contractsSnap.docs) {
+        await deleteDoc(doc(this.firestore, `contracts/${contractDoc.id}`));
+      }
+    } catch (e) {
+      console.error("Errore durante l'eliminazione dei contratti associati al noleggio:", e);
+    }
+
     return deleteDoc(docRef);
   }
 
