@@ -205,7 +205,7 @@
                         <div class="upload-container" [class.has-file]="selectedFile">
                             @if (!selectedFile) {
                                 <div class="dropzone-area" (click)="fileInput.click()">
-                                    <input #fileInput type="file" style="display: none" accept=".pdf" (change)="onFileSelected($event)">
+                                    <input #fileInput type="file" style="display: none" accept=".pdf" (change)="onFileSelected($event)" multiple>
                                     <div class="dropzone-glow-circle">
                                         <i class="fa-solid fa-cloud-arrow-up cloud-icon-animated"></i>
                                     </div>

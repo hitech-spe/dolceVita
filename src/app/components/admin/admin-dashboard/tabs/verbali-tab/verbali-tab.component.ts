@@ -31,10 +31,12 @@ export class VerbaliTabComponent implements OnInit {
 
   // For the upload / creation form
   selectedFile: File | null = null;
+  selectedFiles: File[] = [];
   selectedFileName = '';
   selectedFileSize = '';
   uploadProgress = 0;
   isOcrRunning = false;
+  savedVerbaleId = '';
 
   // New Verbale Form model
   newVerbale: Partial<Verbale> = {
@@ -170,10 +172,12 @@ export class VerbaliTabComponent implements OnInit {
 
   resetForm() {
     this.selectedFile = null;
+    this.selectedFiles = [];
     this.selectedFileName = '';
     this.selectedFileSize = '';
     this.uploadProgress = 0;
     this.isOcrRunning = false;
+    this.savedVerbaleId = '';
     this.violationDateStr = '';
     this.violationTimeStr = '';
     this.newVerbale = {
@@ -204,91 +208,94 @@ export class VerbaliTabComponent implements OnInit {
   }
 
   onFileSelected(event: any) {
-    const file = event.target.files?.[0];
-    if (file) {
-      this.selectedFile = file;
-      this.selectedFileName = file.name;
-      // Convert size to human readable
-      const sizeKb = file.size / 1024;
-      this.selectedFileSize = sizeKb > 1024 
-        ? `${(sizeKb / 1024).toFixed(2)} MB` 
-        : `${sizeKb.toFixed(0)} KB`;
+    const fileList: FileList = event.target.files;
+    if (!fileList || fileList.length === 0) return;
 
-      this.runMockOcr();
+    this.selectedFiles = Array.from(fileList);
+    this.selectedFile = this.selectedFiles[0]; // For compatibility with existing HTML bindings
+
+    if (this.selectedFiles.length > 1) {
+      this.selectedFileName = `${this.selectedFiles.length} file selezionati`;
+    } else {
+      this.selectedFileName = this.selectedFile.name;
     }
+
+    const totalSize = this.selectedFiles.reduce((sum, f) => sum + f.size, 0);
+    const sizeKb = totalSize / 1024;
+    this.selectedFileSize = sizeKb > 1024 
+      ? `${(sizeKb / 1024).toFixed(2)} MB` 
+      : `${sizeKb.toFixed(0)} KB`;
+
+    this.runRealOcr();
   }
 
-  runMockOcr() {
+  runRealOcr() {
     this.isOcrRunning = true;
-    this.uploadProgress = 10;
+    this.uploadProgress = 15;
 
-    // Simulate file reading and OCR extraction steps
+    // Simulate progress feedback
     const interval = setInterval(() => {
-      if (this.uploadProgress < 90) {
-        this.uploadProgress += 20;
+      if (this.uploadProgress < 85) {
+        this.uploadProgress += 15;
       }
-    }, 250);
+    }, 400);
 
-    setTimeout(() => {
-      clearInterval(interval);
-      this.uploadProgress = 100;
-      this.isOcrRunning = false;
+    this.rentalService.parseVerbaliPdfs(this.selectedFiles).subscribe({
+      next: (response) => {
+        clearInterval(interval);
+        this.uploadProgress = 100;
+        this.isOcrRunning = false;
 
-      // Smart mock OCR: pick information from an existing contract to guarantee a match for demonstration
-      if (this.allContracts.length > 0) {
-        // Pick the most recent contract as a reference
-        const refContract = this.allContracts[0];
-        
-        // Find corresponding rental to get the exact start date and location
-        const refRental = this.allRentals.find(r => r.id === refContract.rentalId);
-        
-        let targetDate = new Date();
-        if (refRental) {
-          // Set date to the rental's start date
-          const ts = refRental.startDate as any;
-          targetDate = ts?.toDate ? ts.toDate() : new Date(ts);
+        if (response && response.extraction) {
+          const ext = response.extraction;
+          this.violationDateStr = ext.violationDate || '';
+          this.violationTimeStr = ext.violationTime || '';
+
+          this.newVerbale = {
+            plate: ext.plate ? ext.plate.trim().toUpperCase() : '',
+            ticketNumber: ext.ticketNumber || '',
+            fineAmount: ext.fineAmount || undefined,
+            authorityName: ext.authorityName || '',
+            authorityPec: ext.authorityPec || '',
+            status: 'Nuovo',
+            notes: 'Dati estratti automaticamente tramite scansione intelligente AI del verbale.'
+          };
+
+          this.savedVerbaleId = response.savedDocumentId || '';
+
+          // Se il BE ha già eseguito con successo il matching, cerchiamo gli oggetti tipizzati locali per ID
+          // per evitare incoerenze con i tipi Firestore Timestamp nel template HTML
+          if (response.matchFound && response.matchedContract) {
+            const cId = response.matchedContract.id;
+            const rId = response.matchedContract.rentalId;
+            const custId = response.matchedContract.customerId;
+
+            this.matchedContract = this.allContracts.find(c => c.id === cId) || null;
+            this.matchedRental = this.allRentals.find(r => r.id === rId) || null;
+            this.matchedCustomer = this.allCustomers.find(cust => cust.id === custId) || null;
+            this.matchingSearchDone = true;
+            this.generateEmailDraft();
+          } else {
+            // Altrimenti, fallback al matching locale basato su targa e data infrazione
+            this.findMatchingRental();
+          }
         }
 
-        // Format Date to YYYY-MM-DD
-        const yyyy = targetDate.getFullYear();
-        const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
-        const dd = String(targetDate.getDate()).padStart(2, '0');
-        this.violationDateStr = `${yyyy}-${mm}-${dd}`;
-        this.violationTimeStr = '11:15';
-
-        this.newVerbale = {
-          plate: refContract.vehiclePlate || 'AA123BB',
-          ticketNumber: `V-${Math.floor(1000 + Math.random() * 9000)}/2026`,
-          fineAmount: 148.50,
-          authorityName: 'Polizia Locale Mottola',
-          authorityPec: 'polizialocale.mottola@pec.rupar.puglia.it',
-          status: 'Nuovo',
-          notes: 'Dati estratti automaticamente tramite scansione intelligente OCR del verbale PDF.'
-        };
-      } else {
-        // Fallback dummy data if no contracts exist
-        this.violationDateStr = new Date().toISOString().split('T')[0];
-        this.violationTimeStr = '09:30';
-        this.newVerbale = {
-          plate: 'FX124ZA',
-          ticketNumber: 'V-5491/2026',
-          fineAmount: 110.00,
-          authorityName: 'Comando Polizia Municipale Taranto',
-          authorityPec: 'pm.comune.taranto@pec.rupar.puglia.it',
-          status: 'Nuovo',
-          notes: 'Dati simulati - Nessun contratto presente nel sistema.'
-        };
-      }
-
-      // Automatically run match once OCR completes
-      this.findMatchingRental();
-      
-      // Auto advance to step 2 after OCR completes for seamless flow
-      setTimeout(() => {
+        setTimeout(() => {
+          this.currentStep = 2;
+        }, 500);
+      },
+      error: (err) => {
+        clearInterval(interval);
+        this.isOcrRunning = false;
+        this.uploadProgress = 0;
+        console.error("Errore durante l'estrazione dati tramite Back-End AI:", err);
+        alert("Si è verificato un errore durante l'estrazione AI dei dati dal PDF. Assicurati che il server BE sia attivo o procedi per compilare manualmente i dati.");
+        
+        // In case of error, proceed to Step 2 to allow manual entry (fail-safe UX)
         this.currentStep = 2;
-      }, 600);
-
-    }, 1500);
+      }
+    });
   }
 
   findMatchingRental() {
@@ -427,20 +434,37 @@ La Dolce Vita SRL`;
           : (this.matchedContract?.customerName || '')
       };
 
-      // Handle PDF Base64 mock if a file was uploaded
+      // Handle PDF Base64 conversion if a file was uploaded
       if (this.selectedFile) {
-        verbaleData.pdfBase64 = 'data:application/pdf;base64,JVBERi0xLjQKJSDi48U...[MOCK_PDF_CONTENT]';
+        try {
+          // Salva in Base64 solo se il file singolo è sotto 800 KB per evitare limiti Firestore
+          if (this.selectedFile.size <= 800 * 1024) {
+            verbaleData.pdfBase64 = await this.fileToBase64(this.selectedFile);
+          } else {
+            verbaleData.pdfBase64 = '[FILE_TOO_LARGE_STORED_ON_BE]';
+          }
+        } catch (fileErr) {
+          console.error("Errore conversione file verbale in Base64:", fileErr);
+        }
       }
 
-      const docRef = await this.rentalService.createVerbale(verbaleData);
+      let verbaleId = this.savedVerbaleId;
+      if (verbaleId) {
+        // Aggiorna il verbale pre-salvato creato dal BE
+        await this.rentalService.updateVerbale(verbaleId, verbaleData);
+      } else {
+        // Fallback: crea un nuovo record se non pre-esistente
+        const docRef = await this.rentalService.createVerbale(verbaleData);
+        verbaleId = docRef.id!;
+      }
       this.loadingService.hide();
       
       if (andSendPec) {
         // Automatically send PEC
-        verbaleData.id = docRef.id;
+        verbaleData.id = verbaleId;
         this.sendPec(verbaleData);
       } else {
-        alert('Verbale registrato con successo nello storico!');
+        alert('Verbale registrato e allineato con successo nello storico!');
         this.closeUploadModal();
       }
     } catch (err) {
@@ -567,5 +591,14 @@ La Dolce Vita SRL`;
     const parts = dateStr.split('-');
     if (parts.length !== 3) return dateStr;
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+
+  fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
   }
 }

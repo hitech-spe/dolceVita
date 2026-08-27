@@ -1076,6 +1076,15 @@ export class RentalService {
     return this.http.post(url, formData);
   }
 
+  parseVerbaliPdfs(files: File[]): Observable<any> {
+    const url = `${API_CONFIG.baseUrl}/api/verbali/extract`;
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('files', file, file.name);
+    });
+    return this.http.post(url, formData);
+  }
+
   sendVerbalePec(payload: {
     verbaleId?: string;
     authorityPec: string;
