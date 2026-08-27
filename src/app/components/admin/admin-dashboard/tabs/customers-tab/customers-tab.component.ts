@@ -81,6 +81,15 @@ export class CustomersTabComponent implements OnInit {
   onNewFileSelected(event: any) {
     const file = event.target.files[0];
     if (!file) return;
+
+    // Dimensione massima di 700 KB per prevenire limiti Firestore (1 MB) su Base64
+    const maxSizeBytes = 700 * 1024;
+    if (file.size > maxSizeBytes) {
+      alert(`Il file "${file.name}" è troppo grande (${(file.size / (1024 * 1024)).toFixed(2)} MB). La dimensione massima consentita per gli allegati è di 700 KB per via dei limiti fisici di Firestore (1 MB per documento, incluso il Base64). Prova a comprimere il PDF prima di caricarlo.`);
+      event.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
@@ -96,12 +105,26 @@ export class CustomersTabComponent implements OnInit {
   async onFileSelected(event: any, customer: Customer) {
     const file = event.target.files[0];
     if (!file || !customer.id) return;
+
+    // Dimensione massima di 700 KB per prevenire limiti Firestore (1 MB) su Base64
+    const maxSizeBytes = 700 * 1024;
+    if (file.size > maxSizeBytes) {
+      alert(`Il file "${file.name}" è troppo grande (${(file.size / (1024 * 1024)).toFixed(2)} MB). La dimensione massima consentita per gli allegati è di 700 KB per via dei limiti fisici di Firestore (1 MB per documento, incluso il Base64). Prova a comprimere il PDF prima di caricarlo.`);
+      event.target.value = '';
+      return;
+    }
+
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async () => {
       const base64String = reader.result as string;
       const updatedAttachments = [...(customer.attachments || []), { name: file.name, data: base64String }];
-      await this.rentalService.updateCustomer(customer.id!, { attachments: updatedAttachments });
+      try {
+        await this.rentalService.updateCustomer(customer.id!, { attachments: updatedAttachments });
+      } catch (error) {
+        console.error("Errore durante il salvataggio dell'allegato:", error);
+        alert("Si è verificato un errore durante il salvataggio dell'allegato su Firestore. Assicurati che le dimensioni totali del documento del cliente non superino 1 MB.");
+      }
     };
   }
 

@@ -654,12 +654,12 @@ export class RentalService {
 
   async addCustomer(customer: Customer) {
     const ref = collection(this.firestore, 'customers');
-    return addDoc(ref, { ...customer, createdAt: Timestamp.now() });
+    return addDoc(ref, this.cleanUndefined({ ...customer, createdAt: Timestamp.now() }));
   }
 
   async updateCustomer(id: string, data: Partial<Customer>) {
     const docRef = doc(this.firestore, `customers/${id}`);
-    return updateDoc(docRef, data);
+    return updateDoc(docRef, this.cleanUndefined(data));
   }
 
   async deleteCustomer(id: string) {
@@ -964,7 +964,8 @@ export class RentalService {
       categoryLower.includes('ribaltabile') ||
       categoryLower.includes('refrigerato') ||
       categoryLower.includes('l3h3') ||
-      categoryLower.includes('l4h3')
+      categoryLower.includes('l4h3') ||
+        categoryLower.includes('ILVA')
     ) {
       veicoloTipoDesc = 'autocarri';
     } else if (

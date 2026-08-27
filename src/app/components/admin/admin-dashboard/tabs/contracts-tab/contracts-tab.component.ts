@@ -122,8 +122,13 @@ export class ContractsTabComponent implements OnInit {
 
   editContract(contract: ContractDocument) {
     if (contract.cargos_status === 'SENT') {
-      alert('Non puoi modificare un contratto che è già stato inviato con successo a Cargos!');
-      return;
+      const ok = confirm(
+        "Questo contratto è già stato inviato con successo a Cargos.\n\n" +
+        "Se intendi allungare i giorni (prolungamento del contratto), procedi pure con la modifica:\n" +
+        "salvando con la nuova data di rientro successiva, lo stato verrà azzerato automaticamente e potrai effettuarne di nuovo l'invio a Cargos.\n\n" +
+        "Vuoi procedere con la modifica?"
+      );
+      if (!ok) return;
     }
     this.editingContract = contract;
     this.editedDetails = { ...contract.details };

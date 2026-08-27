@@ -84,7 +84,7 @@ export class CalendarTabComponent implements OnInit {
     'A', 'B', 'C', 'D', 'E', 'F', '7 posti', 'Van 9 posti', 
     'L1H1', 'L2H1', 'L2H2', 'L3H3', 'L4H3', 'Cassa quadrata',
     'Cassone aperto 3 posti', 'Cassone aperto 7 posti', 
-    'Sponda idraulica', 'Refrigerato', 'Ribaltabile'
+    'Sponda idraulica', 'Refrigerato', 'Ribaltabile', 'ILVA'
   ];
 
   private searchSubject = new BehaviorSubject<string>('');

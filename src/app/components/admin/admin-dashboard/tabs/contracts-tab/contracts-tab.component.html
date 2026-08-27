@@ -157,8 +157,7 @@
                 <!-- Edit Contract Details -->
                 <button class="btn-edit" 
                         (click)="editContract(contract)" 
-                        [disabled]="contract.cargos_status === 'SENT'" 
-                        [title]="contract.cargos_status === 'SENT' ? 'Non puoi modificare un contratto già inviato a Cargos' : 'Modifica Dettagli Contratto'">
+                        title="Modifica Dettagli Contratto (anche se già inviato per prolungamento)">
                   <i class="fa-solid fa-pen-to-square"></i>
                 </button>
 
