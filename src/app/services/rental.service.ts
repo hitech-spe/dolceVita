@@ -964,8 +964,7 @@ export class RentalService {
       categoryLower.includes('ribaltabile') ||
       categoryLower.includes('refrigerato') ||
       categoryLower.includes('l3h3') ||
-      categoryLower.includes('l4h3') ||
-        categoryLower.includes('ILVA')
+      categoryLower.includes('l4h3')
     ) {
       veicoloTipoDesc = 'autocarri';
     } else if (
