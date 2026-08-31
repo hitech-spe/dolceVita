@@ -233,6 +233,27 @@ describe('ContractsTabComponent', () => {
     expect(component.isEditModalOpen).toBeFalse();
   });
 
+  it('should format and update contratto_checkout_data and normalize time inputs during save', async () => {
+    const mockContract = {
+      id: 'c_id_2',
+      contractNumber: '666',
+      contratto_checkout_data: '15/08/2026 09.00',
+      contratto_checkin_data: '22/08/2026 18.00',
+      details: { baseRate: 100, mainDriverId: 'c_xyz', timeOut: '08.30', timeIn: '18.15' }
+    } as any;
+
+    component.editingContract = mockContract;
+    component.editedDetails = { ...mockContract.details };
+    component.isEditModalOpen = true;
+
+    await component.saveContractEdit();
+
+    expect(mockRentalService.updateContract).toHaveBeenCalledWith('c_id_2', jasmine.objectContaining({
+      contratto_checkout_data: '15/08/2026 08:30',
+      contratto_checkin_data: '22/08/2026 18:15',
+    }));
+  });
+
   it('should manage bulk selections and trigger bulk sending correctly', () => {
     const mockContracts = [
       { id: '1', contractNumber: '100', cargos_status: 'CHECK_SUCCESS' },

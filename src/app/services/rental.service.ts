@@ -192,6 +192,7 @@ export interface ContractDocument {
 
   // Flat root fields for Cargos integration
   contratto_data?: string;
+  contratto_checkout_data?: string;
   contratto_checkin_data?: string;
   conducente_contraente_nascita_luogo?: string;
   conducente_contraente_nascita_data?: string;
@@ -917,7 +918,17 @@ export class RentalService {
       const dd = String(d.getDate()).padStart(2, '0');
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const yyyy = d.getFullYear();
-      const time = timeStr || '12:00';
+      let time = timeStr || '12:00';
+      
+      // Clean and normalize time string (replace . or , with :)
+      time = time.replace(/[.,]/g, ':').trim();
+      // Ensure there are 2 digits for hours and minutes (e.g. "8:30" -> "08:30")
+      if (time.includes(':')) {
+        const parts = time.split(':');
+        const hours = parts[0].padStart(2, '0');
+        const minutes = parts[1].padEnd(2, '0');
+        time = `${hours}:${minutes}`;
+      }
       return `${dd}/${mm}/${yyyy} ${time}`;
     };
 

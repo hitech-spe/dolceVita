@@ -277,16 +277,41 @@ export class ContractsTabComponent implements OnInit {
         ? this.editedDetails.driverBirthDate.split('-').reverse().join('/') 
         : '15/05/1985';
 
+      const cleanTime = (time: string): string => {
+        let cleaned = (time || '12:00').replace(/[.,]/g, ':').trim();
+        if (cleaned.includes(':')) {
+          const parts = cleaned.split(':');
+          const hours = parts[0].padStart(2, '0');
+          const minutes = parts[1].padEnd(2, '0');
+          return `${hours}:${minutes}`;
+        }
+        return cleaned;
+      };
+
       // Formatta la data di rientro per Cargos se modificata
       const checkinDateStr = this.editedRentalEndDate 
         ? this.editedRentalEndDate.split('-').reverse().join('/') 
         : (this.editingContract.contratto_checkin_data ? this.editingContract.contratto_checkin_data.split(' ')[0] : '25/08/2026');
-      const checkinTimeStr = this.editedDetails.timeIn || '12:00';
+      const checkinTimeStr = cleanTime(this.editedDetails.timeIn);
+
+      // Formatta la data di uscita per Cargos
+      let checkoutDateStr = '20/08/2026';
+      if (associatedRental && associatedRental.startDate) {
+        const dObj = (associatedRental.startDate as any).toDate ? (associatedRental.startDate as any).toDate() : new Date(associatedRental.startDate as any);
+        const dd = String(dObj.getDate()).padStart(2, '0');
+        const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+        const yyyy = dObj.getFullYear();
+        checkoutDateStr = `${dd}/${mm}/${yyyy}`;
+      } else if (this.editingContract.contratto_checkout_data) {
+        checkoutDateStr = this.editingContract.contratto_checkout_data.split(' ')[0];
+      }
+      const checkoutTimeStr = cleanTime(this.editedDetails.timeOut);
 
       const updatedContract: Partial<ContractDocument> = {
         details: this.editedDetails,
 
         // Aggiorna anche i campi flat di Cargos a livello root
+        contratto_checkout_data: `${checkoutDateStr} ${checkoutTimeStr}`,
         contratto_checkin_data: `${checkinDateStr} ${checkinTimeStr}`,
         conducente_contraente_nascita_luogo: this.editedDetails.driverBirthPlace || 'Mottola',
         conducente_contraente_nascita_data: birthDateFormatted,
