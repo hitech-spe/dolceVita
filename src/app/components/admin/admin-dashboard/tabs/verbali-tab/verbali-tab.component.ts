@@ -23,6 +23,10 @@ export class VerbaliTabComponent implements OnInit {
   allCustomers: Customer[] = [];
 
   searchTerm = '';
+  statusFilter = 'ALL';
+  sortField = 'violationDate';
+  sortDirection: 'asc' | 'desc' = 'desc';
+
   isUploadModalOpen = false;
   isSendingPec: { [key: string]: boolean } = {};
 
@@ -126,18 +130,63 @@ export class VerbaliTabComponent implements OnInit {
     return this.verbali.reduce((sum, v) => sum + (v.fineAmount || 0), 0);
   }
 
+  toggleSortDirection() {
+    this.sortDirection = this.sortDirection === 'desc' ? 'asc' : 'desc';
+  }
+
   getFilteredVerbali(): Verbale[] {
-    if (!this.searchTerm) {
-      return this.verbali;
+    let list = this.verbali || [];
+
+    // 1. Search term filter with robustness for null/undefined fields
+    if (this.searchTerm) {
+      const term = this.searchTerm.toLowerCase().trim();
+      list = list.filter(v => {
+        const plate = v.plate ? v.plate.toLowerCase() : '';
+        const ticketNumber = v.ticketNumber ? v.ticketNumber.toLowerCase() : '';
+        const authorityName = v.authorityName ? v.authorityName.toLowerCase() : '';
+        const customerName = v.customerName ? v.customerName.toLowerCase() : '';
+        const contractNumber = v.contractNumber ? v.contractNumber.toLowerCase() : '';
+        return plate.includes(term) ||
+               ticketNumber.includes(term) ||
+               authorityName.includes(term) ||
+               customerName.includes(term) ||
+               contractNumber.includes(term);
+      });
     }
-    const term = this.searchTerm.toLowerCase();
-    return this.verbali.filter(v => 
-      v.plate.toLowerCase().includes(term) ||
-      v.ticketNumber.toLowerCase().includes(term) ||
-      v.authorityName.toLowerCase().includes(term) ||
-      (v.customerName && v.customerName.toLowerCase().includes(term)) ||
-      (v.contractNumber && v.contractNumber.toLowerCase().includes(term))
-    );
+
+    // 2. Status filter
+    if (this.statusFilter !== 'ALL') {
+      list = list.filter(v => v.status === this.statusFilter);
+    }
+
+    // 3. Sorting
+    list = [...list].sort((a, b) => {
+      let valA: any = '';
+      let valB: any = '';
+
+      if (this.sortField === 'violationDate') {
+        valA = a.violationDate ? (a.violationDate.toDate ? a.violationDate.toDate().getTime() : new Date(a.violationDate as any).getTime()) : 0;
+        valB = b.violationDate ? (b.violationDate.toDate ? b.violationDate.toDate().getTime() : new Date(b.violationDate as any).getTime()) : 0;
+      } else if (this.sortField === 'fineAmount') {
+        valA = a.fineAmount || 0;
+        valB = b.fineAmount || 0;
+      } else if (this.sortField === 'ticketNumber') {
+        valA = a.ticketNumber || '';
+        valB = b.ticketNumber || '';
+      }
+
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        return this.sortDirection === 'asc' 
+          ? valA.localeCompare(valB) 
+          : valB.localeCompare(valA);
+      } else {
+        return this.sortDirection === 'asc' 
+          ? (valA > valB ? 1 : -1) 
+          : (valB > valA ? 1 : -1);
+      }
+    });
+
+    return list;
   }
 
   openUploadModal() {
@@ -211,27 +260,48 @@ export class VerbaliTabComponent implements OnInit {
     const fileList: FileList = event.target.files;
     if (!fileList || fileList.length === 0) return;
 
-    this.selectedFiles = Array.from(fileList);
-    this.selectedFile = this.selectedFiles[0]; // For compatibility with existing HTML bindings
+    const newFiles = Array.from(fileList);
+    newFiles.forEach(file => {
+      const exists = this.selectedFiles.some(f => f.name === file.name && f.size === file.size);
+      if (!exists) {
+        this.selectedFiles.push(file);
+      }
+    });
 
-    if (this.selectedFiles.length > 1) {
-      this.selectedFileName = `${this.selectedFiles.length} file selezionati`;
-    } else {
-      this.selectedFileName = this.selectedFile.name;
-    }
-
-    const totalSize = this.selectedFiles.reduce((sum, f) => sum + f.size, 0);
-    const sizeKb = totalSize / 1024;
-    this.selectedFileSize = sizeKb > 1024 
-      ? `${(sizeKb / 1024).toFixed(2)} MB` 
-      : `${sizeKb.toFixed(0)} KB`;
-
-    this.runRealOcr();
+    this.updateFilesMeta();
   }
 
-  runRealOcr() {
+  removeFile(index: number) {
+    this.selectedFiles.splice(index, 1);
+    this.updateFilesMeta();
+  }
+
+  updateFilesMeta() {
+    if (this.selectedFiles.length > 0) {
+      this.selectedFile = this.selectedFiles[0];
+      if (this.selectedFiles.length > 1) {
+        this.selectedFileName = `${this.selectedFiles.length} file selezionati`;
+      } else {
+        this.selectedFileName = this.selectedFiles[0].name;
+      }
+      const totalSize = this.selectedFiles.reduce((sum, f) => sum + f.size, 0);
+      const sizeKb = totalSize / 1024;
+      this.selectedFileSize = sizeKb > 1024 
+        ? `${(sizeKb / 1024).toFixed(2)} MB` 
+        : `${sizeKb.toFixed(0)} KB`;
+    } else {
+      this.selectedFile = null;
+      this.selectedFileName = '';
+      this.selectedFileSize = '';
+    }
+  }
+
+  processVerbali() {
+    if (this.selectedFiles.length === 0) return;
+    
     this.isOcrRunning = true;
     this.uploadProgress = 15;
+    this.loadingService.show();
 
     // Simulate progress feedback
     const interval = setInterval(() => {
@@ -245,55 +315,18 @@ export class VerbaliTabComponent implements OnInit {
         clearInterval(interval);
         this.uploadProgress = 100;
         this.isOcrRunning = false;
-
-        if (response && response.extraction) {
-          const ext = response.extraction;
-          this.violationDateStr = ext.violationDate || '';
-          this.violationTimeStr = ext.violationTime || '';
-
-          this.newVerbale = {
-            plate: ext.plate ? ext.plate.trim().toUpperCase() : '',
-            ticketNumber: ext.ticketNumber || '',
-            fineAmount: ext.fineAmount || undefined,
-            authorityName: ext.authorityName || '',
-            authorityPec: ext.authorityPec || '',
-            status: 'Nuovo',
-            notes: 'Dati estratti automaticamente tramite scansione intelligente AI del verbale.'
-          };
-
-          this.savedVerbaleId = response.savedDocumentId || '';
-
-          // Se il BE ha già eseguito con successo il matching, cerchiamo gli oggetti tipizzati locali per ID
-          // per evitare incoerenze con i tipi Firestore Timestamp nel template HTML
-          if (response.matchFound && response.matchedContract) {
-            const cId = response.matchedContract.id;
-            const rId = response.matchedContract.rentalId;
-            const custId = response.matchedContract.customerId;
-
-            this.matchedContract = this.allContracts.find(c => c.id === cId) || null;
-            this.matchedRental = this.allRentals.find(r => r.id === rId) || null;
-            this.matchedCustomer = this.allCustomers.find(cust => cust.id === custId) || null;
-            this.matchingSearchDone = true;
-            this.generateEmailDraft();
-          } else {
-            // Altrimenti, fallback al matching locale basato su targa e data infrazione
-            this.findMatchingRental();
-          }
-        }
-
-        setTimeout(() => {
-          this.currentStep = 2;
-        }, 500);
+        this.loadingService.hide();
+        alert('I file dei verbali sono stati caricati ed elaborati con successo!');
+        this.closeUploadModal();
+        this.resetForm();
       },
       error: (err) => {
         clearInterval(interval);
         this.isOcrRunning = false;
         this.uploadProgress = 0;
-        console.error("Errore durante l'estrazione dati tramite Back-End AI:", err);
-        alert("Si è verificato un errore durante l'estrazione AI dei dati dal PDF. Assicurati che il server BE sia attivo o procedi per compilare manualmente i dati.");
-        
-        // In case of error, proceed to Step 2 to allow manual entry (fail-safe UX)
-        this.currentStep = 2;
+        this.loadingService.hide();
+        console.error("Errore durante l'elaborazione dei verbali:", err);
+        alert("Si è verificato un errore durante l'elaborazione dei verbali sul server.");
       }
     });
   }

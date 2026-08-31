@@ -1,9 +1,10 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { RentalService, Reminder } from '../../../../../services/rental.service';
+import { LoadingService } from '../../../../../services/loading.service';
 import { Timestamp } from '@angular/fire/firestore';
 
 @Component({
@@ -15,6 +16,7 @@ import { Timestamp } from '@angular/fire/firestore';
 })
 export class RemindersTabComponent implements OnInit {
   private rentalService = inject(RentalService);
+  private loadingService = inject(LoadingService);
 
   reminders$!: Observable<Reminder[]>;
   filter: 'all' | 'active' | 'completed' = 'all';
@@ -49,7 +51,16 @@ export class RemindersTabComponent implements OnInit {
   }
 
   loadReminders() {
-    this.reminders$ = this.rentalService.getReminders();
+    this.loadingService.show();
+    this.reminders$ = this.rentalService.getReminders().pipe(
+      tap({
+        next: () => this.loadingService.hide(),
+        error: (err) => {
+          console.error('Error loading reminders:', err);
+          this.loadingService.hide();
+        }
+      })
+    );
   }
 
   getFilteredReminders(reminders: Reminder[] | null): Reminder[] {
@@ -132,6 +143,7 @@ export class RemindersTabComponent implements OnInit {
     }
 
     try {
+      this.loadingService.show();
       const targetDate = new Date(this.newReminderDate);
       const data: Reminder = {
         text: this.newReminderText.trim(),
@@ -148,8 +160,10 @@ export class RemindersTabComponent implements OnInit {
       } else {
         await this.rentalService.addReminder(data);
       }
+      this.loadingService.hide();
       this.closeModal();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore nel salvataggio del promemoria:', error);
       alert('Si è verificato un errore durante il salvataggio.');
     }
@@ -159,8 +173,11 @@ export class RemindersTabComponent implements OnInit {
     event.stopPropagation(); // Avoid triggering any other click
     if (!reminder.id) return;
     try {
+      this.loadingService.show();
       await this.rentalService.toggleReminderCompletion(reminder);
+      this.loadingService.hide();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore nell\'aggiornamento del promemoria:', error);
     }
   }
@@ -169,8 +186,11 @@ export class RemindersTabComponent implements OnInit {
     event.stopPropagation();
     if (!confirm('Sei sicuro di voler eliminare questo promemoria?')) return;
     try {
+      this.loadingService.show();
       await this.rentalService.deleteReminder(id);
+      this.loadingService.hide();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore nell\'eliminazione del promemoria:', error);
     }
   }

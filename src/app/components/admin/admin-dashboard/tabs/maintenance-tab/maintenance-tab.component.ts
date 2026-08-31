@@ -1,8 +1,9 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { Maintenance, RentalService, Vehicle } from '../../../../../services/rental.service';
+import { LoadingService } from '../../../../../services/loading.service';
 import { Timestamp } from '@angular/fire/firestore';
 import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/vehicle-select.component";
 
@@ -14,6 +15,7 @@ import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/veh
 })
 export class MaintenanceTabComponent implements OnInit {
   private rentalService = inject(RentalService);
+  private loadingService = inject(LoadingService);
 
   maintenances$!: Observable<Maintenance[]>;
   availableVehicles: Vehicle[] = [];
@@ -35,7 +37,16 @@ export class MaintenanceTabComponent implements OnInit {
   sheetInlineMaintenance: any = { description: '', date: '', cost: null, km: null, workshop: '' };
 
   ngOnInit() {
-    this.maintenances$ = this.rentalService.getMaintenances();
+    this.loadingService.show();
+    this.maintenances$ = this.rentalService.getMaintenances().pipe(
+      tap({
+        next: () => this.loadingService.hide(),
+        error: (err) => {
+          console.error('Error loading maintenances:', err);
+          this.loadingService.hide();
+        }
+      })
+    );
     this.maintenances$.subscribe(m => {
       this.allMaintenances = m;
       if (this.selectedVehicleForSheet) {
@@ -73,6 +84,7 @@ export class MaintenanceTabComponent implements OnInit {
   async saveMaintenance() {
     if (!this.newMaintenance.vehicleId || !this.newMaintenance.date) return;
     try {
+      this.loadingService.show();
       const v = this.availableVehicles.find(x => x.id === this.newMaintenance.vehicleId);
       const data: Maintenance = {
         ...this.newMaintenance,
@@ -85,8 +97,10 @@ export class MaintenanceTabComponent implements OnInit {
       } else {
         await this.rentalService.addMaintenance(data);
       }
+      this.loadingService.hide();
       this.closeModal();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante il salvataggio della manutenzione:', error);
       alert('Si è verificato un errore durante il salvataggio della manutenzione.');
     }
@@ -95,8 +109,11 @@ export class MaintenanceTabComponent implements OnInit {
   async deleteMaintenance(id: string) {
     if (confirm('Sei sicuro di voler eliminare questa manutenzione?')) {
       try {
+        this.loadingService.show();
         await this.rentalService.deleteMaintenance(id);
+        this.loadingService.hide();
       } catch (error) {
+        this.loadingService.hide();
         console.error('Errore durante l\'eliminazione della manutenzione:', error);
         alert('Si è verificato un errore durante l\'eliminazione della manutenzione.');
       }
@@ -204,6 +221,7 @@ export class MaintenanceTabComponent implements OnInit {
   async addJobFromSheet() {
     if (!this.selectedVehicleForSheet || !this.sheetInlineMaintenance.description || !this.sheetInlineMaintenance.date) return;
     try {
+      this.loadingService.show();
       const v = this.selectedVehicleForSheet;
       const data: Maintenance = {
         vehicleId: v.id,
@@ -216,10 +234,12 @@ export class MaintenanceTabComponent implements OnInit {
       };
 
       await this.rentalService.addMaintenance(data);
+      this.loadingService.hide();
       this.sheetInlineMaintenance = { description: '', date: '', cost: null, km: null, workshop: '' };
       
       this.sheetMaintenances = this.allMaintenances.filter(m => m.vehicleId === v.id);
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante l\'aggiunta della lavorazione:', error);
       alert('Si è verificato un errore.');
     }
@@ -241,14 +261,17 @@ export class MaintenanceTabComponent implements OnInit {
   async saveEditedJob() {
     if (!this.editingJobId || !this.tempEditingJob.description) return;
     try {
+      this.loadingService.show();
       await this.rentalService.updateMaintenance(this.editingJobId, {
         description: this.tempEditingJob.description,
         km: this.tempEditingJob.km || null,
         cost: this.tempEditingJob.cost || 0,
         workshop: this.tempEditingJob.workshop || ''
       });
+      this.loadingService.hide();
       this.cancelEditJob();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante la modifica:', error);
       alert('Si è verificato un errore durante la modifica.');
     }

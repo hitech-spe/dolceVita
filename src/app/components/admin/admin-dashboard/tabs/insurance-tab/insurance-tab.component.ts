@@ -1,8 +1,9 @@
 import { Component, OnInit, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { Insurance, RentalService, Vehicle } from '../../../../../services/rental.service';
+import { LoadingService } from '../../../../../services/loading.service';
 import { Timestamp } from '@angular/fire/firestore';
 import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/vehicle-select.component";
 
@@ -14,6 +15,7 @@ import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/veh
 })
 export class InsuranceTabComponent implements OnInit {
   private rentalService = inject(RentalService);
+  private loadingService = inject(LoadingService);
 
   insurances$!: Observable<Insurance[]>;
   availableVehicles: Vehicle[] = [];
@@ -28,7 +30,16 @@ export class InsuranceTabComponent implements OnInit {
   newInsurance: any = {};
 
   ngOnInit() {
-    this.insurances$ = this.rentalService.getInsurances();
+    this.loadingService.show();
+    this.insurances$ = this.rentalService.getInsurances().pipe(
+      tap({
+        next: () => this.loadingService.hide(),
+        error: (err) => {
+          console.error('Error loading insurances:', err);
+          this.loadingService.hide();
+        }
+      })
+    );
     this.rentalService.getVehicles().subscribe(v => this.availableVehicles = v);
   }
 
@@ -54,6 +65,7 @@ export class InsuranceTabComponent implements OnInit {
   async saveInsurance() {
     if (!this.newInsurance.vehicleId || !this.newInsurance.expiryDate) return;
     try {
+      this.loadingService.show();
       const v = this.availableVehicles.find(x => x.id === this.newInsurance.vehicleId);
       const data: Insurance = {
         ...this.newInsurance,
@@ -66,8 +78,10 @@ export class InsuranceTabComponent implements OnInit {
       } else {
         await this.rentalService.addInsurance(data);
       }
+      this.loadingService.hide();
       this.closeModal();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante il salvataggio dell\'assicurazione:', error);
       alert('Si è verificato un errore durante il salvataggio dell\'assicurazione.');
     }
@@ -76,8 +90,11 @@ export class InsuranceTabComponent implements OnInit {
   async deleteInsurance(id: string) {
     if (confirm('Sei sicuro di voler eliminare questa assicurazione?')) {
       try {
+        this.loadingService.show();
         await this.rentalService.deleteInsurance(id);
+        this.loadingService.hide();
       } catch (error) {
+        this.loadingService.hide();
         console.error('Errore durante l\'eliminazione dell\'assicurazione:', error);
         alert('Si è verificato un errore durante l\'eliminazione dell\'assicurazione.');
       }

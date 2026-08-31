@@ -1,8 +1,9 @@
 import { Component, OnInit, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import { Inspection, RentalService, Vehicle } from '../../../../../services/rental.service';
+import { LoadingService } from '../../../../../services/loading.service';
 import { Timestamp } from '@angular/fire/firestore';
 import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/vehicle-select.component";
 
@@ -14,6 +15,7 @@ import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/veh
 })
 export class InspectionTabComponent implements OnInit {
   private rentalService = inject(RentalService);
+  private loadingService = inject(LoadingService);
 
   inspections$!: Observable<Inspection[]>;
   availableVehicles: Vehicle[] = [];
@@ -28,7 +30,16 @@ export class InspectionTabComponent implements OnInit {
   newInspection: any = {};
 
   ngOnInit() {
-    this.inspections$ = this.rentalService.getInspections();
+    this.loadingService.show();
+    this.inspections$ = this.rentalService.getInspections().pipe(
+      tap({
+        next: () => this.loadingService.hide(),
+        error: (err) => {
+          console.error('Error loading inspections:', err);
+          this.loadingService.hide();
+        }
+      })
+    );
     this.rentalService.getVehicles().subscribe(v => this.availableVehicles = v);
   }
 
@@ -54,6 +65,7 @@ export class InspectionTabComponent implements OnInit {
   async saveInspection() {
     if (!this.newInspection.vehicleId || !this.newInspection.expiryDate) return;
     try {
+      this.loadingService.show();
       const v = this.availableVehicles.find(x => x.id === this.newInspection.vehicleId);
       const data: Inspection = {
         ...this.newInspection,
@@ -66,8 +78,10 @@ export class InspectionTabComponent implements OnInit {
       } else {
         await this.rentalService.addInspection(data);
       }
+      this.loadingService.hide();
       this.closeModal();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante il salvataggio della revisione:', error);
       alert('Si è verificato un errore durante il salvataggio della revisione.');
     }
@@ -76,8 +90,11 @@ export class InspectionTabComponent implements OnInit {
   async deleteInspection(id: string) {
     if (confirm('Sei sicuro di voler eliminare questa revisione?')) {
       try {
+        this.loadingService.show();
         await this.rentalService.deleteInspection(id);
+        this.loadingService.hide();
       } catch (error) {
+        this.loadingService.hide();
         console.error('Errore durante l\'eliminazione della revisione:', error);
         alert('Si è verificato un errore durante l\'eliminazione della revisione.');
       }

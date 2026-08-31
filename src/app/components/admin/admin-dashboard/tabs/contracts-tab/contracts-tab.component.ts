@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Observable, tap } from 'rxjs';
 import { RentalService, ContractDocument, Customer, Vehicle, Rental, Company } from '../../../../../services/rental.service';
+import { LoadingService } from '../../../../../services/loading.service';
 import { Timestamp } from '@angular/fire/firestore';
 import { API_CONFIG } from '../../../../../config/api.config';
 import { CustomerSelectComponent } from "../../../../../shared/customer-select/customer-select.component";
@@ -16,6 +17,7 @@ import { CustomerSelectComponent } from "../../../../../shared/customer-select/c
 })
 export class ContractsTabComponent implements OnInit {
   private rentalService = inject(RentalService);
+  private loadingService = inject(LoadingService);
 
   contracts$!: Observable<ContractDocument[]>;
   allContracts: ContractDocument[] = [];
@@ -48,9 +50,17 @@ export class ContractsTabComponent implements OnInit {
   isSendingBulk = false;
 
   ngOnInit() {
+    this.loadingService.show();
     this.contracts$ = this.rentalService.getContracts().pipe(
-      tap(contracts => {
-        this.allContracts = contracts || [];
+      tap({
+        next: (contracts) => {
+          this.allContracts = contracts || [];
+          this.loadingService.hide();
+        },
+        error: (err) => {
+          console.error('Error loading contracts:', err);
+          this.loadingService.hide();
+        }
       })
     );
     
@@ -242,6 +252,7 @@ export class ContractsTabComponent implements OnInit {
     if (!this.editingContract || !this.editingContract.id) return;
 
     try {
+      this.loadingService.show();
       let datePostponed = false;
       const associatedRental = this.allRentals.find(r => r.id === this.editingContract!.rentalId);
       if (associatedRental && this.editedRentalEndDate) {
@@ -396,9 +407,11 @@ export class ContractsTabComponent implements OnInit {
       }
 
       await this.rentalService.updateContract(this.editingContract.id, updatedContract);
+      this.loadingService.hide();
       alert('Contratto modificato con successo! Lo stato di verifica Cargos è stato reimpostato.');
       this.closeEditModal();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante il salvataggio del contratto modificato:', error);
       alert('Si è verificato un errore durante il salvataggio delle modifiche.');
     }
@@ -443,14 +456,17 @@ export class ContractsTabComponent implements OnInit {
     }
 
     this.isSendingBulk = true;
+    this.loadingService.show();
     this.rentalService.sendBulkContracts(ids).subscribe({
       next: (response) => {
         this.isSendingBulk = false;
+        this.loadingService.hide();
         this.selectedContractIds.clear();
         alert('Invio cumulativo completato con successo! I contratti sono stati inviati ed elaborati da Cargos.');
       },
       error: (error) => {
         this.isSendingBulk = false;
+        this.loadingService.hide();
         console.error('Errore durante l\'invio bulk Cargos:', error);
         alert(`Si è verificato un errore durante l'invio cumulativo a Cargos.\nDettaglio: ${error.message || error}`);
       }
@@ -462,16 +478,19 @@ export class ContractsTabComponent implements OnInit {
       this.isGeneratingContract[contract.id] = true;
     }
     
+    this.loadingService.show();
     this.rentalService.downloadContractPdf(contract.contractNumber).subscribe({
       next: (pdfBlob: Blob) => {
         const url = window.URL.createObjectURL(pdfBlob);
         window.open(url, '_blank');
+        this.loadingService.hide();
         if (contract.id) {
           this.isGeneratingContract[contract.id] = false;
         }
       },
       error: (error) => {
         console.error('Errore durante il recupero del PDF dal server:', error);
+        this.loadingService.hide();
         alert('Si è verificato un errore durante il recupero del contratto PDF dal server.');
         if (contract.id) {
           this.isGeneratingContract[contract.id] = false;
@@ -486,9 +505,12 @@ export class ContractsTabComponent implements OnInit {
     }
     
     try {
+      this.loadingService.show();
       await this.rentalService.deleteContract(id);
+      this.loadingService.hide();
       alert('Contratto eliminato con successo dallo storico!');
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore nell\'eliminazione del contratto:', error);
       alert('Si è verificato un errore durante l\'eliminazione.');
     }
@@ -496,9 +518,11 @@ export class ContractsTabComponent implements OnInit {
 
   checkCargos(contractNumber: string) {
     this.isCheckingContract[contractNumber] = true;
+    this.loadingService.show();
     this.rentalService.checkCargosContract(contractNumber).subscribe({
       next: (response) => {
         this.isCheckingContract[contractNumber] = false;
+        this.loadingService.hide();
         
         // Verifica se la risposta indica la presenza di errori di validazione
         if (response && (response.success === false || (response.errors && response.errors.length > 0))) {
@@ -510,6 +534,7 @@ export class ContractsTabComponent implements OnInit {
       },
       error: (error) => {
         this.isCheckingContract[contractNumber] = false;
+        this.loadingService.hide();
         console.error('Errore durante il check Cargos:', error);
         alert(`Si è verificato un errore durante la chiamata a Cargos (Microservizio non raggiungibile a ${API_CONFIG.baseUrl} o errore server).\nDettaglio: ${error.message || error}`);
       }
@@ -521,13 +546,16 @@ export class ContractsTabComponent implements OnInit {
       return;
     }
     this.isSendingContract[contractNumber] = true;
+    this.loadingService.show();
     this.rentalService.sendCargosContract(contractNumber).subscribe({
       next: (response) => {
         this.isSendingContract[contractNumber] = false;
+        this.loadingService.hide();
         alert(`Invio reale Cargos completato con successo per il contratto ${contractNumber}!\nContratto inviato ed elaborato.`);
       },
       error: (error) => {
         this.isSendingContract[contractNumber] = false;
+        this.loadingService.hide();
         console.error('Errore durante l\'invio reale Cargos:', error);
         alert(`Si è verificato un errore durante l'invio reale a Cargos.\nDettaglio: ${error.message || error}`);
       }

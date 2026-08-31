@@ -9,7 +9,7 @@ import { from, switchMap, catchError, of } from 'rxjs';
  */
 export const cargosAuthInterceptor: HttpInterceptorFn = (req, next) => {
   // Check if the request is targeting our microservice endpoints
-  if (req.url.includes('/api/v1/')) {
+  if (req.url.includes('/api/')) {
     const auth = inject(Auth);
     const currentUser = auth.currentUser;
 

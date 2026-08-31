@@ -1,8 +1,9 @@
 import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable, BehaviorSubject, switchMap } from 'rxjs';
+import { Observable, BehaviorSubject, switchMap, tap } from 'rxjs';
 import { Insurance, Inspection, Maintenance, RentalService, Vehicle } from '../../../../../services/rental.service';
+import { LoadingService } from '../../../../../services/loading.service';
 import { Timestamp } from '@angular/fire/firestore';
 
 @Component({
@@ -15,6 +16,7 @@ export class FleetTabComponent implements OnInit {
   @Input() selectedLocation$!: BehaviorSubject<string>;
 
   private rentalService = inject(RentalService);
+  private loadingService = inject(LoadingService);
 
   searchTerm = '';
   sortOrder: 'newest' | 'oldest' | 'brand' | 'category' = 'newest';
@@ -58,8 +60,16 @@ export class FleetTabComponent implements OnInit {
   sheetInlineMaintenance: any = { description: '', date: '', cost: null, km: null, workshop: '' };
 
   ngOnInit() {
+    this.loadingService.show();
     this.vehicles$ = this.selectedLocation$.pipe(
-      switchMap(loc => this.rentalService.getVehicles(loc === 'Tutte' ? undefined : loc))
+      switchMap(loc => this.rentalService.getVehicles(loc === 'Tutte' ? undefined : loc)),
+      tap({
+        next: () => this.loadingService.hide(),
+        error: (err) => {
+          console.error('Error loading vehicles:', err);
+          this.loadingService.hide();
+        }
+      })
     );
     this.rentalService.getMaintenances().subscribe(m => {
       this.allMaintenances = m;
@@ -85,34 +95,41 @@ export class FleetTabComponent implements OnInit {
 
       // Carica dettagli correlati più recenti
       if (vehicle.id) {
-        const [ins, insp, maint] = await Promise.all([
-          this.rentalService.getLatestInsurance(vehicle.id),
-          this.rentalService.getLatestInspection(vehicle.id),
-          this.rentalService.getLatestMaintenance(vehicle.id)
-        ]);
+        try {
+          this.loadingService.show();
+          const [ins, insp, maint] = await Promise.all([
+            this.rentalService.getLatestInsurance(vehicle.id),
+            this.rentalService.getLatestInspection(vehicle.id),
+            this.rentalService.getLatestMaintenance(vehicle.id)
+          ]);
 
-        if (ins) {
-          this.newInsurance = { ...ins };
-          this.insuranceExpiryDate = (ins.expiryDate as any).toDate().toISOString().split('T')[0];
-        } else {
-          this.newInsurance = {};
-          this.insuranceExpiryDate = '';
-        }
+          if (ins) {
+            this.newInsurance = { ...ins };
+            this.insuranceExpiryDate = (ins.expiryDate as any).toDate().toISOString().split('T')[0];
+          } else {
+            this.newInsurance = {};
+            this.insuranceExpiryDate = '';
+          }
 
-        if (insp) {
-          this.newInspection = { ...insp };
-          this.inspectionExpiryDate = (insp.expiryDate as any).toDate().toISOString().split('T')[0];
-        } else {
-          this.newInspection = {};
-          this.inspectionExpiryDate = '';
-        }
+          if (insp) {
+            this.newInspection = { ...insp };
+            this.inspectionExpiryDate = (insp.expiryDate as any).toDate().toISOString().split('T')[0];
+          } else {
+            this.newInspection = {};
+            this.inspectionExpiryDate = '';
+          }
 
-        if (maint) {
-          this.newMaintenance = { ...maint };
-          this.maintenanceDate = (maint.date as any).toDate().toISOString().split('T')[0];
-        } else {
-          this.newMaintenance = {};
-          this.maintenanceDate = '';
+          if (maint) {
+            this.newMaintenance = { ...maint };
+            this.maintenanceDate = (maint.date as any).toDate().toISOString().split('T')[0];
+          } else {
+            this.newMaintenance = {};
+            this.maintenanceDate = '';
+          }
+          this.loadingService.hide();
+        } catch (error) {
+          this.loadingService.hide();
+          console.error('Errore durante il caricamento dei dettagli del veicolo:', error);
         }
       }
     } else {
@@ -140,6 +157,7 @@ export class FleetTabComponent implements OnInit {
     if (!this.newVehicle.brand || !this.newVehicle.plate) return;
 
     try {
+      this.loadingService.show();
       // Conversione date in Timestamp (valido sia per add che per update)
       if (this.insuranceExpiryDate) {
         this.newInsurance.expiryDate = Timestamp.fromDate(new Date(this.insuranceExpiryDate));
@@ -167,8 +185,10 @@ export class FleetTabComponent implements OnInit {
           this.newMaintenance
         );
       }
+      this.loadingService.hide();
       this.closeModal();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante il salvataggio del veicolo:', error);
       alert('Si è verificato un errore durante il salvataggio del veicolo.');
     }
@@ -177,8 +197,11 @@ export class FleetTabComponent implements OnInit {
   async deleteVehicle(id: string) {
     if (confirm('ATTENZIONE: Eliminando questo veicolo verranno eliminati anche tutti i noleggi, assicurazioni, revisioni e manutenzioni collegati. Sei sicuro di voler procedere?')) {
       try {
+        this.loadingService.show();
         await this.rentalService.deleteVehicle(id);
+        this.loadingService.hide();
       } catch (error) {
+        this.loadingService.hide();
         console.error('Errore durante l\'eliminazione del veicolo:', error);
         alert('Si è verificato un errore durante l\'eliminazione del veicolo.');
       }
@@ -225,6 +248,7 @@ export class FleetTabComponent implements OnInit {
   async addInlineMaintenance() {
     if (!this.editingVehicleId || !this.inlineMaintenance.description || !this.inlineMaintenance.date) return;
     try {
+      this.loadingService.show();
       const v = this.newVehicle;
       const data: Maintenance = {
         vehicleId: this.editingVehicleId,
@@ -237,8 +261,10 @@ export class FleetTabComponent implements OnInit {
       };
 
       await this.rentalService.addMaintenance(data);
+      this.loadingService.hide();
       this.inlineMaintenance = { description: '', date: '', cost: null, km: null, workshop: '' };
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante l\'aggiunta della lavorazione:', error);
       alert('Si è verificato un errore.');
     }
@@ -247,8 +273,11 @@ export class FleetTabComponent implements OnInit {
   async deleteInlineMaintenance(id: string) {
     if (confirm('Sei sicuro di voler eliminare questa lavorazione dallo storico?')) {
       try {
+        this.loadingService.show();
         await this.rentalService.deleteMaintenance(id);
+        this.loadingService.hide();
       } catch (error) {
+        this.loadingService.hide();
         console.error('Errore durante l\'eliminazione della manutenzione:', error);
         alert('Si è verificato un errore.');
       }
@@ -314,6 +343,7 @@ export class FleetTabComponent implements OnInit {
   async addJobFromSheet() {
     if (!this.selectedVehicleForSheet || !this.sheetInlineMaintenance.description || !this.sheetInlineMaintenance.date) return;
     try {
+      this.loadingService.show();
       const v = this.selectedVehicleForSheet;
       const data: Maintenance = {
         vehicleId: v.id,
@@ -326,10 +356,12 @@ export class FleetTabComponent implements OnInit {
       };
 
       await this.rentalService.addMaintenance(data);
+      this.loadingService.hide();
       this.sheetInlineMaintenance = { description: '', date: '', cost: null, km: null, workshop: '' };
       
       this.sheetMaintenances = this.allMaintenances.filter(m => m.vehicleId === v.id);
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante l\'aggiunta della lavorazione:', error);
       alert('Si è verificato un errore.');
     }
@@ -351,14 +383,17 @@ export class FleetTabComponent implements OnInit {
   async saveEditedJob() {
     if (!this.editingJobId || !this.tempEditingJob.description) return;
     try {
+      this.loadingService.show();
       await this.rentalService.updateMaintenance(this.editingJobId, {
         description: this.tempEditingJob.description,
         km: this.tempEditingJob.km || null,
         cost: this.tempEditingJob.cost || 0,
         workshop: this.tempEditingJob.workshop || ''
       });
+      this.loadingService.hide();
       this.cancelEditJob();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante la modifica:', error);
       alert('Si è verificato un errore durante la modifica.');
     }

@@ -1,8 +1,9 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 import {Customer, RentalService, Vehicle} from '../../../../../services/rental.service';
+import { LoadingService } from '../../../../../services/loading.service';
 import { Timestamp } from '@angular/fire/firestore';
 
 @Component({
@@ -13,6 +14,7 @@ import { Timestamp } from '@angular/fire/firestore';
 })
 export class CustomersTabComponent implements OnInit {
   private rentalService = inject(RentalService);
+  private loadingService = inject(LoadingService);
 
   customers$!: Observable<Customer[]>;
   searchTerm = '';
@@ -25,7 +27,16 @@ export class CustomersTabComponent implements OnInit {
   pendingAttachments: { name: string; data: string }[] = [];
 
   ngOnInit() {
-    this.customers$ = this.rentalService.getCustomers();
+    this.loadingService.show();
+    this.customers$ = this.rentalService.getCustomers().pipe(
+      tap({
+        next: () => this.loadingService.hide(),
+        error: (err) => {
+          console.error('Error loading customers:', err);
+          this.loadingService.hide();
+        }
+      })
+    );
   }
 
   openModal(customer?: Customer) {
@@ -58,6 +69,7 @@ export class CustomersTabComponent implements OnInit {
   async saveCustomer() {
     if (!this.newCustomer.firstName || !this.newCustomer.lastName) return;
     try {
+      this.loadingService.show();
       const data: Customer = {
         ...this.newCustomer,
         birthDate: this.newCustomer.birthDate ? Timestamp.fromDate(new Date(this.newCustomer.birthDate)) : null,
@@ -71,8 +83,10 @@ export class CustomersTabComponent implements OnInit {
       } else {
         await this.rentalService.addCustomer(data);
       }
+      this.loadingService.hide();
       this.closeModal();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante il salvataggio del cliente:', error);
       alert('Si è verificato un errore durante il salvataggio del cliente.');
     }
@@ -114,6 +128,7 @@ export class CustomersTabComponent implements OnInit {
       return;
     }
 
+    this.loadingService.show();
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async () => {
@@ -121,7 +136,9 @@ export class CustomersTabComponent implements OnInit {
       const updatedAttachments = [...(customer.attachments || []), { name: file.name, data: base64String }];
       try {
         await this.rentalService.updateCustomer(customer.id!, { attachments: updatedAttachments });
+        this.loadingService.hide();
       } catch (error) {
+        this.loadingService.hide();
         console.error("Errore durante il salvataggio dell'allegato:", error);
         alert("Si è verificato un errore durante il salvataggio dell'allegato su Firestore. Assicurati che le dimensioni totali del documento del cliente non superino 1 MB.");
       }
@@ -130,8 +147,16 @@ export class CustomersTabComponent implements OnInit {
 
   async removeAttachment(customer: Customer, index: number) {
     if (!customer.id || !customer.attachments) return;
-    const updatedAttachments = customer.attachments.filter((_, i) => i !== index);
-    await this.rentalService.updateCustomer(customer.id, { attachments: updatedAttachments });
+    try {
+      this.loadingService.show();
+      const updatedAttachments = customer.attachments.filter((_, i) => i !== index);
+      await this.rentalService.updateCustomer(customer.id, { attachments: updatedAttachments });
+      this.loadingService.hide();
+    } catch (error) {
+      this.loadingService.hide();
+      console.error("Errore durante la rimozione dell'allegato:", error);
+      alert("Si è verificato un errore durante la rimozione dell'allegato.");
+    }
   }
 
   downloadAttachment(attachment: { name: string; data: string }) {
@@ -144,8 +169,11 @@ export class CustomersTabComponent implements OnInit {
   async deleteCustomer(id: string) {
     if (confirm('Sei sicuro di voler eliminare questo cliente?')) {
       try {
+        this.loadingService.show();
         await this.rentalService.deleteCustomer(id);
+        this.loadingService.hide();
       } catch (error) {
+        this.loadingService.hide();
         console.error('Errore durante l\'eliminazione del cliente:', error);
         alert('Si è verificato un errore durante l\'eliminazione del cliente.');
       }

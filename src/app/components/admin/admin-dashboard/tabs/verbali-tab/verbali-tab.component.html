@@ -52,10 +52,39 @@
                 <p class="subtitle">Associa i verbali cartacei ai conducenti effettivi e rinotifica le violazioni al conducente via PEC</p>
             </div>
             <div class="panel-actions">
+                <!-- Search Input -->
                 <div class="search-bar">
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
                     <input type="text" class="search-input" placeholder="Cerca per targa, verbale, ente, cliente..." [(ngModel)]="searchTerm">
                 </div>
+
+                <!-- Filtro Stato PEC -->
+                <div class="filter-dropdown">
+                    <select [(ngModel)]="statusFilter" class="filter-select">
+                        <option value="ALL">Tutti i verbali</option>
+                        <option value="Nuovo">Da Inviare (Nuovo)</option>
+                        <option value="Inviato">Inviati (PEC)</option>
+                    </select>
+                </div>
+
+                <!-- Ordinamento Field -->
+                <div class="filter-dropdown">
+                    <select [(ngModel)]="sortField" class="filter-select">
+                        <option value="violationDate">Ordina per: Data Infrazione</option>
+                        <option value="ticketNumber">Ordina per: Numero Verbale</option>
+                        <option value="fineAmount">Ordina per: Importo</option>
+                    </select>
+                </div>
+
+                <!-- Direzione Ordinamento -->
+                <button class="btn-sort-dir" (click)="toggleSortDirection()" [title]="sortDirection === 'desc' ? 'Ordinamento Decrescente' : 'Ordinamento Crescente'">
+                    @if (sortDirection === 'desc') {
+                        <i class="fa-solid fa-arrow-down-9-1"></i>
+                    } @else {
+                        <i class="fa-solid fa-arrow-up-1-9"></i>
+                    }
+                </button>
+
                 <button class="btn btn-primary animate-hover" (click)="openUploadModal()">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> Processa Verbale
                 </button>
@@ -65,7 +94,7 @@
         <!-- TABELLA DATI VERBALI -->
         <div class="table-responsive">
             @if (getFilteredVerbali().length > 0) {
-                <table class="verbali-table">
+                <table class="modern-table">
                     <thead>
                         <tr>
                             <th>N. Verbale / Ente</th>
@@ -157,395 +186,95 @@
     </div>
 </div>
 
-<!-- MODALE WIZARD MULTI-STEP: PROCESSAMENTO INTELLIGENTE -->
+<!-- MODALE CARICAMENTO VERBALI -->
 @if (isUploadModalOpen) {
     <div class="modal-overlay">
-        <div class="modal-card wide-modal animate-scale-up">
+        <div class="modal-card wide-modal animate-scale-up" style="max-width: 600px;">
             
             <!-- HEADER MODALE -->
             <div class="modal-header">
                 <div class="header-left">
-                    <i class="fa-solid fa-wand-magic-sparkles modal-icon-magic"></i>
+                    <i class="fa-solid fa-cloud-arrow-up modal-icon-magic" style="color: var(--primary);"></i>
                     <div>
-                        <h2>Processamento Assistito Verbale</h2>
-                        <p class="modal-subtitle">Carica il verbale, estrai i dati con l'OCR e compila la notifica PEC</p>
+                        <h2>Carica e Processa Verbali</h2>
+                        <p class="modal-subtitle">Carica uno o più file PDF dei verbali per l'invio e l'elaborazione automatica sul server</p>
                     </div>
                 </div>
                 <button class="btn-close" (click)="closeUploadModal()"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
-            <!-- STEP INDICATOR BAR: DESIGN MODERNO -->
-            <div class="wizard-stepper">
-                <div class="step-item" [class.active]="currentStep === 1" [class.completed]="currentStep > 1" (click)="goToStep(1)">
-                    <div class="step-bubble">
-                        @if (currentStep > 1) { <i class="fa-solid fa-check"></i> } @else { 1 }
-                    </div>
-                    <span class="step-label">Scansione PDF</span>
-                </div>
-                <div class="step-line" [class.filled]="currentStep > 1"></div>
-                <div class="step-item" [class.active]="currentStep === 2" [class.completed]="currentStep > 2" (click)="goToStep(2)">
-                    <div class="step-bubble">
-                        @if (currentStep > 2) { <i class="fa-solid fa-check"></i> } @else { 2 }
-                    </div>
-                    <span class="step-label">Dati & Smart Match</span>
-                </div>
-                <div class="step-line" [class.filled]="currentStep > 2"></div>
-                <div class="step-item" [class.active]="currentStep === 3" (click)="goToStep(3)">
-                    <div class="step-bubble">3</div>
-                    <span class="step-label">Bozza PEC</span>
-                </div>
-            </div>
-
             <!-- CONTENUTO DEL CORPO MODALE -->
-            <div class="modal-body">
-
-                <!-- ================== STEP 1: CARICAMENTO & OCR ================== -->
-                @if (currentStep === 1) {
-                    <div class="step-content animate-fade-in-right">
-                        <div class="upload-container" [class.has-file]="selectedFile">
-                            @if (!selectedFile) {
-                                <div class="dropzone-area" (click)="fileInput.click()">
-                                    <input #fileInput type="file" style="display: none" accept=".pdf" (change)="onFileSelected($event)" multiple>
-                                    <div class="dropzone-glow-circle">
-                                        <i class="fa-solid fa-cloud-arrow-up cloud-icon-animated"></i>
-                                    </div>
-                                    <h3>Trascina qui il file PDF del verbale</h3>
-                                    <p>Oppure clicca per sfogliare i documenti locali</p>
-                                    <div class="file-badges-info">
-                                        <span class="file-info-pill">PDF</span>
-                                        <span class="file-info-pill">Max 10MB</span>
-                                    </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <div class="step-content">
+                    <div class="upload-container" [class.has-file]="selectedFiles.length > 0" style="border: 2px dashed #cbd5e1; border-radius: 12px; transition: all 0.3s ease;">
+                        @if (!isOcrRunning) {
+                            <div class="dropzone-area" (click)="fileInput.click()" style="padding: 2.5rem; text-align: center; cursor: pointer;">
+                                <input #fileInput type="file" style="display: none" accept=".pdf" (change)="onFileSelected($event)" multiple>
+                                <div class="dropzone-glow-circle" style="width: 64px; height: 64px; background: rgba(59, 130, 246, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                                    <i class="fa-solid fa-cloud-arrow-up cloud-icon-animated" style="font-size: 24px; color: #2563eb;"></i>
                                 </div>
-                            } @else {
-                                <div class="file-card-completed">
-                                    <div class="pdf-logo-box">
-                                        <i class="fa-solid fa-file-pdf pdf-pulsing-icon"></i>
-                                        @if (isOcrRunning) {
-                                            <div class="scanning-laser-line"></div>
-                                        }
-                                    </div>
-                                    <div class="file-info-meta">
-                                        <h3 class="file-name">{{ selectedFileName }}</h3>
-                                        <span class="file-size">{{ selectedFileSize }}</span>
-                                        <p class="file-status">
-                                            @if (isOcrRunning) {
-                                                <span class="text-orange animate-pulse"><i class="fa-solid fa-robot"></i> Intelligenza Artificiale sta estraendo i testi...</span>
-                                            } @else {
-                                                <span class="text-green"><i class="fa-solid fa-circle-check"></i> Scansione OCR completata con successo!</span>
-                                            }
-                                        </p>
-                                    </div>
-                                    @if (!isOcrRunning) {
-                                        <button class="btn btn-secondary btn-icon-only" (click)="resetForm()" title="Rimuovi file">
-                                            <i class="fa-solid fa-trash-can"></i> Cambia Documento
-                                        </button>
-                                    }
-                                </div>
-                            }
-                        </div>
-
-                        @if (isOcrRunning) {
-                            <div class="ocr-progress-box">
-                                <div class="progress-bar-container">
-                                    <div class="progress-bar-fill" [style.width.%]="uploadProgress"></div>
-                                </div>
-                                <span class="progress-percentage-label">Progresso Analisi: {{ uploadProgress }}%</span>
-                                <div class="ocr-steps-visual">
-                                    <span class="ocr-step-badge active"><i class="fa-solid fa-spinner fa-spin"></i> Lettura File</span>
-                                    <span class="ocr-step-badge" [class.active]="uploadProgress >= 40"><i class="fa-solid fa-eye"></i> Riconoscimento Caratteri</span>
-                                    <span class="ocr-step-badge" [class.active]="uploadProgress >= 80"><i class="fa-solid fa-brain"></i> Estrazione Entità Legali</span>
+                                <h3 style="font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem;">Seleziona i file PDF dei verbali</h3>
+                                <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 0.5rem;">Clicca per sfogliare o trascina i file qui</p>
+                                <div class="file-badges-info" style="display: flex; gap: 8px; justify-content: center; margin-top: 0.5rem;">
+                                    <span class="file-info-pill" style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">PDF</span>
+                                    <span class="file-info-pill" style="background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">MULTI-FILE</span>
                                 </div>
                             </div>
-                        }
-
-                        @if (selectedFile && !isOcrRunning) {
-                            <div class="step-guide-banner">
-                                <i class="fa-solid fa-circle-info banner-icon"></i>
-                                <div class="banner-text">
-                                    <h4>Ottimo lavoro!</h4>
-                                    <p>I dati del verbale sono stati convertiti e processati con successo. Clicca su <strong>"Continua"</strong> per verificare l'abbinamento intelligente col noleggio e personalizzare i dati.</p>
-                                </div>
+                        } @else {
+                            <div style="padding: 2.5rem; text-align: center;">
+                                <i class="fa-solid fa-spinner fa-spin" style="font-size: 40px; color: #2563eb; margin-bottom: 1rem;"></i>
+                                <h3 style="font-size: 1.1rem; font-weight: 700; color: #0f172a;">Elaborazione in corso...</h3>
+                                <p style="color: #64748b; font-size: 0.9rem;">I verbali sono in fase di caricamento e analisi intelligente sul Back-End.</p>
                             </div>
                         }
                     </div>
-                }
 
-                <!-- ================== STEP 2: DATI & SMART MATCHING ================== -->
-                @if (currentStep === 2) {
-                    <div class="step-content animate-fade-in-right">
-                        <div class="split-grid-modern">
-                            
-                            <!-- SCHEDA FORM DATI VERBALE -->
-                            <div class="form-card-modern">
-                                <div class="card-title-bar">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                    <h3>Dati Sanitizzati del Verbale</h3>
-                                </div>
-                                <div class="modern-form">
-                                    <div class="form-row-2">
-                                        <div class="form-field">
-                                            <label>Targa Veicolo *</label>
-                                            <div class="input-with-icon">
-                                                <i class="fa-solid fa-car-side input-icon"></i>
-                                                <input type="text" [(ngModel)]="newVerbale.plate" (ngModelChange)="findMatchingRental()" class="input-ctrl text-uppercase" placeholder="ES: AA123BB">
-                                            </div>
-                                        </div>
-                                        <div class="form-field">
-                                            <label>Numero Verbale *</label>
-                                            <div class="input-with-icon">
-                                                <i class="fa-solid fa-file-invoice input-icon"></i>
-                                                <input type="text" [(ngModel)]="newVerbale.ticketNumber" (ngModelChange)="generateEmailDraft()" class="input-ctrl" placeholder="ES: 4930/2026">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-row-2">
-                                        <div class="form-field">
-                                            <label>Data Infrazione *</label>
-                                            <div class="input-with-icon">
-                                                <i class="fa-solid fa-calendar-days input-icon"></i>
-                                                <input type="date" [(ngModel)]="violationDateStr" (ngModelChange)="findMatchingRental()" class="input-ctrl">
-                                            </div>
-                                        </div>
-                                        <div class="form-field">
-                                            <label>Ora Infrazione</label>
-                                            <div class="input-with-icon">
-                                                <i class="fa-solid fa-clock input-icon"></i>
-                                                <input type="time" [(ngModel)]="violationTimeStr" (ngModelChange)="findMatchingRental()" class="input-ctrl">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-row-2">
-                                        <div class="form-field">
-                                            <label>Importo Sanzione (€)</label>
-                                            <div class="input-with-icon">
-                                                <i class="fa-solid fa-euro-sign input-icon"></i>
-                                                <input type="number" [(ngModel)]="newVerbale.fineAmount" class="input-ctrl" placeholder="0.00">
-                                            </div>
-                                        </div>
-                                        <div class="form-field">
-                                            <label>Organo Accertatore</label>
-                                            <div class="input-with-icon">
-                                                <i class="fa-solid fa-building-shield input-icon"></i>
-                                                <input type="text" [(ngModel)]="newVerbale.authorityName" (ngModelChange)="generateEmailDraft()" class="input-ctrl" placeholder="ES: Polizia Locale">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-field">
-                                        <label>Indirizzo PEC Accertatore *</label>
-                                        <div class="input-with-icon">
-                                            <i class="fa-solid fa-at input-icon"></i>
-                                            <input type="email" [(ngModel)]="newVerbale.authorityPec" (ngModelChange)="generateEmailDraft()" class="input-ctrl" placeholder="ES: ente@pec.it">
-                                        </div>
-                                    </div>
-
-                                    <div class="form-field">
-                                        <label>Note Interne</label>
-                                        <textarea [(ngModel)]="newVerbale.notes" class="input-ctrl text-area-ctrl" rows="3" placeholder="Inserisci eventuali note aggiuntive..."></textarea>
-                                    </div>
-                                </div>
+                    @if (isOcrRunning) {
+                        <div class="ocr-progress-box" style="margin-top: 1.5rem;">
+                            <div class="progress-bar-container" style="background: #e2e8f0; border-radius: 6px; height: 10px; overflow: hidden; margin-bottom: 0.5rem;">
+                                <div class="progress-bar-fill" [style.width.%]="uploadProgress" style="background: #2563eb; height: 100%; transition: width 0.3s ease;"></div>
                             </div>
+                            <span class="progress-percentage-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;">Progresso Analisi: {{ uploadProgress }}%</span>
+                        </div>
+                    }
 
-                            <!-- SCHEDA SMART MATCHING - BOARDING PASS STYLE -->
-                            <div class="match-card-modern">
-                                <div class="card-title-bar">
-                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
-                                    <h3>Risultato Abbinamento Noleggio</h3>
-                                </div>
-
-                                @if (matchedContract && matchedCustomer) {
-                                    <div class="boarding-pass">
-                                        <div class="pass-header">
-                                            <div class="pass-badge">
-                                                <i class="fa-solid fa-circle-check"></i> VERIFICATO
-                                            </div>
-                                            <span class="pass-code">CONTRATTO #{{ matchedContract.contractNumber }}</span>
-                                        </div>
-
-                                        <div class="pass-body">
-                                            <div class="pass-section">
-                                                <span class="section-label">Conducente / Locatario</span>
-                                                <span class="section-val">{{ matchedCustomer.lastName }} {{ matchedCustomer.firstName }}</span>
-                                            </div>
-
-                                            <div class="pass-grid-2">
-                                                <div class="pass-section">
-                                                    <span class="section-label">Targa Veicolo</span>
-                                                    <span class="section-val font-mono">{{ matchedContract.vehiclePlate }}</span>
-                                                </div>
-                                                <div class="pass-section">
-                                                    <span class="section-label">Patente di Guida</span>
-                                                    <span class="section-val">{{ matchedCustomer.licenseNumber || matchedContract.details.driverLicenseNumber || '-' }}</span>
-                                                </div>
-                                            </div>
-
-                                            <div class="pass-divider-line">
-                                                <div class="half-circle left"></div>
-                                                <div class="half-circle right"></div>
-                                            </div>
-
-                                            <div class="pass-section">
-                                                <span class="section-label">Periodo di Noleggio Conforme</span>
-                                                <div class="pass-dates">
-                                                    <div>
-                                                        <span class="date-time-micro-label">INIZIO</span>
-                                                        <span class="date-time-micro-val">{{ formatDate(matchedRental?.startDate) }}</span>
-                                                    </div>
-                                                    <i class="fa-solid fa-arrow-right date-arrow-icon"></i>
-                                                    <div>
-                                                        <span class="date-time-micro-label">RIENTRO</span>
-                                                        <span class="date-time-micro-val">{{ formatDate(matchedRental?.endDate) }}</span>
-                                                    </div>
-                                                </div>
+                    @if (selectedFiles.length > 0 && !isOcrRunning) {
+                        <div class="selected-files-list" style="margin-top: 1.5rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
+                            <h4 style="font-size: 0.95rem; font-weight: 700; color: #334155; margin-bottom: 1rem; display: flex; justify-content: space-between;">
+                                <span>File pronti per l'invio ({{ selectedFiles.length }})</span>
+                                <span style="font-weight: 600; color: #64748b; font-size: 0.85rem;">{{ selectedFileSize }} totali</span>
+                            </h4>
+                            <div class="file-cards-grid" style="display: grid; gap: 10px; max-height: 220px; overflow-y: auto; padding-right: 4px;">
+                                @for (file of selectedFiles; track $index) {
+                                    <div class="file-card-mini" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                                        <div style="display: flex; align-items: center; gap: 10px; overflow: hidden;">
+                                            <i class="fa-solid fa-file-pdf" style="font-size: 20px; color: #ef4444; flex-shrink: 0;"></i>
+                                            <div style="display: flex; flex-direction: column; overflow: hidden;">
+                                                <span style="font-size: 0.85rem; font-weight: 600; color: #1e293b; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;" [title]="file.name">{{ file.name }}</span>
+                                                <span style="font-size: 0.75rem; color: #64748b;">{{ (file.size / 1024).toFixed(0) }} KB</span>
                                             </div>
                                         </div>
-                                    </div>
-                                } @else if (matchingSearchDone) {
-                                    <div class="modern-match-empty-box orange-border animate-pulse">
-                                        <i class="fa-solid fa-triangle-exclamation empty-icon-warning"></i>
-                                        <h4>Nessun Noleggio Trovato</h4>
-                                        <p>Nessun contratto di noleggio attivo per la targa <strong>{{ newVerbale.plate || 'N/D' }}</strong> in data <strong>{{ formatItalianDateStr(violationDateStr) || 'N/D' }}</strong>.</p>
-                                        <span class="info-help-text">Puoi comunque forzare la registrazione del verbale e compilare l'e-mail a mano nel prossimo passaggio.</span>
-                                    </div>
-                                } @else {
-                                    <div class="modern-match-empty-box">
-                                        <i class="fa-solid fa-search empty-icon-search"></i>
-                                        <h4>In Attesa di Dati</h4>
-                                        <p>Riempi i campi Targa e Data Infrazione a sinistra per avviare il motore di ricerca di corrispondenze.</p>
+                                        <button (click)="removeFile($index)" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'" title="Rimuovi file">
+                                            <i class="fa-solid fa-trash-can" style="font-size: 14px;"></i>
+                                        </button>
                                     </div>
                                 }
-
-                                <!-- CARD ALLEGATI FISICI -->
-                                <div class="visual-attachments-box">
-                                    <h4 class="attachments-title">Documenti che verranno allegati alla PEC:</h4>
-                                    <div class="allegati-cards-list">
-                                        
-                                        <!-- ALLEGATO 1 -->
-                                        <div class="attachment-pill-card red-pill" [class.disabled]="!selectedFile">
-                                            <div class="pill-icon-box"><i class="fa-solid fa-file-pdf"></i></div>
-                                            <div class="pill-details">
-                                                <span class="pill-name">1. Copia Verbale PDF</span>
-                                                <span class="pill-status-ok"><i class="fa-solid fa-check"></i> Allegato</span>
-                                            </div>
-                                            <input type="checkbox" [(ngModel)]="emailDraft.attachVerbale" [disabled]="!selectedFile" class="pill-checkbox">
-                                        </div>
-
-                                        <!-- ALLEGATO 2 -->
-                                        <div class="attachment-pill-card blue-pill" [class.disabled]="!matchedContract">
-                                            <div class="pill-icon-box"><i class="fa-solid fa-file-contract"></i></div>
-                                            <div class="pill-details">
-                                                <span class="pill-name">2. Contratto di Noleggio @if (matchedContract) { #{{ matchedContract.contractNumber }} }</span>
-                                                <span class="pill-status-ok">@if (matchedContract) { <i class="fa-solid fa-check"></i> Generato PDF } @else { Non Disponibile }</span>
-                                            </div>
-                                            <input type="checkbox" [(ngModel)]="emailDraft.attachContract" [disabled]="!matchedContract" class="pill-checkbox">
-                                        </div>
-
-                                        <!-- ALLEGATO 3 -->
-                                        <div class="attachment-pill-card green-pill" [class.disabled]="!matchedCustomer || !matchedCustomer.attachments?.length">
-                                            <div class="pill-icon-box"><i class="fa-solid fa-address-card"></i></div>
-                                            <div class="pill-details">
-                                                <span class="pill-name">3. Patente / Documenti Cliente</span>
-                                                <span class="pill-status-ok">@if (matchedCustomer && matchedCustomer.attachments?.length) { <i class="fa-solid fa-check"></i> Presente } @else { Nessun allegato in anagrafica }</span>
-                                            </div>
-                                            <input type="checkbox" [(ngModel)]="emailDraft.attachCustomerDoc" [disabled]="!matchedCustomer || !matchedCustomer.attachments?.length" class="pill-checkbox">
-                                        </div>
-
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                }
-
-                <!-- ================== STEP 3: ANTEPRIMA EMAIL & PEC ================== -->
-                @if (currentStep === 3) {
-                    <div class="step-content animate-fade-in-right">
-                        
-                        <!-- INTERFACCIA COMPOSITORE CLIENT POSTALE (STILE GMAIL / OUTLOOK) -->
-                        <div class="mail-composer">
-                            <div class="composer-header">
-                                <div class="header-badge-pec">
-                                    <i class="fa-solid fa-shield-halved"></i> INVIO TRAMITE PEC SICURA
-                                </div>
-                                <span class="composer-title">Nuovo Messaggio Legale</span>
-                            </div>
-                            
-                            <div class="composer-fields">
-                                <div class="composer-row">
-                                    <span class="field-label">A (PEC Ente):</span>
-                                    <input type="text" [(ngModel)]="emailDraft.to" class="field-input-text" placeholder="indirizzo.pec@ente.it">
-                                </div>
-                                <div class="composer-row">
-                                    <span class="field-label">Da (PEC LDV):</span>
-                                    <input type="text" value="ladolcevita.rentalsrl@legalmail.it (Server PEC Aziendale)" disabled class="field-input-text disabled-input">
-                                </div>
-                                <div class="composer-row">
-                                    <span class="field-label">Oggetto:</span>
-                                    <input type="text" [(ngModel)]="emailDraft.subject" class="field-input-text font-bold">
-                                </div>
-                            </div>
-
-                            <div class="composer-body">
-                                <textarea [(ngModel)]="emailDraft.body" class="composer-textarea" rows="14" placeholder="Scrivi qui il corpo della PEC..."></textarea>
-                            </div>
-
-                            <div class="composer-footer-attachments">
-                                <span class="attachments-header-label"><i class="fa-solid fa-paperclip"></i> Allegati inclusi nel messaggio:</span>
-                                <div class="composer-attachments-chips">
-                                    @if (emailDraft.attachVerbale && selectedFile) {
-                                        <span class="attachment-chip red-chip"><i class="fa-solid fa-file-pdf"></i> Verbale_Scansione.pdf ({{ selectedFileSize }})</span>
-                                    }
-                                    @if (emailDraft.attachContract && matchedContract) {
-                                        <span class="attachment-chip blue-chip"><i class="fa-solid fa-file-signature"></i> Contratto_Noleggio_{{ matchedContract.contractNumber }}.pdf (A Generazione Dinamica)</span>
-                                    }
-                                    @if (emailDraft.attachCustomerDoc && matchedCustomer && matchedCustomer.attachments?.length) {
-                                        <span class="attachment-chip green-chip"><i class="fa-solid fa-address-card"></i> Doc_Identita_{{ matchedCustomer.lastName }}.jpg</span>
-                                    }
-                                </div>
                             </div>
                         </div>
-
-                        <!-- BANNER COMPILAZIONE OK -->
-                        <div class="step-guide-banner success-banner">
-                            <i class="fa-solid fa-paper-plane banner-icon"></i>
-                            <div class="banner-text">
-                                <h4>Tutto Pronto per la Trasmissione!</h4>
-                                <p>Puoi salvare il verbale nel tuo storico o procedere direttamente all'invio della PEC con tutti gli allegati. Il sistema contrassegnerà automaticamente il verbale come <strong>"INVIATO"</strong> al completamento.</p>
-                            </div>
-                        </div>
-                    </div>
-                }
-
+                    }
+                </div>
             </div>
 
-            <!-- FOOTER CON CONTROLLI DI NAVIGAZIONE INTELLIGENTI -->
-            <div class="modal-footer-wizard">
-                <div class="footer-left">
-                    @if (currentStep > 1) {
-                        <button class="btn btn-secondary" (click)="prevStep()">
-                            <i class="fa-solid fa-chevron-left"></i> Indietro
-                        </button>
+            <!-- FOOTER CON CONTROLLI DI NAVIGAZIONE -->
+            <div class="modal-footer-wizard" style="padding: 1rem 1.5rem; display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0;">
+                <button class="btn btn-secondary" (click)="closeUploadModal()" [disabled]="isOcrRunning">Annulla</button>
+                <button class="btn btn-primary" (click)="processVerbali()" [disabled]="selectedFiles.length === 0 || isOcrRunning">
+                    @if (isOcrRunning) {
+                        <i class="fa-solid fa-spinner fa-spin"></i> Elaborazione...
                     } @else {
-                        <button class="btn btn-secondary" (click)="closeUploadModal()">Annulla</button>
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Processa Verbali
                     }
-                </div>
-                <div class="footer-right">
-                    @if (currentStep < 3) {
-                        <button class="btn btn-primary" (click)="nextStep()" [disabled]="currentStep === 1 && !selectedFile">
-                            Avanti <i class="fa-solid fa-chevron-right"></i>
-                        </button>
-                    } @else {
-                        <button class="btn btn-secondary" (click)="saveVerbale(false)">
-                            <i class="fa-solid fa-floppy-disk"></i> Salva in Archivio
-                        </button>
-                        <button class="btn btn-success btn-glow-success" (click)="saveVerbale(true)">
-                            <i class="fa-solid fa-paper-plane animate-pulse"></i> Salva e Trasmetti PEC
-                        </button>
-                    }
-                </div>
+                </button>
             </div>
 
         </div>

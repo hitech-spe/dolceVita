@@ -29,9 +29,14 @@
             <div class="promo-image reveal-on-scroll reveal-right">
                 <div class="image-wrapper shadow-2xl">
                     @for (img of promoImages; track $index) {
-                        <img [src]="img" alt="Auto della flotta"
-                             class="carousel-img"
-                             [class.active]="currentPromoIndex === $index">
+                        @if ($index === currentPromoIndex || 
+                             $index === (currentPromoIndex + 1) % promoImages.length || 
+                             $index === (currentPromoIndex - 1 + promoImages.length) % promoImages.length) {
+                            <img [src]="img" alt="Auto della flotta"
+                                 class="carousel-img"
+                                 [class.active]="currentPromoIndex === $index"
+                                 loading="lazy">
+                        }
                     }
                 </div>
             </div>

@@ -1,8 +1,9 @@
 import { Component, Input, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable, combineLatest, map, switchMap, BehaviorSubject } from 'rxjs';
+import { Observable, combineLatest, map, switchMap, BehaviorSubject, tap } from 'rxjs';
 import { Rental, RentalService, Vehicle, Customer, TemporaryTransfer, MaintenancePeriod, Maintenance, ContractDocument, ContractDetails, Company } from "../../../../../services/rental.service";
+import { LoadingService } from '../../../../../services/loading.service';
 import { Timestamp } from '@angular/fire/firestore';
 import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/vehicle-select.component";
 import { CustomerSelectComponent } from "../../../../../shared/customer-select/customer-select.component";
@@ -18,6 +19,7 @@ export class CalendarTabComponent implements OnInit {
   @Input() selectedLocation$!: Observable<string>;
   
   private rentalService = inject(RentalService);
+  private loadingService = inject(LoadingService);
   
   vehiclesData$!: Observable<{
     vehicle: Vehicle, 
@@ -106,6 +108,7 @@ export class CalendarTabComponent implements OnInit {
     this.rentalService.getCompanies().subscribe(companies => this.availableCompanies = companies);
     this.rentalService.getMaintenances().subscribe(m => this.allMaintenances = m);
 
+    this.loadingService.show();
     this.vehiclesData$ = combineLatest([
       this.selectedLocation$,
       this.searchSubject,
@@ -170,6 +173,13 @@ export class CalendarTabComponent implements OnInit {
         this.displayedVehicleIds = data.map(item => item.vehicle.id).filter((id): id is string => !!id);
         this.currentVehiclesData = data;
         return data;
+      }),
+      tap({
+        next: () => this.loadingService.hide(),
+        error: (err) => {
+          console.error('Error loading calendar data:', err);
+          this.loadingService.hide();
+        }
       })
     );
   }
@@ -545,6 +555,7 @@ export class CalendarTabComponent implements OnInit {
   async addAssociatedJob() {
     if (!this.selectedStatusForAction || !this.newInlineJob.description) return;
     try {
+      this.loadingService.show();
       const periodId = this.selectedStatusForAction.data.id;
       const vehicleId = this.selectedStatusForAction.data.vehicleId;
       const v = this.availableVehicles.find(x => x.id === vehicleId);
@@ -560,8 +571,10 @@ export class CalendarTabComponent implements OnInit {
       };
 
       await this.rentalService.addMaintenance(data);
+      this.loadingService.hide();
       this.newInlineJob = { description: '', cost: null, km: null };
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante l\'aggiunta del lavoro:', error);
       alert('Si è verificato un errore durante l\'aggiunta del lavoro.');
     }
@@ -570,8 +583,11 @@ export class CalendarTabComponent implements OnInit {
   async deleteAssociatedJob(jobId: string) {
     if (confirm('Sei sicuro di voler eliminare questo lavoro dalla scheda?')) {
       try {
+        this.loadingService.show();
         await this.rentalService.deleteMaintenance(jobId);
+        this.loadingService.hide();
       } catch (error) {
+        this.loadingService.hide();
         console.error('Errore durante l\'eliminazione del lavoro:', error);
         alert('Si è verificato un errore.');
       }
@@ -941,30 +957,45 @@ export class CalendarTabComponent implements OnInit {
   }
 
   async saveRental() {
-    const saved = await this.saveRentalSilent();
-    if (saved) {
-      this.closeModals();
+    try {
+      this.loadingService.show();
+      const saved = await this.saveRentalSilent();
+      this.loadingService.hide();
+      if (saved) {
+        this.closeModals();
+      }
+    } catch (error) {
+      this.loadingService.hide();
     }
   }
 
   async saveAndStipulateContract() {
-    const saved = await this.saveRentalSilent();
-    if (saved) {
-      this.isRentalModalOpen = false;
-      this.openContractModal(saved);
+    try {
+      this.loadingService.show();
+      const saved = await this.saveRentalSilent();
+      this.loadingService.hide();
+      if (saved) {
+        this.isRentalModalOpen = false;
+        this.openContractModal(saved);
+      }
+    } catch (error) {
+      this.loadingService.hide();
     }
   }
 
   async saveSale() {
     if (!this.newSale.vehicleId || !this.newSale.soldDate) return;
     try {
+      this.loadingService.show();
       const soldDateTimestamp = Timestamp.fromDate(new Date(this.newSale.soldDate));
       await this.rentalService.updateVehicle(this.newSale.vehicleId, {
         status: 'Venduto',
         soldDate: soldDateTimestamp
       });
+      this.loadingService.hide();
       this.closeModals();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore registrazione vendita:', error);
       alert('Si è verificato un errore durante la registrazione della vendita.');
     }
@@ -976,12 +1007,15 @@ export class CalendarTabComponent implements OnInit {
     
     if (confirm(`Sei sicuro di voler annullare la vendita del veicolo ${vehicle.brand} ${vehicle.model} (${vehicle.plate})?`)) {
       try {
+        this.loadingService.show();
         await this.rentalService.updateVehicle(vehicle.id, {
           status: 'Attivo',
           soldDate: null as any
         });
+        this.loadingService.hide();
         this.closeModals();
       } catch (error) {
+        this.loadingService.hide();
         console.error('Errore annullamento vendita:', error);
         alert('Si è verificato un errore durante l\'annullamento della vendita.');
       }
@@ -991,14 +1025,17 @@ export class CalendarTabComponent implements OnInit {
   async saveMaintenance() {
     if (!this.newMaintenance.vehicleId || !this.newMaintenance.startDate || !this.newMaintenance.endDate) return;
     try {
+      this.loadingService.show();
       await this.rentalService.addMaintenancePeriod({
         vehicleId: this.newMaintenance.vehicleId,
         startDate: Timestamp.fromDate(new Date(this.newMaintenance.startDate)),
         endDate: Timestamp.fromDate(new Date(this.newMaintenance.endDate)),
         notes: this.newMaintenance.notes
       });
+      this.loadingService.hide();
       this.closeModals();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore manutenzione:', error);
     }
   }
@@ -1006,6 +1043,7 @@ export class CalendarTabComponent implements OnInit {
   async saveTransfer() {
     if (!this.newTransfer.vehicleId || !this.newTransfer.startDate || !this.newTransfer.endDate) return;
     try {
+      this.loadingService.show();
       await this.rentalService.addTemporaryTransfer({
         vehicleId: this.newTransfer.vehicleId,
         startDate: Timestamp.fromDate(new Date(this.newTransfer.startDate)),
@@ -1013,8 +1051,10 @@ export class CalendarTabComponent implements OnInit {
         location: this.newTransfer.location,
         notes: this.newTransfer.notes
       });
+      this.loadingService.hide();
       this.closeModals();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore trasferimento:', error);
     }
   }
@@ -1057,6 +1097,7 @@ export class CalendarTabComponent implements OnInit {
     const finalDate = new Date(this.manualEndDate);
 
     try {
+      this.loadingService.show();
       const newEndDate = Timestamp.fromDate(finalDate);
       if (status.type === 'rental') {
         await this.rentalService.updateRental(status.data.id, { endDate: newEndDate });
@@ -1065,8 +1106,10 @@ export class CalendarTabComponent implements OnInit {
       } else if (status.type === 'transfer') {
         await this.rentalService.updateTemporaryTransfer(status.data.id, { endDate: newEndDate });
       }
+      this.loadingService.hide();
       this.closeModals();
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante l\'aggiornamento dello stato:', error);
       alert('Si è verificato un errore durante l\'operazione.');
     }
@@ -1080,6 +1123,7 @@ export class CalendarTabComponent implements OnInit {
     
     if (confirm(confirmMsg)) {
       try {
+        this.loadingService.show();
         if (status.type === 'rental') {
           await this.rentalService.deleteRental(status.data.id);
         } else if (status.type === 'maintenance') {
@@ -1091,8 +1135,10 @@ export class CalendarTabComponent implements OnInit {
         } else if (status.type === 'transfer') {
           await this.rentalService.deleteTemporaryTransfer(status.data.id);
         }
+        this.loadingService.hide();
         this.closeModals();
       } catch (error) {
+        this.loadingService.hide();
         console.error('Errore durante l\'eliminazione dello stato:', error);
         alert('Si è verificato un errore durante l\'eliminazione.');
       }
@@ -1105,10 +1151,13 @@ export class CalendarTabComponent implements OnInit {
     const confirmMsg = `Sei sicuro di voler eliminare definitivamente questo noleggio?`;
     if (confirm(confirmMsg)) {
       try {
+        this.loadingService.show();
         await this.rentalService.deleteRental(rentalId);
+        this.loadingService.hide();
         alert('Noleggio eliminato con successo!');
         this.closeModals();
       } catch (error) {
+        this.loadingService.hide();
         console.error("Errore durante l'eliminazione del noleggio dalla modale:", error);
         alert("Si è verificato un errore durante l'eliminazione.");
       }
@@ -1272,6 +1321,7 @@ export class CalendarTabComponent implements OnInit {
 
     try {
       this.isGeneratingContract = true;
+      this.loadingService.show();
 
       // Update customer registry in Firestore with entered details
       if (this.contractDetails.mainDriverId) {
@@ -1401,17 +1451,20 @@ export class CalendarTabComponent implements OnInit {
         next: (pdfBlob: Blob) => {
           const url = window.URL.createObjectURL(pdfBlob);
           window.open(url, '_blank');
+          this.loadingService.hide();
           this.closeContractModal();
           alert('Contratto PDF generato, salvato in archivio ed aperto in una nuova scheda browser!');
           this.isGeneratingContract = false;
         },
         error: (error) => {
           console.error('Errore durante il recupero del PDF dal server:', error);
+          this.loadingService.hide();
           alert('Contratto salvato in archivio, ma si è verificato un errore durante la generazione/recupero del PDF dal server.');
           this.isGeneratingContract = false;
         }
       });
     } catch (error) {
+      this.loadingService.hide();
       console.error('Errore durante la generazione del contratto:', error);
       alert('Si è verificato un errore durante la generazione del contratto.');
       this.isGeneratingContract = false;
