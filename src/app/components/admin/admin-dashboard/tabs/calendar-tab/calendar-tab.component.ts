@@ -1204,7 +1204,7 @@ export class CalendarTabComponent implements OnInit {
       advance: 0,
       fuelLevel: '12/12',
       franchise: 1350,
-      vehicleFuelType: this.contractVehicle?.fuelType || 'Diesel'
+      vehicleFuelType: ''
     };
 
     // Calculate sequential numeric contract number automatically
