@@ -195,7 +195,7 @@ export class FleetTabComponent implements OnInit {
   }
 
   async deleteVehicle(id: string) {
-    if (confirm('ATTENZIONE: Eliminando questo veicolo verranno eliminati anche tutti i noleggi, assicurazioni, revisioni e manutenzioni collegati. Sei sicuro di voler procedere?')) {
+    if (confirm('Sei sicuro di voler eliminare questo veicolo? Tutti i dati storici (noleggi, assicurazioni, revisioni e manutenzioni) verranno conservati nel database per consultazione. Vuoi procedere?')) {
       try {
         this.loadingService.show();
         await this.rentalService.deleteVehicle(id);

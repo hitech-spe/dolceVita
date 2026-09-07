@@ -694,41 +694,12 @@ export class RentalService {
   }
 
   // ==========================================
-  // ELIMINAZIONE COMPLETA VEICOLO (CASCATA)
+  // ELIMINAZIONE VEICOLO (STORICO CONSERVATO)
   // ==========================================
 
   async deleteVehicle(id: string) {
-    const batch = writeBatch(this.firestore);
-
-    // 1. Veicolo
     const vehicleRef = doc(this.firestore, `vehicles/${id}`);
-    batch.delete(vehicleRef);
-
-    // 2. Noleggi
-    const rentalsRef = collection(this.firestore, 'rentals');
-    const qRentals = query(rentalsRef, where('vehicleId', '==', id));
-    const rentalsSnap = await getDocs(qRentals);
-    rentalsSnap.forEach(d => batch.delete(d.ref));
-
-    // 3. Assicurazioni
-    const insurancesRef = collection(this.firestore, 'insurances');
-    const qInsurances = query(insurancesRef, where('vehicleId', '==', id));
-    const insurancesSnap = await getDocs(qInsurances);
-    insurancesSnap.forEach(d => batch.delete(d.ref));
-
-    // 4. Revisioni
-    const inspectionsRef = collection(this.firestore, 'inspections');
-    const qInspections = query(inspectionsRef, where('vehicleId', '==', id));
-    const inspectionsSnap = await getDocs(qInspections);
-    inspectionsSnap.forEach(d => batch.delete(d.ref));
-
-    // 5. Manutenzioni
-    const maintenancesRef = collection(this.firestore, 'maintenances');
-    const qMaintenances = query(maintenancesRef, where('vehicleId', '==', id));
-    const maintenancesSnap = await getDocs(qMaintenances);
-    maintenancesSnap.forEach(d => batch.delete(d.ref));
-
-    return batch.commit();
+    return deleteDoc(vehicleRef);
   }
 
   // ==========================================
