@@ -450,12 +450,11 @@ export class RentalService {
     const rentalsRef = collection(this.firestore, 'rentals');
     const docRef = await addDoc(rentalsRef, { ...rental, createdAt: Timestamp.now() });
     
-    // Se è stato specificato un returnLocation diverso da location, aggiorniamo la sede del veicolo
-    // NOTA: In un'app reale questo andrebbe fatto quando il noleggio passa a "Concluso",
-    // ma l'utente dice "la sede di rientro vada a modificare la sede del veicolo stesso".
-    // Se lo facciamo subito, il veicolo risulterà nella nuova sede anche durante il noleggio.
-    if (rental.returnLocation && rental.returnLocation !== rental.location) {
-      await this.updateVehicle(rental.vehicleId, { location: rental.returnLocation });
+    // Aggiorna sempre la sede del veicolo con la sede di rientro (o la sede del noleggio se non specificata)
+    // per riflettere lo spostamento automatico del veicolo.
+    const targetLocation = rental.returnLocation || rental.location;
+    if (targetLocation) {
+      await this.updateVehicle(rental.vehicleId, { location: targetLocation });
     }
     
     return docRef;
@@ -466,8 +465,9 @@ export class RentalService {
     const docRef = doc(this.firestore, `rentals/${id}`);
     await updateDoc(docRef, data);
     
-    if (data.returnLocation && data.vehicleId) {
-      await this.updateVehicle(data.vehicleId, { location: data.returnLocation });
+    const targetLocation = data.returnLocation || data.location;
+    if (targetLocation && data.vehicleId) {
+      await this.updateVehicle(data.vehicleId, { location: targetLocation });
     }
   }
 
