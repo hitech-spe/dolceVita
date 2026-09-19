@@ -296,4 +296,26 @@ describe('ContractsTabComponent', () => {
     expect(component.isSendingBulk).toBeFalse();
     expect(component.selectedContractIds.size).toBe(0);
   });
+
+  it('should only allow modal closing if mousedown and mouseup are both on the overlay', () => {
+    const dummyOverlay = document.createElement('div');
+    const dummyCard = document.createElement('div');
+    dummyOverlay.appendChild(dummyCard);
+
+    // Case 1: Mousedown on card, Click/Mouseup on overlay (drag-out scenario)
+    let mousedownEvent = { target: dummyCard, currentTarget: dummyOverlay } as any;
+    let clickEvent = { target: dummyOverlay, currentTarget: dummyOverlay } as any;
+
+    component.onOverlayMousedown(mousedownEvent);
+    let shouldClose = component.shouldCloseModal(clickEvent);
+    expect(shouldClose).toBeFalse();
+
+    // Case 2: Mousedown on overlay, Click/Mouseup on overlay (intentional click on backdrop)
+    mousedownEvent = { target: dummyOverlay, currentTarget: dummyOverlay } as any;
+    clickEvent = { target: dummyOverlay, currentTarget: dummyOverlay } as any;
+
+    component.onOverlayMousedown(mousedownEvent);
+    shouldClose = component.shouldCloseModal(clickEvent);
+    expect(shouldClose).toBeTrue();
+  });
 });

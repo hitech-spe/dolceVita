@@ -158,6 +158,18 @@ export class ContractsTabComponent implements OnInit {
     this.isEditModalOpen = true;
   }
 
+  mousedownOnOverlay = false;
+
+  onOverlayMousedown(event: MouseEvent) {
+    this.mousedownOnOverlay = event.target === event.currentTarget;
+  }
+
+  shouldCloseModal(event: MouseEvent): boolean {
+    const shouldClose = this.mousedownOnOverlay && event.target === event.currentTarget;
+    this.mousedownOnOverlay = false;
+    return shouldClose;
+  }
+
   closeEditModal() {
     this.isEditModalOpen = false;
     this.editingContract = null;

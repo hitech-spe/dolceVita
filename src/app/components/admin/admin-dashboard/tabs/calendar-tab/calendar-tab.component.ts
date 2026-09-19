@@ -882,6 +882,18 @@ export class CalendarTabComponent implements OnInit {
     this.isSaleModalOpen = true;
   }
 
+  mousedownOnOverlay = false;
+
+  onOverlayMousedown(event: MouseEvent) {
+    this.mousedownOnOverlay = event.target === event.currentTarget;
+  }
+
+  shouldCloseModal(event: MouseEvent): boolean {
+    const shouldClose = this.mousedownOnOverlay && event.target === event.currentTarget;
+    this.mousedownOnOverlay = false;
+    return shouldClose;
+  }
+
   closeModals() {
     this.isRentalModalOpen = false;
     this.isMaintenanceModalOpen = false;

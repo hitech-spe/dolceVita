@@ -215,7 +215,7 @@
   
   <!-- Modal Nuovo Noleggio (Copiata e adattata da rentals-tab) -->
   @if (isRentalModalOpen) {
-    <div class="modal-overlay" (click)="closeModals()">
+    <div class="modal-overlay" (mousedown)="onOverlayMousedown($event)" (click)="shouldCloseModal($event) && closeModals()">
       <div class="modal-card" (click)="$event.stopPropagation()">
         <h3>{{ isEditMode ? 'Modifica Noleggio' : 'Nuovo Noleggio' }}</h3>
         <form (ngSubmit)="saveRental()" class="rental-form">
@@ -330,7 +330,7 @@
 
   <!-- Modal Manutenzione -->
   @if (isMaintenanceModalOpen) {
-    <div class="modal-overlay" (click)="closeModals()">
+    <div class="modal-overlay" (mousedown)="onOverlayMousedown($event)" (click)="shouldCloseModal($event) && closeModals()">
       <div class="modal-card" (click)="$event.stopPropagation()">
         <h3>Metti in Manutenzione</h3>
         <form (ngSubmit)="saveMaintenance()" class="rental-form">
@@ -364,7 +364,7 @@
 
   <!-- Modal Trasferimento Sede -->
   @if (isTransferModalOpen) {
-    <div class="modal-overlay" (click)="closeModals()">
+    <div class="modal-overlay" (mousedown)="onOverlayMousedown($event)" (click)="shouldCloseModal($event) && closeModals()">
       <div class="modal-card" (click)="$event.stopPropagation()">
         <h3>Passaggio Temporaneo di Sede</h3>
         <form (ngSubmit)="saveTransfer()" class="rental-form">
@@ -524,7 +524,7 @@
 
   <!-- Modal Registra Vendita Auto -->
   @if (isSaleModalOpen) {
-    <div class="modal-overlay" (click)="closeModals()">
+    <div class="modal-overlay" (mousedown)="onOverlayMousedown($event)" (click)="shouldCloseModal($event) && closeModals()">
       <div class="modal-card" (click)="$event.stopPropagation()">
         <h3>Registra Vendita Auto</h3>
         <form (ngSubmit)="saveSale()" class="rental-form">
@@ -550,7 +550,7 @@
 
   <!-- Modal Stipula Contratto (PDF Customizer) -->
   @if (isContractModalOpen) {
-    <div class="modal-overlay" (click)="closeContractModal()">
+    <div class="modal-overlay" (mousedown)="onOverlayMousedown($event)" (click)="shouldCloseModal($event) && closeContractModal()">
       <div class="modal-card" (click)="$event.stopPropagation()" style="max-width: 700px; width: 95%;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1.5rem;">
           <h3 style="margin: 0; color: #0f172a; font-weight: 800;"><i class="fa-solid fa-file-invoice text-gradient"></i> Stipula Contratto di Noleggio</h3>

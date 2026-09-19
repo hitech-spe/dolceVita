@@ -113,7 +113,7 @@
 
     <!-- Creation/Editing Modal -->
     @if (isModalOpen) {
-        <div class="modal-overlay" (click)="closeModal()">
+        <div class="modal-overlay" (mousedown)="onOverlayMousedown($event)" (click)="shouldCloseModal($event) && closeModal()">
             <div class="modal-card" (click)="$event.stopPropagation()">
                 <div class="modal-header">
                     <h3>{{ isEditMode ? 'Modifica Promemoria' : 'Nuovo Promemoria' }}</h3>

@@ -82,4 +82,26 @@ describe('RemindersTabComponent', () => {
     const desc = component.getAlertDescription(mockReminder);
     expect(desc).toBe('Avviso impostato: 2 ore prima');
   });
+
+  it('should only allow modal closing if mousedown and mouseup are both on the overlay', () => {
+    const dummyOverlay = document.createElement('div');
+    const dummyCard = document.createElement('div');
+    dummyOverlay.appendChild(dummyCard);
+
+    // Case 1: Mousedown on card, Click/Mouseup on overlay (drag-out scenario)
+    let mousedownEvent = { target: dummyCard, currentTarget: dummyOverlay } as any;
+    let clickEvent = { target: dummyOverlay, currentTarget: dummyOverlay } as any;
+
+    component.onOverlayMousedown(mousedownEvent);
+    let shouldClose = component.shouldCloseModal(clickEvent);
+    expect(shouldClose).toBeFalse();
+
+    // Case 2: Mousedown on overlay, Click/Mouseup on overlay (intentional click on backdrop)
+    mousedownEvent = { target: dummyOverlay, currentTarget: dummyOverlay } as any;
+    clickEvent = { target: dummyOverlay, currentTarget: dummyOverlay } as any;
+
+    component.onOverlayMousedown(mousedownEvent);
+    shouldClose = component.shouldCloseModal(clickEvent);
+    expect(shouldClose).toBeTrue();
+  });
 });

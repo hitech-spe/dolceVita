@@ -223,7 +223,7 @@
 
   <!-- Edit Contract Modal -->
   @if (isEditModalOpen && editingContract) {
-    <div class="modal-overlay" (click)="closeEditModal()">
+    <div class="modal-overlay" (mousedown)="onOverlayMousedown($event)" (click)="shouldCloseModal($event) && closeEditModal()">
       <div class="modal-card wide-modal" (click)="$event.stopPropagation()">
         <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1.5rem;">
           <h3 style="margin: 0; font-size: 1.3rem; display: flex; align-items: center; gap: 0.5rem;"><i class="fa-solid fa-file-pen text-gradient"></i> Modifica Contratto (Cod. {{ editingContract.contractNumber }})</h3>

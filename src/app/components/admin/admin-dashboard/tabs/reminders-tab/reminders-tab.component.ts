@@ -124,6 +124,18 @@ export class RemindersTabComponent implements OnInit {
     this.isModalOpen = true;
   }
 
+  mousedownOnOverlay = false;
+
+  onOverlayMousedown(event: MouseEvent) {
+    this.mousedownOnOverlay = event.target === event.currentTarget;
+  }
+
+  shouldCloseModal(event: MouseEvent): boolean {
+    const shouldClose = this.mousedownOnOverlay && event.target === event.currentTarget;
+    this.mousedownOnOverlay = false;
+    return shouldClose;
+  }
+
   closeModal() {
     this.isModalOpen = false;
     this.newReminderText = '';
