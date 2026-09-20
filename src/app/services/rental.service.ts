@@ -14,7 +14,8 @@ import {
   Timestamp,
   orderBy,
   getDocs,
-  writeBatch
+  writeBatch,
+  limit
 } from '@angular/fire/firestore';
 import { Observable, map } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
@@ -793,7 +794,9 @@ export class RentalService {
   }
 
   getNextContractNumber(): Observable<number> {
-    return this.getContracts().pipe(
+    const ref = collection(this.firestore, 'contracts');
+    const q = query(ref, orderBy('date', 'desc'), limit(1));
+    return (collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>).pipe(
       map(contracts => {
         if (!contracts || contracts.length === 0) {
           return 731; // Start at 731 as in the original example

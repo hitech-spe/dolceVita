@@ -166,11 +166,11 @@ describe('ContractsTabComponent', () => {
       details: { baseRate: 120 }
     } as any;
 
-    // SENT contract should not be editable
-    spyOn(window, 'alert');
+    // SENT contract should not be editable if user cancels confirmation
+    spyOn(window, 'confirm').and.returnValue(false);
     component.editContract(mockContractSent);
     expect(component.isEditModalOpen).toBeFalse();
-    expect(window.alert).toHaveBeenCalledWith('Non puoi modificare un contratto che è già stato inviato con successo a Cargos!');
+    expect(window.confirm).toHaveBeenCalled();
 
     // Unsent contract should be editable
     component.editContract(mockContractUnsent);
@@ -295,6 +295,35 @@ describe('ContractsTabComponent', () => {
     expect(mockRentalService.sendBulkContracts).toHaveBeenCalledWith(['1', '3']);
     expect(component.isSendingBulk).toBeFalse();
     expect(component.selectedContractIds.size).toBe(0);
+  });
+
+  it('should paginate contracts correctly', () => {
+    const mockContracts = Array.from({ length: 25 }, (_, i) => ({
+      id: String(i + 1),
+      contractNumber: String(100 + i),
+      customerName: `Customer ${i + 1}`,
+      date: { seconds: 1000 + i } as any,
+      details: {}
+    })) as any[];
+
+    component.itemsPerPage = 10;
+    component.currentPage = 1;
+
+    let paginated = component.getPaginatedContracts(mockContracts);
+    expect(paginated.length).toBe(10);
+    // Since default sorting is date desc, items are returned in reverse order
+    expect(paginated[0].id).toBe('25');
+
+    component.currentPage = 2;
+    paginated = component.getPaginatedContracts(mockContracts);
+    expect(paginated.length).toBe(10);
+    expect(paginated[0].id).toBe('15');
+
+    component.currentPage = 3;
+    paginated = component.getPaginatedContracts(mockContracts);
+    expect(paginated.length).toBe(5);
+
+    expect(component.getTotalPages(mockContracts)).toBe(3);
   });
 
   it('should only allow modal closing if mousedown and mouseup are both on the overlay', () => {

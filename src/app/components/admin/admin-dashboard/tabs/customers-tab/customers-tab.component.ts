@@ -19,6 +19,8 @@ export class CustomersTabComponent implements OnInit {
   customers$!: Observable<Customer[]>;
   searchTerm = '';
   sortOrder: 'newest' | 'oldest' | 'alpha' = 'newest';
+  currentPage = 1;
+  itemsPerPage = 10;
 
   isModalOpen = false;
   isEditMode = false;
@@ -209,5 +211,16 @@ export class CustomersTabComponent implements OnInit {
         return a.lastName.localeCompare(b.lastName);
       }
     });
+  }
+
+  getPaginated(items: Customer[] | null): Customer[] {
+    const filtered = this.getFiltered(items);
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    return filtered.slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  getTotalPages(items: Customer[] | null): number {
+    const filtered = this.getFiltered(items);
+    return Math.ceil(filtered.length / this.itemsPerPage);
   }
 }

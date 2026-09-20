@@ -20,6 +20,8 @@ export class FleetTabComponent implements OnInit {
 
   searchTerm = '';
   sortOrder: 'newest' | 'oldest' | 'brand' | 'category' = 'newest';
+  currentPage = 1;
+  itemsPerPage = 10;
 
   readonly CATEGORY_ORDER = [
     'A', 'B', 'C', 'D', 'E', 'F', '7 posti', 'Van 9 posti', 
@@ -62,6 +64,7 @@ export class FleetTabComponent implements OnInit {
   ngOnInit() {
     this.loadingService.show();
     this.vehicles$ = this.selectedLocation$.pipe(
+      tap(() => this.currentPage = 1),
       switchMap(loc => this.rentalService.getVehicles(loc === 'Tutte' ? undefined : loc)),
       tap({
         next: () => this.loadingService.hide(),
@@ -243,6 +246,17 @@ export class FleetTabComponent implements OnInit {
         return a.brand.localeCompare(b.brand);
       }
     });
+  }
+
+  getPaginated(items: Vehicle[] | null): Vehicle[] {
+    const filtered = this.getFiltered(items);
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    return filtered.slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  getTotalPages(items: Vehicle[] | null): number {
+    const filtered = this.getFiltered(items);
+    return Math.ceil(filtered.length / this.itemsPerPage);
   }
 
   async addInlineMaintenance() {

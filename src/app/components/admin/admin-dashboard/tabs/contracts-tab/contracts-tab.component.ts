@@ -26,8 +26,12 @@ export class ContractsTabComponent implements OnInit {
   sortField: 'date' | 'contractNumber' | 'customerName' = 'date';
   sortDirection: 'asc' | 'desc' = 'desc';
 
+  currentPage = 1;
+  itemsPerPage = 10;
+
   toggleSortDirection() {
     this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    this.currentPage = 1;
   }
   isGeneratingContract: { [key: string]: boolean } = {};
   isCheckingContract: { [key: string]: boolean } = {};
@@ -128,6 +132,17 @@ export class ContractsTabComponent implements OnInit {
     });
 
     return result;
+  }
+
+  getPaginatedContracts(contracts: ContractDocument[] | null): ContractDocument[] {
+    const filtered = this.getFilteredContracts(contracts);
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    return filtered.slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  getTotalPages(contracts: ContractDocument[] | null): number {
+    const filtered = this.getFilteredContracts(contracts);
+    return Math.ceil(filtered.length / this.itemsPerPage);
   }
 
   editContract(contract: ContractDocument) {

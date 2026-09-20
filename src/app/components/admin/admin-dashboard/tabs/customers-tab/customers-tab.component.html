@@ -4,11 +4,11 @@
         <div class="panel-actions">
             <div class="search-box">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" [(ngModel)]="searchTerm" placeholder="Cerca cliente...">
+                <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="currentPage = 1" placeholder="Cerca cliente...">
             </div>
             <div class="sort-box">
                 <i class="fa-solid fa-sort"></i>
-                <select [(ngModel)]="sortOrder" class="sort-select">
+                <select [(ngModel)]="sortOrder" (ngModelChange)="currentPage = 1" class="sort-select">
                     <option value="newest">Più recenti</option>
                     <option value="oldest">Meno recenti</option>
                     <option value="alpha">Alfabetico</option>
@@ -31,7 +31,7 @@
                 </tr>
             </thead>
             <tbody>
-                @for (cust of getFiltered(customers$ | async); track cust.id) {
+                @for (cust of getPaginated(customers$ | async); track cust.id) {
                     <tr>
                         <td class="fw-bold">{{ cust.firstName }} {{ cust.lastName }}</td>
                         <td>{{ formatDate(cust.birthDate) }}</td>
@@ -85,7 +85,7 @@
     </div>
     <!-- Layout Mobile: Card -->
     <div class="mobile-cards show-mobile">
-        @for (cust of getFiltered(customers$ | async); track cust.id) {
+        @for (cust of getPaginated(customers$ | async); track cust.id) {
             <div class="rental-card-mobile">
                 <div class="card-header">
                     <span class="customer-name">{{ cust.firstName }} {{ cust.lastName }}</span>
@@ -127,6 +127,30 @@
         } @empty {
             <div class="text-center py-4">Nessun cliente registrato.</div>
         }
+    </div>
+
+    <!-- Pagination Controls -->
+    <div class="pagination-container" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: #fff; border-top: 1px solid #edf2f7; border-radius: 0 0 12px 12px; flex-wrap: wrap; gap: 1rem;">
+        <div style="color: #64748b; font-size: 0.9rem;">
+            Mostrati <strong>{{ getPaginated(customers$ | async).length }}</strong> di <strong>{{ getFiltered(customers$ | async).length }}</strong> clienti
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button class="btn btn-outline" 
+                    [disabled]="currentPage === 1" 
+                    (click)="currentPage = currentPage - 1"
+                    style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer;">
+                <i class="fa-solid fa-chevron-left"></i> Prec
+            </button>
+            <span style="font-size: 0.9rem; font-weight: 600; color: #334155; min-width: 100px; text-align: center;">
+                Pagina {{ currentPage }} di {{ getTotalPages(customers$ | async) || 1 }}
+            </span>
+            <button class="btn btn-outline" 
+                    [disabled]="currentPage >= getTotalPages(customers$ | async)" 
+                    (click)="currentPage = currentPage + 1"
+                    style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer;">
+                Succ <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
     </div>
 </div>
 
