@@ -37,16 +37,7 @@ export class MaintenanceTabComponent implements OnInit {
   sheetInlineMaintenance: any = { description: '', date: '', cost: null, km: null, workshop: '' };
 
   ngOnInit() {
-    this.loadingService.show();
-    this.maintenances$ = this.rentalService.getMaintenances().pipe(
-      tap({
-        next: () => this.loadingService.hide(),
-        error: (err) => {
-          console.error('Error loading maintenances:', err);
-          this.loadingService.hide();
-        }
-      })
-    );
+    this.maintenances$ = this.rentalService.getMaintenances();
     this.maintenances$.subscribe(m => {
       this.allMaintenances = m;
       if (this.selectedVehicleForSheet) {

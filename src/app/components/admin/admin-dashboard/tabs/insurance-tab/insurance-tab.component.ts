@@ -30,16 +30,7 @@ export class InsuranceTabComponent implements OnInit {
   newInsurance: any = {};
 
   ngOnInit() {
-    this.loadingService.show();
-    this.insurances$ = this.rentalService.getInsurances().pipe(
-      tap({
-        next: () => this.loadingService.hide(),
-        error: (err) => {
-          console.error('Error loading insurances:', err);
-          this.loadingService.hide();
-        }
-      })
-    );
+    this.insurances$ = this.rentalService.getInsurances();
     this.rentalService.getVehicles().subscribe(v => this.availableVehicles = v);
   }
 

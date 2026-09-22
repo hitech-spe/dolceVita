@@ -75,17 +75,13 @@ export class VerbaliTabComponent implements OnInit {
   private subs: Subscription[] = [];
 
   ngOnInit() {
-    this.loadingService.show();
-    
     // Load existing verbali
     const vSub = this.rentalService.getVerbali().subscribe({
       next: (data) => {
         this.verbali = data || [];
-        this.loadingService.hide();
       },
       error: (err) => {
         console.error('Error loading verbali:', err);
-        this.loadingService.hide();
       }
     });
     this.subs.push(vSub);

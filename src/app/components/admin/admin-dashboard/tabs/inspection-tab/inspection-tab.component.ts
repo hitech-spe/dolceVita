@@ -30,16 +30,7 @@ export class InspectionTabComponent implements OnInit {
   newInspection: any = {};
 
   ngOnInit() {
-    this.loadingService.show();
-    this.inspections$ = this.rentalService.getInspections().pipe(
-      tap({
-        next: () => this.loadingService.hide(),
-        error: (err) => {
-          console.error('Error loading inspections:', err);
-          this.loadingService.hide();
-        }
-      })
-    );
+    this.inspections$ = this.rentalService.getInspections();
     this.rentalService.getVehicles().subscribe(v => this.availableVehicles = v);
   }
 

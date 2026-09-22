@@ -669,6 +669,13 @@ export class CalendarTabComponent implements OnInit {
     });
     if (trans) return { type: 'transfer', data: trans };
 
+    const maint = item.maintenances.find((m: any) => {
+      const s = m.startDate.toDate(); s.setHours(0,0,0,0);
+      const e = m.endDate.toDate(); e.setHours(0,0,0,0);
+      return time >= s.getTime() && time <= e.getTime();
+    });
+    if (maint) return { type: 'maintenance', data: maint };
+
     const rental = item.rentals.find((r: any) => {
       if (r.status === 'Cancellato') return false;
       const s = r.startDate.toDate(); s.setHours(0,0,0,0);
@@ -676,13 +683,6 @@ export class CalendarTabComponent implements OnInit {
       return time >= s.getTime() && time <= e.getTime();
     });
     if (rental) return { type: 'rental', data: rental };
-
-    const maint = item.maintenances.find((m: any) => {
-      const s = m.startDate.toDate(); s.setHours(0,0,0,0);
-      const e = m.endDate.toDate(); e.setHours(0,0,0,0);
-      return time >= s.getTime() && time <= e.getTime();
-    });
-    if (maint) return { type: 'maintenance', data: maint };
 
     return { type: null };
   }

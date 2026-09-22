@@ -51,16 +51,7 @@ export class RemindersTabComponent implements OnInit {
   }
 
   loadReminders() {
-    this.loadingService.show();
-    this.reminders$ = this.rentalService.getReminders().pipe(
-      tap({
-        next: () => this.loadingService.hide(),
-        error: (err) => {
-          console.error('Error loading reminders:', err);
-          this.loadingService.hide();
-        }
-      })
-    );
+    this.reminders$ = this.rentalService.getReminders();
   }
 
   getFilteredReminders(reminders: Reminder[] | null): Reminder[] {
