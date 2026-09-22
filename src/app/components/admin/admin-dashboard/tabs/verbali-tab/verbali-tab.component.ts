@@ -62,6 +62,18 @@ export class VerbaliTabComponent implements OnInit {
   matchedRental: Rental | null = null;
   matchingSearchDone = false;
 
+  // Manual Association State
+  isAssociateModalOpen = false;
+  selectedVerbaleToAssociate: Verbale | null = null;
+  associationSearchTerm = '';
+  selectedRentalForAssociationItem: { rental: Rental, contract?: ContractDocument, customer?: Customer } | null = null;
+
+  // Manual Edit State
+  isEditModalOpen = false;
+  editingVerbale: Partial<Verbale> = {};
+  editingViolationDateStr = '';
+  editingVerbaleId = '';
+
   // Email draft state
   emailDraft = {
     to: '',
@@ -588,6 +600,213 @@ La Dolce Vita SRL`;
       console.error('Error deleting verbale:', err);
       this.loadingService.hide();
       alert('Errore durante la cancellazione.');
+    }
+  }
+
+  getMatchedDataForVerbale(v: Verbale): { rental?: Rental, contract?: ContractDocument, customer?: Customer } {
+    if (!v.plate || !v.violationDate) return {};
+
+    const plate = v.plate.trim().toUpperCase();
+    
+    // Convert violationDate to timestamp milliseconds
+    let infrazioneTimeMs = 0;
+    if (v.violationDate) {
+      if (typeof (v.violationDate as any).toDate === 'function') {
+        infrazioneTimeMs = (v.violationDate as any).toDate().getTime();
+      } else {
+        const dStr = (v.violationDate as any).toString(); // Format expected: YYYY-MM-DD
+        const violationTime = v.violationTime || '12:00';
+        infrazioneTimeMs = new Date(`${dStr}T${violationTime}`).getTime();
+      }
+    }
+
+    // 1. Find rental
+    const match = this.allRentals.find(r => {
+      if (!r.vehiclePlate) return false;
+      let rPlate = r.vehiclePlate.trim().toUpperCase();
+      if (rPlate.includes('(') && rPlate.includes(')')) {
+        const parts = rPlate.split('(');
+        rPlate = parts[parts.length - 1].replace(')', '').trim();
+      }
+      if (rPlate !== plate) return false;
+
+      const startMs = (r.startDate as any)?.seconds 
+        ? (r.startDate as any).seconds * 1000 
+        : new Date(r.startDate as any).getTime();
+
+      const endMs = (r.endDate as any)?.seconds 
+        ? (r.endDate as any).seconds * 1000 
+        : new Date(r.endDate as any).getTime();
+
+      return infrazioneTimeMs >= startMs && infrazioneTimeMs <= endMs;
+    });
+
+    if (match) {
+      const contract = this.allContracts.find(c => c.rentalId === match.id);
+      const customerId = match.customerId || contract?.customerId;
+      const customer = customerId ? this.allCustomers.find(cust => cust.id === customerId) : undefined;
+      return { rental: match, contract, customer };
+    }
+
+    return {};
+  }
+
+  openAssociateModal(verbale: Verbale) {
+    this.selectedVerbaleToAssociate = verbale;
+    this.associationSearchTerm = '';
+    this.selectedRentalForAssociationItem = null;
+    this.isAssociateModalOpen = true;
+  }
+
+  closeAssociateModal() {
+    this.isAssociateModalOpen = false;
+    this.selectedVerbaleToAssociate = null;
+    this.associationSearchTerm = '';
+    this.selectedRentalForAssociationItem = null;
+  }
+
+  getRentalsForManualAssociation(): { rental: Rental, contract?: ContractDocument, customer?: Customer }[] {
+    if (!this.selectedVerbaleToAssociate) return [];
+    
+    const plateToMatch = this.selectedVerbaleToAssociate.plate?.trim().toUpperCase();
+    const term = this.associationSearchTerm?.toLowerCase().trim();
+
+    return this.allRentals
+      .filter(r => {
+        // Match Plate
+        let rPlate = r.vehiclePlate ? r.vehiclePlate.trim().toUpperCase() : '';
+        if (rPlate.includes('(') && rPlate.includes(')')) {
+          const parts = rPlate.split('(');
+          rPlate = parts[parts.length - 1].replace(')', '').trim();
+        }
+
+        // If there's a custom search term, check that. Otherwise pre-filter by the verbale's plate
+        if (term) {
+          const customerName = r.customerName ? r.customerName.toLowerCase() : '';
+          const contract = this.allContracts.find(c => c.rentalId === r.id);
+          const contractNum = contract ? contract.contractNumber.toLowerCase() : '';
+          return customerName.includes(term) || rPlate.includes(term) || contractNum.includes(term);
+        } else {
+          return rPlate === plateToMatch;
+        }
+      })
+      .map(r => {
+        const contract = this.allContracts.find(c => c.rentalId === r.id);
+        const customerId = r.customerId || contract?.customerId;
+        const customer = customerId ? this.allCustomers.find(cust => cust.id === customerId) : undefined;
+        return { rental: r, contract, customer };
+      });
+  }
+
+  selectRentalForAssociation(item: { rental: Rental, contract?: ContractDocument, customer?: Customer }) {
+    this.selectedRentalForAssociationItem = item;
+  }
+
+  async confirmManualAssociation() {
+    if (!this.selectedVerbaleToAssociate || !this.selectedRentalForAssociationItem) return;
+    
+    const verbale = this.selectedVerbaleToAssociate;
+    const item = this.selectedRentalForAssociationItem;
+
+    try {
+      this.loadingService.show();
+      
+      const updateData: Partial<Verbale> = {
+        matchFound: true,
+        matchType: 'MANUAL',
+        rentalId: item.rental.id || '',
+        contractNumber: item.contract?.contractNumber || '',
+        customerName: item.customer 
+          ? `${item.customer.lastName} ${item.customer.firstName}` 
+          : (item.contract?.customerName || item.rental.customerName || '')
+      };
+
+      await this.rentalService.updateVerbale(verbale.id!, updateData);
+      
+      this.loadingService.hide();
+      alert('Verbale associato manualmente con successo!');
+      this.closeAssociateModal();
+    } catch (err) {
+      this.loadingService.hide();
+      console.error('Errore durante l\'associazione manuale del verbale:', err);
+      alert('Si è verificato un errore durante l\'associazione manuale del verbale.');
+    }
+  }
+
+  openEditModal(verbale: Verbale) {
+    this.editingVerbaleId = verbale.id || '';
+    
+    let dateStr = '';
+    if (verbale.violationDate) {
+      if (typeof (verbale.violationDate as any).toDate === 'function') {
+        dateStr = (verbale.violationDate as any).toDate().toISOString().split('T')[0];
+      } else {
+        dateStr = (verbale.violationDate as any).toString();
+      }
+    }
+
+    this.editingViolationDateStr = dateStr;
+    this.editingVerbale = {
+      ...verbale,
+      plate: verbale.plate || '',
+      ticketNumber: verbale.ticketNumber || '',
+      fineAmount: verbale.fineAmount,
+      authorityName: verbale.authorityName || '',
+      authorityPec: verbale.authorityPec || '',
+      status: verbale.status || 'Nuovo',
+      violationTime: verbale.violationTime || '',
+      notes: verbale.notes || '',
+      contractNumber: verbale.contractNumber || '',
+      customerName: verbale.customerName || '',
+      rentalId: verbale.rentalId || ''
+    };
+
+    this.isEditModalOpen = true;
+  }
+
+  closeEditModal() {
+    this.isEditModalOpen = false;
+    this.editingVerbale = {};
+    this.editingViolationDateStr = '';
+    this.editingVerbaleId = '';
+  }
+
+  async saveEditedVerbale() {
+    if (!this.editingVerbaleId) return;
+    if (!this.editingVerbale.plate || !this.editingVerbale.ticketNumber || !this.editingViolationDateStr) {
+      alert('Targa, Numero Verbale e Data Infrazione sono obbligatori.');
+      return;
+    }
+
+    try {
+      this.loadingService.show();
+      const parts = this.editingViolationDateStr.split('-');
+      const dateObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+
+      const updatedData: Partial<Verbale> = {
+        plate: this.editingVerbale.plate.trim().toUpperCase(),
+        ticketNumber: this.editingVerbale.ticketNumber.trim(),
+        violationDate: Timestamp.fromDate(dateObj),
+        violationTime: this.editingVerbale.violationTime || '',
+        fineAmount: Number(this.editingVerbale.fineAmount) || 0,
+        authorityName: this.editingVerbale.authorityName?.trim() || '',
+        authorityPec: this.editingVerbale.authorityPec?.trim() || '',
+        status: this.editingVerbale.status || 'Nuovo',
+        notes: this.editingVerbale.notes || '',
+        contractNumber: this.editingVerbale.contractNumber || '',
+        customerName: this.editingVerbale.customerName || '',
+        rentalId: this.editingVerbale.rentalId || ''
+      };
+
+      await this.rentalService.updateVerbale(this.editingVerbaleId, updatedData);
+      
+      this.loadingService.hide();
+      alert('Verbale modificato con successo!');
+      this.closeEditModal();
+    } catch (err) {
+      this.loadingService.hide();
+      console.error('Errore durante la modifica del verbale:', err);
+      alert('Si è verificato un errore durante il salvataggio delle modifiche.');
     }
   }
 

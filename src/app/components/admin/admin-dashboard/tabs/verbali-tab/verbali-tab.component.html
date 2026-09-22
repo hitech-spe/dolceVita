@@ -97,7 +97,7 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th>N. Verbale / Ente</th>
+                            <th>N. Verbale / Ente & PEC</th>
                             <th>Targa Mezzo</th>
                             <th>Data Infrazione</th>
                             <th>Associazione Contratto</th>
@@ -113,6 +113,15 @@
                                     <div class="ticket-info">
                                         <span class="ticket-number"><i class="fa-solid fa-file-invoice"></i> {{ v.ticketNumber }}</span>
                                         <span class="authority-name">{{ v.authorityName }}</span>
+                                        @if (v.authorityPec) {
+                                            <span class="authority-pec" style="font-size: 0.76rem; color: #2563eb; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;" [title]="'PEC Destinatario: ' + v.authorityPec">
+                                                <i class="fa-solid fa-envelope"></i> {{ v.authorityPec }}
+                                            </span>
+                                        } @else {
+                                            <span style="font-size: 0.72rem; color: #ef4444; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;">
+                                                <i class="fa-solid fa-triangle-exclamation"></i> PEC Mancante
+                                            </span>
+                                        }
                                     </div>
                                 </td>
                                 <td>
@@ -130,10 +139,25 @@
                                     @if (v.contractNumber) {
                                         <div class="customer-info">
                                             <span class="customer-name">{{ v.customerName }}</span>
-                                            <span class="contract-badge"><i class="fa-solid fa-file-contract"></i> Contr. {{ v.contractNumber }}</span>
+                                            <span class="contract-badge" style="background: #ecfdf5; color: #065f46;"><i class="fa-solid fa-file-contract"></i> Contr. {{ v.contractNumber }} @if (v.matchType === 'MANUAL') { (Manuale) } @else { (Auto) }</span>
                                         </div>
                                     } @else {
-                                        <span class="no-match-badge"><i class="fa-solid fa-triangle-exclamation"></i> Non Associato</span>
+                                        @let realTimeMatch = getMatchedDataForVerbale(v);
+                                        @if (realTimeMatch.contract) {
+                                            <div class="customer-info">
+                                                <span class="customer-name">{{ realTimeMatch.customer ? realTimeMatch.customer.lastName + ' ' + realTimeMatch.customer.firstName : realTimeMatch.contract.customerName }}</span>
+                                                <span class="contract-badge" style="background: #eff6ff; color: #1e40af;"><i class="fa-solid fa-file-contract"></i> Contr. {{ realTimeMatch.contract.contractNumber }} (Auto)</span>
+                                            </div>
+                                        } @else {
+                                            <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
+                                                <span class="no-match-badge" style="background: #fef2f2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                                                    <i class="fa-solid fa-triangle-exclamation" style="color: #dc2626;"></i> Non Associato
+                                                </span>
+                                                <button class="btn-action btn-send-pec" (click)="openAssociateModal(v)" style="background: var(--primary); color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Abbina questo verbale ad un noleggio/cliente">
+                                                    <i class="fa-solid fa-link"></i> Associa Manuale
+                                                </button>
+                                            </div>
+                                        }
                                     }
                                 </td>
                                 <td class="bold-text price-cell">
@@ -166,6 +190,9 @@
                                                 }
                                             </button>
                                         }
+                                        <button class="btn-action btn-edit" (click)="openEditModal(v)" title="Modifica tutti i dati del verbale" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; font-size: 0.8rem;">
+                                            <i class="fa-solid fa-pen-to-square"></i> Modifica
+                                        </button>
                                         <button class="btn-action btn-delete" (click)="deleteVerbale(v)" title="Elimina verbale">
                                             <i class="fa-regular fa-trash-can"></i>
                                         </button>
@@ -276,6 +303,188 @@
                     }
                 </button>
             </div>
+
+        </div>
+    </div>
+}
+
+<!-- MODALE ASSOCIAZIONE MANUALE -->
+@if (isAssociateModalOpen && selectedVerbaleToAssociate) {
+    <div class="modal-overlay">
+        <div class="modal-card wide-modal animate-scale-up" style="max-width: 650px;">
+            
+            <!-- HEADER MODALE -->
+            <div class="modal-header">
+                <div class="header-left">
+                    <i class="fa-solid fa-link modal-icon-magic" style="color: var(--primary);"></i>
+                    <div>
+                        <h2>Associa Manualmente Verbale</h2>
+                        <p class="modal-subtitle">Abbina il verbale n. {{ selectedVerbaleToAssociate.ticketNumber }} ad uno dei contratti attivi</p>
+                    </div>
+                </div>
+                <button class="btn-close" (click)="closeAssociateModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- CONTENUTO DEL CORPO MODALE -->
+            <div class="modal-body" style="padding: 1.5rem; max-height: 60vh; overflow-y: auto;">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600; display: block; text-transform: uppercase;">Targa</span>
+                        <strong style="font-size: 1rem; color: #1e293b;">{{ selectedVerbaleToAssociate.plate }}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600; display: block; text-transform: uppercase;">Data Infrazione</span>
+                        <strong style="font-size: 1rem; color: #1e293b;">{{ formatDate(selectedVerbaleToAssociate.violationDate) }} @if (selectedVerbaleToAssociate.violationTime) { alle {{ selectedVerbaleToAssociate.violationTime }} }</strong>
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600; display: block; text-transform: uppercase;">Ente Accertatore</span>
+                        <strong style="font-size: 0.95rem; color: #1e293b;">{{ selectedVerbaleToAssociate.authorityName }}</strong>
+                    </div>
+                </div>
+
+                <div class="search-rentals" style="margin-bottom: 1rem;">
+                    <label style="font-weight: 700; color: #334155; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Cerca Contratto / Cliente da associare</label>
+                    <div style="position: relative; display: flex; gap: 8px;">
+                        <input type="text" [(ngModel)]="associationSearchTerm" placeholder="Cerca per Nome Cliente, Targa o Numero Contratto..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;">
+                    </div>
+                </div>
+
+                <div class="rentals-list-box" style="border: 1px solid #cbd5e1; border-radius: 8px; max-height: 250px; overflow-y: auto;">
+                    @let matchingRentals = getRentalsForManualAssociation();
+                    @if (matchingRentals.length > 0) {
+                        <div style="display: flex; flex-direction: column;">
+                            @for (item of matchingRentals; track item.rental.id) {
+                                <div (click)="selectRentalForAssociation(item)" [style.background]="selectedRentalForAssociationItem?.rental?.id === item.rental.id ? '#eff6ff' : 'transparent'" [style.border-left]="selectedRentalForAssociationItem?.rental?.id === item.rental.id ? '4px solid #2563eb' : '4px solid transparent'" style="padding: 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;">
+                                    <div>
+                                        <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem;">{{ item.rental.customerName }}</div>
+                                        <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+                                            <i class="fa-solid fa-car"></i> {{ item.rental.vehiclePlate }} | 
+                                            <i class="fa-solid fa-calendar"></i> Dal {{ formatDate(item.rental.startDate) }} al {{ formatDate(item.rental.endDate) }}
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right; display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
+                                        @if (item.contract) {
+                                            <span style="background: #ecfdf5; color: #065f46; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;"><i class="fa-solid fa-file-contract"></i> Contr. {{ item.contract.contractNumber }}</span>
+                                        }
+                                        <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Stato: {{ item.rental.status }}</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    } @else {
+                        <div style="padding: 2rem; text-align: center; color: #64748b;">
+                            <i class="fa-solid fa-magnifying-glass" style="font-size: 24px; margin-bottom: 8px; display: block; color: #94a3b8;"></i>
+                            Nessun noleggio o contratto trovato per la ricerca impostata o per la targa {{ selectedVerbaleToAssociate.plate }}.
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- FOOTER MODALE -->
+            <div class="modal-footer-wizard" style="padding: 1rem 1.5rem; display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0;">
+                <button class="btn btn-secondary" (click)="closeAssociateModal()">Annulla</button>
+                <button class="btn btn-primary" (click)="confirmManualAssociation()" [disabled]="!selectedRentalForAssociationItem">
+                    <i class="fa-solid fa-circle-check"></i> Conferma Associazione
+                </button>
+            </div>
+
+        </div>
+    </div>
+}
+
+<!-- MODALE MODIFICA MANUALE VERBALE -->
+@if (isEditModalOpen) {
+    <div class="modal-overlay">
+        <div class="modal-card wide-modal animate-scale-up" style="max-width: 650px;">
+            
+            <!-- HEADER MODALE -->
+            <div class="modal-header">
+                <div class="header-left">
+                    <i class="fa-solid fa-pen-to-square modal-icon-magic" style="color: var(--primary);"></i>
+                    <div>
+                        <h2>Modifica Verbale</h2>
+                        <p class="modal-subtitle">Modifica manualmente qualsiasi informazione del verbale n. {{ editingVerbale.ticketNumber }}</p>
+                    </div>
+                </div>
+                <button class="btn-close" (click)="closeEditModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- CONTENUTO DEL FORM DI MODIFICA -->
+            <form (ngSubmit)="saveEditedVerbale()" class="rental-form" style="padding: 1.5rem; max-height: 70vh; overflow-y: auto;">
+                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    
+                    <div class="form-group">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block;">Targa Veicolo *</label>
+                        <input type="text" [(ngModel)]="editingVerbale.plate" name="editPlate" required style="text-transform: uppercase;" placeholder="Es. AA123BB">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block;">Numero Verbale *</label>
+                        <input type="text" [(ngModel)]="editingVerbale.ticketNumber" name="editTicketNumber" required placeholder="Es. 12345/2026">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block;">Data Infrazione *</label>
+                        <input type="date" [(ngModel)]="editingViolationDateStr" name="editViolationDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block;">Ora Infrazione</label>
+                        <input type="time" [(ngModel)]="editingVerbale.violationTime" name="editViolationTime">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block;">Importo Sanzione (€)</label>
+                        <input type="number" step="0.01" [(ngModel)]="editingVerbale.fineAmount" name="editFineAmount" placeholder="Es. 145.80">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block;">Stato Verbale</label>
+                        <select [(ngModel)]="editingVerbale.status" name="editStatus">
+                            <option value="Nuovo">Nuovo / Da Inviare</option>
+                            <option value="In Corso">In Corso</option>
+                            <option value="Inviato">Inviato (PEC Trasmessa)</option>
+                            <option value="Errore">Errore</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block;">Ente Accertatore</label>
+                        <input type="text" [(ngModel)]="editingVerbale.authorityName" name="editAuthorityName" placeholder="Es. Polizia Locale di Mottola">
+                    </div>
+
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-envelope" style="color: #2563eb;"></i> Indirizzo PEC Destinatario
+                        </label>
+                        <input type="email" [(ngModel)]="editingVerbale.authorityPec" name="editAuthorityPec" placeholder="Es. polizialocale@pec.comune.mottola.ta.it">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block;">Cliente Locatario Associato</label>
+                        <input type="text" [(ngModel)]="editingVerbale.customerName" name="editCustomerName" placeholder="Es. Mario Rossi">
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block;">Numero Contratto Associato</label>
+                        <input type="text" [(ngModel)]="editingVerbale.contractNumber" name="editContractNumber" placeholder="Es. 2026/042">
+                    </div>
+
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block;">Note Aggiuntive</label>
+                        <textarea [(ngModel)]="editingVerbale.notes" name="editNotes" rows="2" placeholder="Note operative interne sul verbale..."></textarea>
+                    </div>
+
+                </div>
+
+                <!-- FOOTER MODALE -->
+                <div class="modal-footer-wizard" style="margin-top: 1.5rem; padding-top: 1rem; display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-secondary" (click)="closeEditModal()">Annulla</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk"></i> Salva Modifiche
+                    </button>
+                </div>
+            </form>
 
         </div>
     </div>

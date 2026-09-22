@@ -17,7 +17,7 @@ import {
   writeBatch,
   limit
 } from '@angular/fire/firestore';
-import { Observable, map } from 'rxjs';
+import { Observable, map, shareReplay } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { API_CONFIG } from '../config/api.config';
 
@@ -232,6 +232,8 @@ export interface Verbale {
   pdfBase64?: string | null;
   notes?: string;
   createdAt?: Timestamp;
+  matchFound?: boolean;
+  matchType?: string;
 }
 
 @Injectable({
@@ -242,33 +244,49 @@ export class RentalService {
   private http = inject(HttpClient);
   private injector = inject(Injector);
 
+  // --- IN-MEMORY FIRESTORE STREAM CACHES ---
+  private vehicles$?: Observable<Vehicle[]>;
+  private rentals$?: Observable<Rental[]>;
+  private customers$?: Observable<Customer[]>;
+  private companies$?: Observable<Company[]>;
+  private insurances$?: Observable<Insurance[]>;
+  private inspections$?: Observable<Inspection[]>;
+  private reminders$?: Observable<Reminder[]>;
+  private maintenances$?: Observable<Maintenance[]>;
+  private maintenancePeriods$?: Observable<MaintenancePeriod[]>;
+  private temporaryTransfers$?: Observable<TemporaryTransfer[]>;
+  private contracts$?: Observable<ContractDocument[]>;
+  private verbali$?: Observable<Verbale[]>;
+
   // ==========================================
   // GESTIONE VEICOLI (IL PARCO MEZZI)
   // ==========================================
 
   /** Recupera tutti i veicoli (con filtro opzionale per sede) */
   getVehicles(location?: string): Observable<Vehicle[]> {
-    const vehiclesRef = collection(this.firestore, 'vehicles');
-    let q = query(vehiclesRef);
-
-    if (location) {
-      q = query(vehiclesRef, where('location', '==', location));
+    if (!this.vehicles$) {
+      const vehiclesRef = collection(this.firestore, 'vehicles');
+      this.vehicles$ = (collectionData(vehiclesRef, { idField: 'id' }) as Observable<Vehicle[]>).pipe(
+        map(vehicles => {
+          // Ordina per data di inserimento decrescente (più recenti in alto)
+          vehicles.sort((a, b) => {
+            const dateA = (a.createdAt as any)?.seconds || 0;
+            const dateB = (b.createdAt as any)?.seconds || 0;
+            if (dateA !== dateB) return dateB - dateA;
+            return a.brand.localeCompare(b.brand);
+          });
+          return vehicles;
+        }),
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
     }
 
-    return (collectionData(q, { idField: 'id' }) as Observable<Vehicle[]>).pipe(
-      map(vehicles => {
-        // Ordina per data di inserimento decrescente (più recenti in alto)
-        // Se createdAt manca, lo mettiamo in fondo
-        vehicles.sort((a, b) => {
-          const dateA = (a.createdAt as any)?.seconds || 0;
-          const dateB = (b.createdAt as any)?.seconds || 0;
-          if (dateA !== dateB) return dateB - dateA;
-          // Fallback su marca e modello se la data è uguale o assente
-          return a.brand.localeCompare(b.brand);
-        });
-        return vehicles;
-      })
-    );
+    if (location) {
+      return this.vehicles$.pipe(
+        map(vehicles => vehicles.filter(v => v.location === location))
+      );
+    }
+    return this.vehicles$;
   }
 
   /** Aggiunge una nuova auto */
@@ -419,31 +437,28 @@ export class RentalService {
    * Restituirà i noleggi ordinati per data di inizio.
    */
   getRentals(location?: string): Observable<Rental[]> {
-    const rentalsRef = collection(this.firestore, 'rentals');
-    let q = query(rentalsRef);
-
-    if (location) {
-      q = query(rentalsRef, where('location', '==', location));
+    if (!this.rentals$) {
+      const rentalsRef = collection(this.firestore, 'rentals');
+      this.rentals$ = (collectionData(rentalsRef, { idField: 'id' }) as Observable<Rental[]>).pipe(
+        map(rentals => {
+          // Sort in memory to avoid composite index requirement for location + startDate
+          rentals.sort((a, b) => {
+            const dateA = (a.startDate as any)?.seconds || 0;
+            const dateB = (b.startDate as any)?.seconds || 0;
+            return dateB - dateA;
+          });
+          return rentals;
+        }),
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
     }
 
-    return (collectionData(q, { idField: 'id' }) as Observable<Rental[]>).pipe(
-      map(rentals => {
-        // Sort in memory to avoid composite index requirement for location + startDate
-        rentals.sort((a, b) => {
-          const dateA = (a.startDate as any)?.seconds || 0;
-          const dateB = (b.startDate as any)?.seconds || 0;
-          return dateB - dateA;
-        });
-
-        rentals.forEach(r => {
-          const newStatus = this.calculateStatus(r);
-          if (r.status !== newStatus) {
-            this.updateRental(r.id!, { status: newStatus });
-          }
-        });
-        return rentals;
-      })
-    );
+    if (location) {
+      return this.rentals$.pipe(
+        map(rentals => rentals.filter(r => r.location === location))
+      );
+    }
+    return this.rentals$;
   }
 
   /** Registra un nuovo noleggio */
@@ -477,10 +492,15 @@ export class RentalService {
   // ==========================================
 
   getTemporaryTransfers(): Observable<TemporaryTransfer[]> {
-    const ref = collection(this.firestore, 'temporary_transfers');
-    return runInInjectionContext(this.injector, () => {
-      return collectionData(ref, { idField: 'id' }) as Observable<TemporaryTransfer[]>;
-    });
+    if (!this.temporaryTransfers$) {
+      const ref = collection(this.firestore, 'temporary_transfers');
+      this.temporaryTransfers$ = runInInjectionContext(this.injector, () => {
+        return (collectionData(ref, { idField: 'id' }) as Observable<TemporaryTransfer[]>).pipe(
+          shareReplay({ bufferSize: 1, refCount: false })
+        );
+      });
+    }
+    return this.temporaryTransfers$;
   }
 
   async addTemporaryTransfer(transfer: TemporaryTransfer) {
@@ -494,10 +514,15 @@ export class RentalService {
   }
 
   getMaintenancePeriods(): Observable<MaintenancePeriod[]> {
-    const ref = collection(this.firestore, 'maintenance_periods');
-    return runInInjectionContext(this.injector, () => {
-      return collectionData(ref, { idField: 'id' }) as Observable<MaintenancePeriod[]>;
-    });
+    if (!this.maintenancePeriods$) {
+      const ref = collection(this.firestore, 'maintenance_periods');
+      this.maintenancePeriods$ = runInInjectionContext(this.injector, () => {
+        return (collectionData(ref, { idField: 'id' }) as Observable<MaintenancePeriod[]>).pipe(
+          shareReplay({ bufferSize: 1, refCount: false })
+        );
+      });
+    }
+    return this.maintenancePeriods$;
   }
 
   async addMaintenancePeriod(period: MaintenancePeriod) {
@@ -582,9 +607,14 @@ export class RentalService {
   // ==========================================
 
   getInsurances(): Observable<Insurance[]> {
-    const ref = collection(this.firestore, 'insurances');
-    const q = query(ref, orderBy('expiryDate', 'asc'));
-    return collectionData(q, { idField: 'id' }) as Observable<Insurance[]>;
+    if (!this.insurances$) {
+      const ref = collection(this.firestore, 'insurances');
+      const q = query(ref, orderBy('expiryDate', 'asc'));
+      this.insurances$ = (collectionData(q, { idField: 'id' }) as Observable<Insurance[]>).pipe(
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+    return this.insurances$;
   }
 
   async addInsurance(insurance: Insurance) {
@@ -593,9 +623,14 @@ export class RentalService {
   }
 
   getInspections(): Observable<Inspection[]> {
-    const ref = collection(this.firestore, 'inspections');
-    const q = query(ref, orderBy('expiryDate', 'asc'));
-    return collectionData(q, { idField: 'id' }) as Observable<Inspection[]>;
+    if (!this.inspections$) {
+      const ref = collection(this.firestore, 'inspections');
+      const q = query(ref, orderBy('expiryDate', 'asc'));
+      this.inspections$ = (collectionData(q, { idField: 'id' }) as Observable<Inspection[]>).pipe(
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+    return this.inspections$;
   }
 
   async addInspection(inspection: Inspection) {
@@ -604,9 +639,14 @@ export class RentalService {
   }
 
   getMaintenances(): Observable<Maintenance[]> {
-    const ref = collection(this.firestore, 'maintenances');
-    const q = query(ref, orderBy('date', 'desc'));
-    return collectionData(q, { idField: 'id' }) as Observable<Maintenance[]>;
+    if (!this.maintenances$) {
+      const ref = collection(this.firestore, 'maintenances');
+      const q = query(ref, orderBy('date', 'desc'));
+      this.maintenances$ = (collectionData(q, { idField: 'id' }) as Observable<Maintenance[]>).pipe(
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+    return this.maintenances$;
   }
 
   async addMaintenance(maintenance: Maintenance) {
@@ -649,9 +689,14 @@ export class RentalService {
   // ==========================================
 
   getCustomers(): Observable<Customer[]> {
-    const ref = collection(this.firestore, 'customers');
-    const q = query(ref, orderBy('lastName'));
-    return collectionData(q, { idField: 'id' }) as Observable<Customer[]>;
+    if (!this.customers$) {
+      const ref = collection(this.firestore, 'customers');
+      const q = query(ref, orderBy('lastName'));
+      this.customers$ = (collectionData(q, { idField: 'id' }) as Observable<Customer[]>).pipe(
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+    return this.customers$;
   }
 
   async addCustomer(customer: Customer) {
@@ -674,9 +719,14 @@ export class RentalService {
   // ==========================================
 
   getCompanies(): Observable<Company[]> {
-    const ref = collection(this.firestore, 'companies');
-    const q = query(ref, orderBy('name'));
-    return collectionData(q, { idField: 'id' }) as Observable<Company[]>;
+    if (!this.companies$) {
+      const ref = collection(this.firestore, 'companies');
+      const q = query(ref, orderBy('name'));
+      this.companies$ = (collectionData(q, { idField: 'id' }) as Observable<Company[]>).pipe(
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+    return this.companies$;
   }
 
   async addCompany(company: Company) {
@@ -708,9 +758,14 @@ export class RentalService {
   // ==========================================
 
   getReminders(): Observable<Reminder[]> {
-    const ref = collection(this.firestore, 'reminders');
-    const q = query(ref, orderBy('date', 'asc'));
-    return collectionData(q, { idField: 'id' }) as Observable<Reminder[]>;
+    if (!this.reminders$) {
+      const ref = collection(this.firestore, 'reminders');
+      const q = query(ref, orderBy('date', 'asc'));
+      this.reminders$ = (collectionData(q, { idField: 'id' }) as Observable<Reminder[]>).pipe(
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+    return this.reminders$;
   }
 
   async addReminder(reminder: Reminder) {
@@ -788,9 +843,14 @@ export class RentalService {
   // ==========================================
 
   getContracts(): Observable<ContractDocument[]> {
-    const ref = collection(this.firestore, 'contracts');
-    const q = query(ref, orderBy('date', 'desc'));
-    return collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>;
+    if (!this.contracts$) {
+      const ref = collection(this.firestore, 'contracts');
+      const q = query(ref, orderBy('date', 'desc'));
+      this.contracts$ = (collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>).pipe(
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+    return this.contracts$;
   }
 
   getNextContractNumber(): Observable<number> {
@@ -1034,9 +1094,14 @@ export class RentalService {
   // ==========================================
 
   getVerbali(): Observable<Verbale[]> {
-    const ref = collection(this.firestore, 'verbali');
-    const q = query(ref, orderBy('createdAt', 'desc'));
-    return collectionData(q, { idField: 'id' }) as Observable<Verbale[]>;
+    if (!this.verbali$) {
+      const ref = collection(this.firestore, 'verbali');
+      const q = query(ref, orderBy('createdAt', 'desc'));
+      this.verbali$ = (collectionData(q, { idField: 'id' }) as Observable<Verbale[]>).pipe(
+        shareReplay({ bufferSize: 1, refCount: false })
+      );
+    }
+    return this.verbali$;
   }
 
   async createVerbale(verbale: Verbale) {

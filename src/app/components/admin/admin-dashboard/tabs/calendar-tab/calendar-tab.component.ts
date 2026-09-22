@@ -108,66 +108,67 @@ export class CalendarTabComponent implements OnInit {
     this.rentalService.getCompanies().subscribe(companies => this.availableCompanies = companies);
     this.rentalService.getMaintenances().subscribe(m => this.allMaintenances = m);
 
+    const rawData$ = combineLatest([
+      this.rentalService.getVehicles(),
+      this.rentalService.getRentals(),
+      this.rentalService.getTemporaryTransfers(),
+      this.rentalService.getMaintenancePeriods()
+    ]);
+
     this.loadingService.show();
     this.vehiclesData$ = combineLatest([
+      rawData$,
       this.selectedLocation$,
       this.searchSubject,
       this.sortSubject
     ]).pipe(
-      switchMap(([loc, search, sort]) => {
-        const filterLoc = loc === 'Tutte' ? undefined : loc;
-        return combineLatest([
-          this.rentalService.getVehicles(filterLoc),
-          this.rentalService.getRentals(filterLoc),
-          this.rentalService.getTemporaryTransfers(),
-          this.rentalService.getMaintenancePeriods()
-        ]).pipe(
-          map(([vehicles, rentals, transfers, maintenances]) => {
-            // Filtraggio
-            let filteredVehicles = vehicles.filter(v => {
-              const s = search.toLowerCase();
-              const brand = v.brand?.toLowerCase() || '';
-              const model = v.model?.toLowerCase() || '';
-              const plate = v.plate?.toLowerCase() || '';
-              const category = v.category?.toLowerCase() || '';
+      map(([[allVehicles, allRentals, transfers, maintenances], loc, search, sort]) => {
+        const vehicles = loc === 'Tutte' ? allVehicles : allVehicles.filter(v => v.location === loc);
+        const rentals = loc === 'Tutte' ? allRentals : allRentals.filter(r => r.location === loc);
 
-              return brand.includes(s) || 
-                     model.includes(s) || 
-                     plate.includes(s) ||
-                     category.includes(s);
-            });
+        // Filtraggio
+        let filteredVehicles = vehicles.filter(v => {
+          const s = search.toLowerCase();
+          const brand = v.brand?.toLowerCase() || '';
+          const model = v.model?.toLowerCase() || '';
+          const plate = v.plate?.toLowerCase() || '';
+          const category = v.category?.toLowerCase() || '';
 
-            // Ordinamento
-            filteredVehicles.sort((a, b) => {
-              if (sort === 'category') {
-                const indexA = this.CATEGORY_ORDER.indexOf(a.category);
-                const indexB = this.CATEGORY_ORDER.indexOf(b.category);
-                if (indexA === -1 && indexB === -1) return a.category.localeCompare(b.category);
-                if (indexA === -1) return 1;
-                if (indexB === -1) return -1;
-                return indexA - indexB;
-              } else if (sort === 'brand') {
-                return a.brand.localeCompare(b.brand);
-              } else {
-                return a.plate.localeCompare(b.plate);
-              }
-            });
+          return brand.includes(s) || 
+                 model.includes(s) || 
+                 plate.includes(s) || 
+                 category.includes(s);
+        });
 
-            return filteredVehicles.map(v => {
-              const vehicleRentals = rentals.filter(r => r.vehicleId === v.id);
-              const vehicleTransfers = transfers.filter(t => t.vehicleId === v.id);
-              const vehicleMaintenances = maintenances.filter(m => m.vehicleId === v.id);
+        // Ordinamento
+        filteredVehicles.sort((a, b) => {
+          if (sort === 'category') {
+            const indexA = this.CATEGORY_ORDER.indexOf(a.category);
+            const indexB = this.CATEGORY_ORDER.indexOf(b.category);
+            if (indexA === -1 && indexB === -1) return a.category.localeCompare(b.category);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+          } else if (sort === 'brand') {
+            return a.brand.localeCompare(b.brand);
+          } else {
+            return a.plate.localeCompare(b.plate);
+          }
+        });
 
-              return {
-                vehicle: v,
-                rentals: vehicleRentals,
-                transfers: vehicleTransfers,
-                maintenances: vehicleMaintenances,
-                displayLocation: v.location
-              };
-            });
-          })
-        );
+        return filteredVehicles.map(v => {
+          const vehicleRentals = rentals.filter(r => r.vehicleId === v.id);
+          const vehicleTransfers = transfers.filter(t => t.vehicleId === v.id);
+          const vehicleMaintenances = maintenances.filter(m => m.vehicleId === v.id);
+
+          return {
+            vehicle: v,
+            rentals: vehicleRentals,
+            transfers: vehicleTransfers,
+            maintenances: vehicleMaintenances,
+            displayLocation: v.location
+          };
+        });
       }),
       map(data => {
         this.displayedVehicleIds = data.map(item => item.vehicle.id).filter((id): id is string => !!id);

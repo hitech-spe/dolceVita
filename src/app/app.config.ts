@@ -4,9 +4,10 @@ import { HttpClient, provideHttpClient, withInterceptors, withInterceptorsFromDi
 import { TranslateModule, TranslateLoader } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 import { routes } from './app.routes';
-import { getFirestore, provideFirestore } from "@angular/fire/firestore";
+import { getFirestore, provideFirestore, initializeFirestore } from "@angular/fire/firestore";
+import { persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getAuth, provideAuth } from "@angular/fire/auth";
-import { initializeApp, provideFirebaseApp } from "@angular/fire/app";
+import { initializeApp, provideFirebaseApp, getApp } from "@angular/fire/app";
 import { LogLevel, setLogLevel } from '@angular/fire';
 import { cargosAuthInterceptor } from './interceptors/cargos-auth.interceptor';
 
@@ -39,7 +40,15 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([cargosAuthInterceptor]), withInterceptorsFromDi()),
     provideFirebaseApp(() => initializeApp(firebaseConfig)),
     provideAuth(() => getAuth()),
-    provideFirestore(() => getFirestore()),
+    provideFirestore(() => {
+      try {
+        return initializeFirestore(getApp(), {
+          localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+        });
+      } catch (e) {
+        return getFirestore();
+      }
+    }),
     importProvidersFrom(
       TranslateModule.forRoot({
         loader: {
