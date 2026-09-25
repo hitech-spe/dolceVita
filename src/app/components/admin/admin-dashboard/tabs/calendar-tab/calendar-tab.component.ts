@@ -1,7 +1,7 @@
 import { Component, Input, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable, combineLatest, map, switchMap, BehaviorSubject, tap } from 'rxjs';
+import { Observable, combineLatest, map, switchMap, BehaviorSubject, tap, take } from 'rxjs';
 import { Rental, RentalService, Vehicle, Customer, TemporaryTransfer, MaintenancePeriod, Maintenance, ContractDocument, ContractDetails, Company } from "../../../../../services/rental.service";
 import { LoadingService } from '../../../../../services/loading.service';
 import { Timestamp } from '@angular/fire/firestore';
@@ -1221,7 +1221,7 @@ export class CalendarTabComponent implements OnInit {
     };
 
     // Calculate sequential numeric contract number automatically
-    this.rentalService.getNextContractNumber().subscribe(nextNum => {
+    this.rentalService.getNextContractNumber().pipe(take(1)).subscribe(nextNum => {
       this.contractDetails.contractNumber = String(nextNum);
     });
 
@@ -1458,6 +1458,9 @@ export class CalendarTabComponent implements OnInit {
         contractDoc.date
       );
       await this.rentalService.createContract(contractDoc, cargosData);
+
+      // Breve ritardo di sicurezza per consentire la sincronizzazione della persistenza Firestore con il microservizio Render
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Download generated PDF from microservice and open in new tab
       this.rentalService.downloadContractPdf(contractDoc.contractNumber).subscribe({

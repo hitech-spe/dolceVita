@@ -17,8 +17,8 @@ import {
   writeBatch,
   limit
 } from '@angular/fire/firestore';
-import { Observable, map, shareReplay } from 'rxjs';
-import { HttpClient } from '@angular/common/http';
+import { Observable, map, shareReplay, combineLatest } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { API_CONFIG } from '../config/api.config';
 
 // --- INTERFACCE ---
@@ -854,17 +854,29 @@ export class RentalService {
   }
 
   getNextContractNumber(): Observable<number> {
-    const ref = collection(this.firestore, 'contracts');
-    const q = query(ref, orderBy('date', 'desc'), limit(1));
-    return (collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>).pipe(
-      map(contracts => {
-        if (!contracts || contracts.length === 0) {
-          return 731; // Start at 731 as in the original example
+    const counterRef = collection(this.firestore, 'counters');
+    const contractsRef = collection(this.firestore, 'contracts');
+    const q = query(contractsRef, orderBy('date', 'desc'), limit(10));
+
+    return combineLatest([
+      collectionData(counterRef, { idField: 'id' }) as Observable<any[]>,
+      collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>
+    ]).pipe(
+      map(([counters, contracts]) => {
+        const contractCounter = counters?.find(c => c.id === 'contracts');
+        const maxFromCounter = contractCounter?.lastContractNumber ? Number(contractCounter.lastContractNumber) : 730;
+
+        let maxFromContracts = 730;
+        if (contracts && contracts.length > 0) {
+          const nums = contracts
+            .map(c => parseInt(c.contractNumber, 10))
+            .filter(n => !isNaN(n));
+          if (nums.length > 0) {
+            maxFromContracts = Math.max(...nums);
+          }
         }
-        const nums = contracts
-          .map(c => parseInt(c.contractNumber, 10))
-          .filter(n => !isNaN(n));
-        const max = nums.length > 0 ? Math.max(...nums) : 730;
+
+        const max = Math.max(maxFromCounter, maxFromContracts);
         return max + 1;
       })
     );
@@ -897,6 +909,25 @@ export class RentalService {
       ...(cargosData || {}),
       createdAt: Timestamp.now()
     };
+
+    // Aggiorna progressivamente il contatore massimo dei contratti per evitare riciclo di numeri già emessi
+    const num = parseInt(contract.contractNumber, 10);
+    if (!isNaN(num)) {
+      try {
+        const counterDocRef = doc(this.firestore, 'counters/contracts');
+        const counterSnap = await getDoc(counterDocRef);
+        const currentCounter = counterSnap.exists() ? (counterSnap.data()?.['lastContractNumber'] || 0) : 0;
+        if (num > currentCounter) {
+          await setDoc(counterDocRef, {
+            lastContractNumber: num,
+            updatedAt: Timestamp.now()
+          }, { merge: true });
+        }
+      } catch (counterError) {
+        console.error("Errore nell'aggiornamento del contatore contratti:", counterError);
+      }
+    }
+
     return setDoc(docRef, this.cleanUndefined(dataToSave));
   }
 
@@ -1085,8 +1116,14 @@ export class RentalService {
   }
 
   downloadContractPdf(contractNumber: string): Observable<Blob> {
-    const url = `${API_CONFIG.baseUrl}/api/v1/contracts/${contractNumber}/pdf`;
-    return this.http.get(url, { responseType: 'blob' });
+    const timestamp = new Date().getTime();
+    const url = `${API_CONFIG.baseUrl}/api/v1/contracts/${contractNumber}/pdf?t=${timestamp}&force=true`;
+    const headers = new HttpHeaders({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    return this.http.get(url, { responseType: 'blob', headers });
   }
 
   // ==========================================
