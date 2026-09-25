@@ -5,33 +5,42 @@ import { from, switchMap, catchError, of } from 'rxjs';
 
 /**
  * Interceptor to automatically add the Firebase ID token in the Authorization header
- * for any outgoing HTTP requests targeting the cargos or contracts API backend (/api/v1/cargos/**, /api/v1/contracts/**).
+ * for any outgoing HTTP requests targeting the cargos, contracts, or verbali API backend.
  */
 export const cargosAuthInterceptor: HttpInterceptorFn = (req, next) => {
+  const isTargetEndpoint =
+    req.url.includes('/api/v1/cargos/') ||
+    req.url.includes('/api/v1/contracts/') ||
+    req.url.includes('/api/v1/verbali/') ||
+    req.url.includes('/api/verbali/');
+
   // Check if the request is targeting our microservice endpoints
-  if (req.url.includes('/api/')) {
+  if (isTargetEndpoint) {
     const auth = inject(Auth);
     const currentUser = auth.currentUser;
 
     if (currentUser) {
       // Use from() to convert Promise<string> returned by getIdToken() to an Observable
       return from(currentUser.getIdToken()).pipe(
-        switchMap(token => {
-          const authReq = req.clone({
-            setHeaders: {
-              Authorization: `Bearer ${token}`
-            }
-          });
-          return next(authReq);
-        }),
         catchError(err => {
           console.error('Error retrieving Firebase ID token in cargosAuthInterceptor:', err);
+          return of(null);
+        }),
+        switchMap(token => {
+          if (token) {
+            const authReq = req.clone({
+              setHeaders: {
+                Authorization: `Bearer ${token}`
+              }
+            });
+            return next(authReq);
+          }
           return next(req);
         })
       );
     }
   }
 
-  // Pass-through if not targeting cargos or if no user is signed in
+  // Pass-through if not targeting microservice endpoints or if no user is signed in
   return next(req);
 };

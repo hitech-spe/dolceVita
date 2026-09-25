@@ -51,6 +51,24 @@ describe('CargosAuthInterceptor', () => {
     expect(responseReceived).toBeTrue();
   }));
 
+  it('should add Authorization Bearer header for /api/v1/contracts/ requests', fakeAsync(() => {
+    let responseReceived = false;
+    httpClient.get('/api/v1/contracts/1752/pdf').subscribe(response => {
+      expect(response).toBeTruthy();
+      responseReceived = true;
+    });
+
+    tick();
+
+    const req = httpMock.expectOne('/api/v1/contracts/1752/pdf');
+    expect(req.request.headers.has('Authorization')).toBeTrue();
+    expect(req.request.headers.get('Authorization')).toBe('Bearer mock-firebase-id-token');
+    req.flush({});
+
+    tick();
+    expect(responseReceived).toBeTrue();
+  }));
+
   it('should NOT add Authorization header for non-cargos requests', () => {
     httpClient.get('/api/v1/other/api').subscribe();
 
@@ -58,6 +76,27 @@ describe('CargosAuthInterceptor', () => {
     expect(req.request.headers.has('Authorization')).toBeFalse();
     req.flush({});
   });
+
+  it('should pass request through unmodified if getIdToken fails', fakeAsync(() => {
+    mockAuth.currentUser = {
+      getIdToken: () => Promise.reject(new Error('Token error'))
+    };
+
+    let responseReceived = false;
+    httpClient.get('/api/v1/contracts/1752/pdf').subscribe(response => {
+      expect(response).toBeTruthy();
+      responseReceived = true;
+    });
+
+    tick();
+
+    const req = httpMock.expectOne('/api/v1/contracts/1752/pdf');
+    expect(req.request.headers.has('Authorization')).toBeFalse();
+    req.flush({});
+
+    tick();
+    expect(responseReceived).toBeTrue();
+  }));
 
   it('should pass request through unmodified if no user is authenticated', () => {
     mockAuth.currentUser = null;

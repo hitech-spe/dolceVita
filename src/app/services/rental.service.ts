@@ -1118,12 +1118,7 @@ export class RentalService {
   downloadContractPdf(contractNumber: string): Observable<Blob> {
     const timestamp = new Date().getTime();
     const url = `${API_CONFIG.baseUrl}/api/v1/contracts/${contractNumber}/pdf?t=${timestamp}&force=true`;
-    const headers = new HttpHeaders({
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    });
-    return this.http.get(url, { responseType: 'blob', headers });
+    return this.http.get(url, { responseType: 'blob' });
   }
 
   // ==========================================
