@@ -1463,7 +1463,7 @@ export class CalendarTabComponent implements OnInit {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Download generated PDF from microservice and open in new tab
-      this.rentalService.downloadContractPdf(contractDoc.contractNumber).subscribe({
+      this.rentalService.downloadContractPdf(contractDoc.contractNumber, true).subscribe({
         next: (pdfBlob: Blob) => {
           const url = window.URL.createObjectURL(pdfBlob);
           window.open(url, '_blank');

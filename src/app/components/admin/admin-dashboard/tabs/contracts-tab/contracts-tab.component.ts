@@ -51,6 +51,7 @@ export class ContractsTabComponent implements OnInit {
   editedDetails: any = {};
 
   selectedContractIds = new Set<string>();
+  modifiedContractNumbers = new Set<string>();
   isSendingBulk = false;
 
   ngOnInit() {
@@ -459,6 +460,9 @@ export class ContractsTabComponent implements OnInit {
       }
 
       await this.rentalService.updateContract(this.editingContract.id, updatedContract);
+      if (this.editingContract.contractNumber) {
+        this.modifiedContractNumbers.add(this.editingContract.contractNumber);
+      }
       this.loadingService.hide();
       alert('Contratto modificato con successo! Lo stato di verifica Cargos è stato reimpostato.');
       this.closeEditModal();
@@ -525,14 +529,18 @@ export class ContractsTabComponent implements OnInit {
     });
   }
 
-  printContract(contract: ContractDocument) {
+  printContract(contract: ContractDocument, force?: boolean) {
     if (contract.id) {
       this.isGeneratingContract[contract.id] = true;
     }
     
     this.loadingService.show();
-    this.rentalService.downloadContractPdf(contract.contractNumber).subscribe({
+    const shouldForce = force === true || this.modifiedContractNumbers.has(contract.contractNumber);
+    this.rentalService.downloadContractPdf(contract.contractNumber, shouldForce).subscribe({
       next: (pdfBlob: Blob) => {
+        if (shouldForce) {
+          this.modifiedContractNumbers.delete(contract.contractNumber);
+        }
         const url = window.URL.createObjectURL(pdfBlob);
         window.open(url, '_blank');
         this.loadingService.hide();

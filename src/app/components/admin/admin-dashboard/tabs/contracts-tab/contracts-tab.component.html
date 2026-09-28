@@ -164,9 +164,9 @@
 
                 <!-- Print PDF -->
                 <button class="btn-print" 
-                        (click)="printContract(contract)" 
+                        (click)="printContract(contract, $event.shiftKey)" 
                         [disabled]="isGeneratingContract[contract.id!]" 
-                        title="Scarica Contratto (PDF)">
+                        title="Scarica Contratto (PDF) - Tieni premuto Shift per forzare la rigenerazione">
                   @if (isGeneratingContract[contract.id!]) {
                     <i class="fa-solid fa-spinner fa-spin"></i>
                   } @else {

@@ -347,4 +347,49 @@ describe('ContractsTabComponent', () => {
     shouldClose = component.shouldCloseModal(clickEvent);
     expect(shouldClose).toBeTrue();
   });
+
+  describe('printContract with cache and force support', () => {
+    const dummyContract: any = {
+      id: 'doc-123',
+      contractNumber: '10042',
+      details: {}
+    };
+
+    beforeEach(() => {
+      spyOn(window, 'open');
+      spyOn(window.URL, 'createObjectURL').and.returnValue('blob:http://localhost/test');
+      mockRentalService.downloadContractPdf.calls.reset();
+    });
+
+    it('should download with force: false by default for unchanged contract', () => {
+      component.printContract(dummyContract);
+      expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('10042', false);
+    });
+
+    it('should download with force: true when explicit force is provided (e.g. shift-click)', () => {
+      component.printContract(dummyContract, true);
+      expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('10042', true);
+    });
+
+    it('should automatically force regenerate if contract was modified, then revert to cache on subsequent print', async () => {
+      component.editingContract = { ...dummyContract };
+      component.editedDetails = { baseRate: 150 };
+      spyOn(window, 'alert');
+
+      await component.saveContractEdit();
+
+      expect(component.modifiedContractNumbers.has('10042')).toBeTrue();
+
+      // First print after edit should force regenerate
+      component.printContract(dummyContract);
+      expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('10042', true);
+      expect(component.modifiedContractNumbers.has('10042')).toBeFalse();
+
+      mockRentalService.downloadContractPdf.calls.reset();
+
+      // Subsequent print should use cached PDF (force: false)
+      component.printContract(dummyContract);
+      expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('10042', false);
+    });
+  });
 });

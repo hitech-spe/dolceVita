@@ -1115,9 +1115,9 @@ export class RentalService {
     return this.http.post(url, contractIds);
   }
 
-  downloadContractPdf(contractNumber: string): Observable<Blob> {
+  downloadContractPdf(contractNumber: string, force: boolean = false): Observable<Blob> {
     const timestamp = new Date().getTime();
-    const url = `${API_CONFIG.baseUrl}/api/v1/contracts/${contractNumber}/pdf?t=${timestamp}&force=true`;
+    const url = `${API_CONFIG.baseUrl}/api/v1/contracts/${contractNumber}/pdf?t=${timestamp}${force ? '&force=true' : ''}`;
     return this.http.get(url, { responseType: 'blob' });
   }
 
