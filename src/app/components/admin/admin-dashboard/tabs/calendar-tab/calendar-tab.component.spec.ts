@@ -19,7 +19,11 @@ describe('CalendarTabComponent', () => {
       getMaintenances: () => of([]),
       getMaintenancePeriods: () => of([]),
       getTemporaryTransfers: () => of([]),
-      getRentals: () => of([])
+      getRentals: () => of([]),
+      getNextContractNumber: jasmine.createSpy('getNextContractNumber').and.returnValue(of(731)),
+      createContract: jasmine.createSpy('createContract').and.returnValue(Promise.resolve({ contractNumber: '731', id: '731' })),
+      downloadContractPdf: jasmine.createSpy('downloadContractPdf').and.returnValue(of(new Blob())),
+      mapToCargosFormat: jasmine.createSpy('mapToCargosFormat').and.returnValue({})
     };
 
     mockLoadingService = {
@@ -87,5 +91,73 @@ describe('CalendarTabComponent', () => {
     status = component.getDayStatus(item, dayAfter);
     expect(status.type).toBe('rental');
     expect(status.data.id).toBe('r1');
+  });
+
+  describe('Contract generation and atomic numbering', () => {
+    beforeEach(() => {
+      spyOn(window, 'alert').and.stub();
+      spyOn(window, 'open').and.stub();
+      spyOn(window.URL, 'createObjectURL').and.returnValue('blob:http://localhost/test');
+
+      component.contractRental = {
+        id: 'r1',
+        vehicleId: 'v1',
+        customerId: 'c1',
+        customerName: 'Mario Rossi',
+        location: 'Mottola',
+        startDate: Timestamp.now(),
+        endDate: Timestamp.now(),
+        status: 'In Corso'
+      };
+      component.contractVehicle = {
+        id: 'v1',
+        brand: 'Fiat',
+        model: 'Panda',
+        plate: 'AA111BB',
+        location: 'Mottola',
+        category: 'A',
+        status: 'Attivo'
+      };
+      component.contractCustomer = {
+        id: 'c1',
+        firstName: 'Mario',
+        lastName: 'Rossi',
+        phone: '123456789'
+      };
+      component.contractDetails = {
+        contractNumber: '731',
+        kmIncluded: 'Senza Limiti',
+        timeOut: '10:00',
+        timeIn: '18:00'
+      };
+      component.suggestedContractNumber = '731';
+    });
+
+    it('should automatically assign the atomic contract number and download the corresponding PDF', async () => {
+      mockRentalService.createContract.and.returnValue(Promise.resolve({ contractNumber: '732', id: '732' }));
+
+      await component.generateContract();
+
+      expect(mockRentalService.createContract).toHaveBeenCalledWith(
+        jasmine.any(Object),
+        jasmine.any(Object)
+      );
+      expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('732', true);
+      expect(window.alert).toHaveBeenCalledWith(
+        jasmine.stringMatching(/Contratto PDF generato con successo \(N\. 732\)/)
+      );
+      expect(component.isContractModalOpen).toBeFalse();
+    });
+
+    it('should catch error and alert user when createContract rejects unexpectedly', async () => {
+      const dbError = new Error('Errore di connessione Firestore');
+      mockRentalService.createContract.and.returnValue(Promise.reject(dbError));
+
+      await component.generateContract();
+
+      expect(window.alert).toHaveBeenCalledWith('Errore di connessione Firestore');
+      expect(component.isGeneratingContract).toBeFalse();
+      expect(mockLoadingService.hide).toHaveBeenCalled();
+    });
   });
 });

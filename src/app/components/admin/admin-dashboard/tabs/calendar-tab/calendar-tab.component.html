@@ -564,8 +564,9 @@
           <h4 style="font-size: 0.95rem; font-weight: 700; color: #0f172a; border-left: 3px solid var(--accent); padding-left: 8px; margin-bottom: 1rem;">Dati Base Contratto</h4>
           <div class="form-grid" style="margin-bottom: 1.5rem;">
             <div class="form-group">
-              <label>Codice Contratto *</label>
-              <input type="text" [(ngModel)]="contractDetails.contractNumber" name="contractNumber" required>
+              <label>Codice Contratto</label>
+              <input type="text" [value]="contractDetails.contractNumber || 'Calcolo in corso...'" name="contractNumber" readonly style="background-color: #f1f5f9; cursor: not-allowed; font-weight: 600; color: #0f172a;">
+              <small style="color: #64748b; font-size: 0.72rem; display: block; margin-top: 2px;"><i class="fa-solid fa-wand-magic-sparkles"></i> Assegnato automaticamente in sequenza</small>
             </div>
             <div class="form-group">
               <label>Km Uscita (Attuali)</label>

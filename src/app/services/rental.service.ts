@@ -15,7 +15,8 @@ import {
   orderBy,
   getDocs,
   writeBatch,
-  limit
+  limit,
+  runTransaction
 } from '@angular/fire/firestore';
 import { Observable, map, shareReplay, combineLatest } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -902,33 +903,59 @@ export class RentalService {
     return result;
   }
 
-  async createContract(contract: ContractDocument, cargosData?: any) {
-    const docRef = doc(this.firestore, `contracts/${contract.contractNumber}`);
-    const dataToSave = {
-      ...contract,
-      ...(cargosData || {}),
-      createdAt: Timestamp.now()
-    };
+  async createContract(
+    contract: ContractDocument,
+    cargosData?: any
+  ): Promise<{ contractNumber: string; id: string }> {
+    const counterDocRef = doc(this.firestore, 'counters/contracts');
 
-    // Aggiorna progressivamente il contatore massimo dei contratti per evitare riciclo di numeri già emessi
-    const num = parseInt(contract.contractNumber, 10);
-    if (!isNaN(num)) {
-      try {
-        const counterDocRef = doc(this.firestore, 'counters/contracts');
-        const counterSnap = await getDoc(counterDocRef);
-        const currentCounter = counterSnap.exists() ? (counterSnap.data()?.['lastContractNumber'] || 0) : 0;
-        if (num > currentCounter) {
-          await setDoc(counterDocRef, {
-            lastContractNumber: num,
-            updatedAt: Timestamp.now()
-          }, { merge: true });
-        }
-      } catch (counterError) {
-        console.error("Errore nell'aggiornamento del contatore contratti:", counterError);
+    return await runTransaction(this.firestore, async (transaction) => {
+      // 1. All reads must be executed before any writes
+      const counterSnap = await transaction.get(counterDocRef);
+      const currentCounter = counterSnap.exists()
+        ? (Number(counterSnap.data()?.['lastContractNumber']) || 0)
+        : 0;
+
+      // Calcola l'ultimo ID + 1 garantito
+      let nextNum = Math.max(currentCounter, 730) + 1;
+
+      // Verifica atomica che il codice candidato non sia già occupato, altrimenti avanza al successivo libero
+      let candidateDocRef = doc(this.firestore, `contracts/${nextNum}`);
+      let candidateSnap = await transaction.get(candidateDocRef);
+
+      while (candidateSnap.exists()) {
+        nextNum++;
+        candidateDocRef = doc(this.firestore, `contracts/${nextNum}`);
+        candidateSnap = await transaction.get(candidateDocRef);
       }
-    }
 
-    return setDoc(docRef, this.cleanUndefined(dataToSave));
+      const finalContractNumber = String(nextNum);
+
+      // 2. All writes must be executed after all reads
+      transaction.set(counterDocRef, {
+        lastContractNumber: nextNum,
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+
+      const contractDataToSave = {
+        ...contract,
+        ...(cargosData || {}),
+        contractNumber: finalContractNumber,
+        details: {
+          ...(contract.details || {}),
+          contractNumber: finalContractNumber
+        },
+        contratto_id: finalContractNumber,
+        createdAt: Timestamp.now()
+      };
+
+      transaction.set(candidateDocRef, this.cleanUndefined(contractDataToSave));
+
+      return {
+        contractNumber: finalContractNumber,
+        id: finalContractNumber
+      };
+    });
   }
 
   async deleteContract(id: string) {

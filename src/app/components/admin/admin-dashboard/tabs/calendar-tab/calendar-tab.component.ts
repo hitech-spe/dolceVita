@@ -71,6 +71,7 @@ export class CalendarTabComponent implements OnInit {
   isContractModalOpen = false;
   isGeneratingContract = false;
   contractDetails: ContractDetails = {};
+  suggestedContractNumber = '';
   contractRental?: Rental;
   contractVehicle?: Vehicle;
   contractCustomer?: Customer;
@@ -1220,9 +1221,12 @@ export class CalendarTabComponent implements OnInit {
       vehicleFuelType: ''
     };
 
+    this.suggestedContractNumber = '';
     // Calculate sequential numeric contract number automatically
     this.rentalService.getNextContractNumber().pipe(take(1)).subscribe(nextNum => {
-      this.contractDetails.contractNumber = String(nextNum);
+      const numStr = String(nextNum);
+      this.contractDetails.contractNumber = numStr;
+      this.suggestedContractNumber = numStr;
     });
 
     // Populate main driver details initially
@@ -1440,7 +1444,7 @@ export class CalendarTabComponent implements OnInit {
 
       // Persist contract metadata in Firestore
       const contractDoc: ContractDocument = {
-        contractNumber: this.contractDetails.contractNumber || 'CONTRATTO',
+        contractNumber: '',
         rentalId: this.contractRental.id || '',
         customerId: this.contractCustomer.id || '',
         customerName: this.contractDetails.isCompany ? (this.contractDetails.companyName || '') : `${this.contractCustomer.firstName} ${this.contractCustomer.lastName}`,
@@ -1457,19 +1461,24 @@ export class CalendarTabComponent implements OnInit {
         this.contractDetails,
         contractDoc.date
       );
-      await this.rentalService.createContract(contractDoc, cargosData);
+
+      const saveResult = await this.rentalService.createContract(contractDoc, cargosData);
+
+      const finalContractNumber = saveResult.contractNumber;
+      contractDoc.contractNumber = finalContractNumber;
+      this.contractDetails.contractNumber = finalContractNumber;
 
       // Breve ritardo di sicurezza per consentire la sincronizzazione della persistenza Firestore con il microservizio Render
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Download generated PDF from microservice and open in new tab
-      this.rentalService.downloadContractPdf(contractDoc.contractNumber, true).subscribe({
+      this.rentalService.downloadContractPdf(finalContractNumber, true).subscribe({
         next: (pdfBlob: Blob) => {
           const url = window.URL.createObjectURL(pdfBlob);
           window.open(url, '_blank');
           this.loadingService.hide();
           this.closeContractModal();
-          alert('Contratto PDF generato, salvato in archivio ed aperto in una nuova scheda browser!');
+          alert(`Contratto PDF generato con successo (N. ${finalContractNumber}), salvato in archivio ed aperto in una nuova scheda browser!`);
           this.isGeneratingContract = false;
         },
         error: (error) => {
@@ -1479,10 +1488,11 @@ export class CalendarTabComponent implements OnInit {
           this.isGeneratingContract = false;
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       this.loadingService.hide();
       console.error('Errore durante la generazione del contratto:', error);
-      alert('Si è verificato un errore durante la generazione del contratto.');
+      const msg = error?.message || 'Si è verificato un errore durante la generazione del contratto.';
+      alert(msg);
       this.isGeneratingContract = false;
     }
   }
