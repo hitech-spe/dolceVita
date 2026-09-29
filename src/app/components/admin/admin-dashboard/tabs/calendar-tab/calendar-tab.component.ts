@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Observable, combineLatest, map, switchMap, BehaviorSubject, tap, take } from 'rxjs';
 import { Rental, RentalService, Vehicle, Customer, TemporaryTransfer, MaintenancePeriod, Maintenance, ContractDocument, ContractDetails, Company } from "../../../../../services/rental.service";
 import { LoadingService } from '../../../../../services/loading.service';
+import { WarmupService } from '../../../../../services/warmup.service';
 import { Timestamp } from '@angular/fire/firestore';
 import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/vehicle-select.component";
 import { CustomerSelectComponent } from "../../../../../shared/customer-select/customer-select.component";
@@ -20,6 +21,7 @@ export class CalendarTabComponent implements OnInit {
   
   private rentalService = inject(RentalService);
   private loadingService = inject(LoadingService);
+  private warmupService = inject(WarmupService);
   
   vehiclesData$!: Observable<{
     vehicle: Vehicle, 
@@ -1181,6 +1183,9 @@ export class CalendarTabComponent implements OnInit {
   // --- CONTROLLER CONTRATTI (PDF) ---
 
   openContractModal(rental: Rental) {
+    // Risveglia anticipatamente il microservizio Render in background mentre l'operatore compila i dati
+    this.warmupService.pingBackend();
+
     this.isRentalModalOpen = false; // chiudi modale noleggio standard
     this.contractRental = rental;
     this.contractVehicle = this.availableVehicles.find(v => v.id === rental.vehicleId);

@@ -191,6 +191,7 @@ export interface ContractDocument {
   cargos_sync_time?: Timestamp;
   cargos_error?: string | null;
   pdfBase64?: string | null;
+  pdfUrl?: string | null;
 
   // Flat root fields for Cargos integration
   contratto_data?: string;

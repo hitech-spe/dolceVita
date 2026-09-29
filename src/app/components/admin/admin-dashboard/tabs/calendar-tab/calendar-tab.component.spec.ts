@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CalendarTabComponent } from './calendar-tab.component';
 import { RentalService } from '../../../../../services/rental.service';
 import { LoadingService } from '../../../../../services/loading.service';
+import { WarmupService } from '../../../../../services/warmup.service';
 import { of } from 'rxjs';
 import { Timestamp } from '@angular/fire/firestore';
 
@@ -10,6 +11,7 @@ describe('CalendarTabComponent', () => {
   let fixture: ComponentFixture<CalendarTabComponent>;
   let mockRentalService: any;
   let mockLoadingService: any;
+  let mockWarmupService: any;
 
   beforeEach(async () => {
     mockRentalService = {
@@ -31,11 +33,16 @@ describe('CalendarTabComponent', () => {
       hide: jasmine.createSpy('hide')
     };
 
+    mockWarmupService = {
+      pingBackend: jasmine.createSpy('pingBackend')
+    };
+
     await TestBed.configureTestingModule({
       imports: [CalendarTabComponent],
       providers: [
         { provide: RentalService, useValue: mockRentalService },
-        { provide: LoadingService, useValue: mockLoadingService }
+        { provide: LoadingService, useValue: mockLoadingService },
+        { provide: WarmupService, useValue: mockWarmupService }
       ]
     }).compileComponents();
 
@@ -158,6 +165,13 @@ describe('CalendarTabComponent', () => {
       expect(window.alert).toHaveBeenCalledWith('Errore di connessione Firestore');
       expect(component.isGeneratingContract).toBeFalse();
       expect(mockLoadingService.hide).toHaveBeenCalled();
+    });
+
+    it('should trigger backend warmup ping when opening contract modal', () => {
+      const dummyRental: any = { id: 'rent-99', vehicleId: 'v1', customerId: 'c1' };
+      component.openContractModal(dummyRental);
+      expect(mockWarmupService.pingBackend).toHaveBeenCalled();
+      expect(component.isContractModalOpen).toBeTrue();
     });
   });
 });

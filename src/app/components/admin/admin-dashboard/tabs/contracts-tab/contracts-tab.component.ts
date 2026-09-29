@@ -361,6 +361,7 @@ export class ContractsTabComponent implements OnInit {
         updatedContract.cargos_error = null as any;
         updatedContract.cargos_sync_time = null as any;
         updatedContract.pdfBase64 = null as any;
+        updatedContract.pdfUrl = null as any;
       } else {
         // Mantieni lo stato corrente di invio
         updatedContract.cargos_status = this.editingContract.cargos_status;
@@ -368,6 +369,7 @@ export class ContractsTabComponent implements OnInit {
         updatedContract.cargos_error = this.editingContract.cargos_error;
         updatedContract.cargos_sync_time = this.editingContract.cargos_sync_time;
         updatedContract.pdfBase64 = this.editingContract.pdfBase64;
+        updatedContract.pdfUrl = this.editingContract.pdfUrl;
       }
 
       if (this.editedContractDate) {
@@ -530,12 +532,20 @@ export class ContractsTabComponent implements OnInit {
   }
 
   printContract(contract: ContractDocument, force?: boolean) {
+    const shouldForce = force === true || this.modifiedContractNumbers.has(contract.contractNumber);
+
+    // Se il PDF è già salvato su Firebase Storage e non stiamo forzando la rigenerazione,
+    // apriamo direttamente il file dalla CDN (50-100ms) senza svegliare o caricare il backend su Render.
+    if (contract.pdfUrl && !shouldForce) {
+      window.open(contract.pdfUrl, '_blank');
+      return;
+    }
+
     if (contract.id) {
       this.isGeneratingContract[contract.id] = true;
     }
     
     this.loadingService.show();
-    const shouldForce = force === true || this.modifiedContractNumbers.has(contract.contractNumber);
     this.rentalService.downloadContractPdf(contract.contractNumber, shouldForce).subscribe({
       next: (pdfBlob: Blob) => {
         if (shouldForce) {

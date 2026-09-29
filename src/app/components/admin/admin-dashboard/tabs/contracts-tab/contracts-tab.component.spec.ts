@@ -391,5 +391,28 @@ describe('ContractsTabComponent', () => {
       component.printContract(dummyContract);
       expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('10042', false);
     });
+
+    it('should open directly from Firebase Storage URL if pdfUrl exists and force is false', () => {
+      const contractWithUrl: any = {
+        ...dummyContract,
+        pdfUrl: 'https://firebasestorage.googleapis.com/v0/b/test-bucket/contracts%2F10042.pdf'
+      };
+
+      component.printContract(contractWithUrl);
+
+      expect(window.open).toHaveBeenCalledWith('https://firebasestorage.googleapis.com/v0/b/test-bucket/contracts%2F10042.pdf', '_blank');
+      expect(mockRentalService.downloadContractPdf).not.toHaveBeenCalled();
+    });
+
+    it('should bypass pdfUrl and call backend when force: true is explicitly provided', () => {
+      const contractWithUrl: any = {
+        ...dummyContract,
+        pdfUrl: 'https://firebasestorage.googleapis.com/v0/b/test-bucket/contracts%2F10042.pdf'
+      };
+
+      component.printContract(contractWithUrl, true);
+
+      expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('10042', true);
+    });
   });
 });
