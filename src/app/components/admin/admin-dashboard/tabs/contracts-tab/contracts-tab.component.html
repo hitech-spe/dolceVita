@@ -162,6 +162,13 @@
                   <i class="fa-solid fa-pen-to-square"></i>
                 </button>
 
+                <!-- Create Reference Contract (RIF) -->
+                <button class="btn-reference" 
+                        (click)="openReferenceModal(contract)" 
+                        title="Crea Contratto di Riferimento (es. sostituzione veicolo con codice RIF)">
+                  <i class="fa-solid fa-clone"></i>
+                </button>
+
                 <!-- Print PDF -->
                 <button class="btn-print" 
                         (click)="printContract(contract, $event.shiftKey)" 
@@ -475,6 +482,228 @@
             <div class="form-actions mt-4" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.2rem;">
               <button type="button" class="btn btn-outline" (click)="closeEditModal()">Annulla</button>
               <button type="submit" class="btn btn-accent" style="display: flex; align-items: center; gap: 0.4rem;"><i class="fa-solid fa-floppy-disk"></i> Salva Modifiche</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Create Reference Contract (RIF) Modal -->
+  @if (isReferenceModalOpen && sourceContractForReference) {
+    <div class="modal-overlay" (mousedown)="onOverlayMousedown($event)" (click)="shouldCloseModal($event) && closeReferenceModal()">
+      <div class="modal-card wide-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1.5rem;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.3rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-clone text-gradient"></i> Nuovo Contratto di Riferimento ({{ rifContractNumber }})
+            </h3>
+            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #64748b;">
+              Generazione nuovo contratto collegato all'originale <strong>N. {{ sourceContractForReference.contractNumber }}</strong> (es. per sostituzione veicolo o imprevisto).
+            </p>
+          </div>
+          <button class="close-btn" (click)="closeReferenceModal()" style="background: none; border: none; font-size: 1.25rem; color: #64748b; cursor: pointer;">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="modal-body" style="max-height: 65vh; overflow-y: auto; padding-right: 0.5rem;">
+          <form (submit)="saveAndGenerateReferenceContract()">
+            
+            <!-- ALERT INFO VEICOLO ORIGINALE -->
+            <div style="background: #f8fafc; border-left: 4px solid #8b5cf6; padding: 0.8rem 1rem; border-radius: 6px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+              <div>
+                <span style="font-size: 0.8rem; font-weight: 700; color: #8b5cf6; text-transform: uppercase; letter-spacing: 0.05em; display: block;">Contratto di Origine</span>
+                <span style="font-size: 0.95rem; font-weight: 700; color: #1e293b;">N. {{ sourceContractForReference.contractNumber }} — {{ sourceContractForReference.customerName }}</span>
+              </div>
+              <div>
+                <span style="font-size: 0.8rem; color: #64748b; display: block;">Veicolo precedente:</span>
+                <span style="font-size: 0.9rem; font-weight: 600; color: #475569;"><i class="fa-solid fa-car"></i> {{ sourceContractForReference.vehiclePlate }}</span>
+              </div>
+            </div>
+
+            <!-- SECTION 1: DATI IDENTIFICATIVI & NUOVO VEICOLO -->
+            <h4 class="modal-section-title">Identificativo & Nuovo Veicolo Sostitutivo</h4>
+            <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1.2rem;">
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Codice Nuovo Contratto *</label>
+                <input type="text" [(ngModel)]="rifContractNumber" name="rifContractNumber" required style="padding: 0.8rem; border: 2px solid #8b5cf6; border-radius: 8px; font-size: 1.05rem; font-weight: 700; color: #8b5cf6; background: #faf5ff;" />
+                <small style="color: #64748b; font-size: 0.75rem;">Prefisso RIF automatico</small>
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Seleziona Nuovo Veicolo (Sostitutivo) *</label>
+                <app-vehicle-select [(vehicleId)]="rifVehicleId" [vehicles]="availableVehicles" (vehicleIdChange)="onRifVehicleChange()" placeholder="Cerca veicolo sostitutivo per targa o modello..."></app-vehicle-select>
+              </div>
+            </div>
+
+            <!-- CHECKBOX AGGIORNAMENTO CALENDARIO -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.8rem;">
+              <input type="checkbox" id="updateCalendarRental" [(ngModel)]="updateCalendarRental" name="updateCalendarRental" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent);" />
+              <label for="updateCalendarRental" style="font-size: 0.9rem; font-weight: 600; color: #1e40af; cursor: pointer; margin: 0;">
+                Registra a calendario il nuovo veicolo per questo noleggio
+              </label>
+            </div>
+
+            <!-- SECTION 2: DATI NOLEGGIO & TARIFFE -->
+            <h4 class="modal-section-title">Date, Km & Condizioni Economiche</h4>
+            <div class="form-grid-3">
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Data Stipula Contratto RIF *</label>
+                <input type="date" [(ngModel)]="rifDate" name="rifDate" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Data Inizio Noleggio</label>
+                <input type="date" [(ngModel)]="rifRentalStartDate" name="rifRentalStartDate" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Data Fine Noleggio (Rientro)</label>
+                <input type="date" [(ngModel)]="rifRentalEndDate" name="rifRentalEndDate" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Tariffa Base (€) *</label>
+                <input type="number" [(ngModel)]="rifDetails.baseRate" name="rifBaseRate" min="0" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Chilometri Inclusi *</label>
+                <input type="text" [(ngModel)]="rifDetails.kmIncluded" name="rifKmIncluded" placeholder="Es. Senza Limiti" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Prezzo Km Extra (€/km)</label>
+                <input type="number" [(ngModel)]="rifDetails.extraKmPrice" step="0.01" name="rifExtraKmPrice" min="0" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Km Uscita Nuovo Veicolo</label>
+                <input type="number" [(ngModel)]="rifDetails.kmOut" name="rifKmOut" min="0" placeholder="Km attuali del nuovo mezzo" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Ora Uscita (Time Out)</label>
+                <input type="text" [(ngModel)]="rifDetails.timeOut" name="rifTimeOut" placeholder="Es. 09:30" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Ora Rientro (Time In)</label>
+                <input type="text" [(ngModel)]="rifDetails.timeIn" name="rifTimeIn" placeholder="Es. 18:30" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Livello Carburante Uscita</label>
+                <input type="text" [(ngModel)]="rifDetails.fuelLevel" name="rifFuelLevel" placeholder="Es. 12/12 o 8/8" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Alimentazione Veicolo</label>
+                <input type="text" [(ngModel)]="rifDetails.vehicleFuelType" name="rifVehicleFuelType" placeholder="Es. Diesel, Benzina" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Franchigia Selezionata (€) *</label>
+                <input type="number" [(ngModel)]="rifDetails.franchise" name="rifFranchise" min="0" required style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Deposito Cauzionale (€)</label>
+                <input type="number" [(ngModel)]="rifDetails.deposit" name="rifDeposit" min="0" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Tipologia Deposito</label>
+                <select [(ngModel)]="rifDetails.depositType" name="rifDepositType" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;">
+                  <option value="">-- Seleziona --</option>
+                  <option value="Contanti">Contanti</option>
+                  <option value="Carta di Credito">Carta di Credito</option>
+                  <option value="Assegno">Assegno</option>
+                  <option value="Bonifico">Bonifico</option>
+                </select>
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Anticipo (€)</label>
+                <input type="number" [(ngModel)]="rifDetails.advance" name="rifAdvance" min="0" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+            </div>
+
+            <!-- SECTION 3: INTESTAZIONE AZIENDA (SE APPLICABILE) -->
+            <div style="margin: 1.5rem 0 1rem 0; padding: 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;">
+                <input type="checkbox" id="rifIsCompany" [(ngModel)]="rifDetails.isCompany" name="rifIsCompany" style="width: 18px; height: 18px; cursor: pointer;">
+                <label for="rifIsCompany" style="font-weight: 700; color: #0f172a; margin: 0; cursor: pointer;">Intestazione Aziendale</label>
+              </div>
+
+              @if (rifDetails.isCompany) {
+                <div class="form-grid-3">
+                  <div class="form-group" style="position: relative;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Ragione Sociale *</label>
+                    <input type="text" [(ngModel)]="rifDetails.companyName" name="rifCompanyName" (focus)="isRifCompanyDropdownOpen = true" (blur)="onRifCompanySearchBlur()" placeholder="Cerca azienda..." style="padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem; width: 100%;" />
+                    @if (isRifCompanyDropdownOpen && filteredRifCompanies.length > 0) {
+                      <div class="autocomplete-dropdown" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #cbd5e1; border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 10; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        @for (comp of filteredRifCompanies; track comp.id) {
+                          <div class="autocomplete-item" (mousedown)="selectRifCompany(comp)" style="padding: 0.5rem 0.8rem; cursor: pointer; border-bottom: 1px solid #f1f5f9;">
+                            <strong>{{ comp.name }}</strong> (P.IVA: {{ comp.vat }})
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                  <div class="form-group">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Partita IVA *</label>
+                    <input type="text" [(ngModel)]="rifDetails.companyVat" name="rifCompanyVat" style="padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem;" />
+                  </div>
+                  <div class="form-group">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Indirizzo Sede Legale</label>
+                    <input type="text" [(ngModel)]="rifDetails.companyAddress" name="rifCompanyAddress" style="padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem;" />
+                  </div>
+                  <div class="form-group">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #64748b;">Telefono Azienda</label>
+                    <input type="text" [(ngModel)]="rifDetails.companyPhone" name="rifCompanyPhone" style="padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem;" />
+                  </div>
+                  <div class="form-group">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: #64748b;">PEC / Codice Univoco</label>
+                    <input type="text" [(ngModel)]="rifDetails.companyPec" name="rifCompanyPec" style="padding: 0.6rem; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.95rem;" />
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- SECTION 4: CONDUCENTE PRINCIPALE -->
+            <h4 class="modal-section-title">Dati Conducente Principale</h4>
+            <div class="form-grid-3">
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Conducente Principale</label>
+                <app-customer-select [(customerId)]="rifDetails.mainDriverId" [customers]="availableCustomers" (customerIdChange)="onRifMainDriverChange()" placeholder="Seleziona Conducente..."></app-customer-select>
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Luogo di Nascita</label>
+                <input type="text" [(ngModel)]="rifDetails.driverBirthPlace" name="rifDriverBirthPlace" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Data di Nascita</label>
+                <input type="date" [(ngModel)]="rifDetails.driverBirthDate" name="rifDriverBirthDate" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Numero Patente</label>
+                <input type="text" [(ngModel)]="rifDetails.driverLicenseNumber" name="rifDriverLicenseNumber" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Data Rilascio Patente</label>
+                <input type="date" [(ngModel)]="rifDetails.driverLicenseIssueDate" name="rifDriverLicenseIssueDate" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Data Scadenza Patente</label>
+                <input type="date" [(ngModel)]="rifDetails.driverLicenseExpiry" name="rifDriverLicenseExpiry" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Rilasciata Da</label>
+                <input type="text" [(ngModel)]="rifDetails.driverLicenseReleasedBy" name="rifDriverLicenseReleasedBy" placeholder="Es. Prefettura, MCTC" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+              <div class="form-group" style="display: flex; flex-direction: column; gap: 0.4rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Paese Rilascio Patente</label>
+                <input type="text" [(ngModel)]="rifDetails.driverLicenseCountry" name="rifDriverLicenseCountry" placeholder="Es. Italia" style="padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; background: #f8fafc;" />
+              </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="form-actions mt-4" style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.2rem;">
+              <button type="button" class="btn btn-outline" (click)="closeReferenceModal()">Annulla</button>
+              <button type="submit" class="btn btn-accent" [disabled]="isGeneratingRif" style="display: flex; align-items: center; gap: 0.5rem; min-width: 220px; justify-content: center; background: #8b5cf6; border-color: #8b5cf6;">
+                @if (isGeneratingRif) {
+                  <i class="fa-solid fa-spinner fa-spin"></i> Generazione Contratto RIF...
+                } @else {
+                  <i class="fa-solid fa-file-invoice"></i> Stipula e Genera RIF (PDF)
+                }
+              </button>
             </div>
           </form>
         </div>

@@ -15,7 +15,11 @@ describe('ContractsTabComponent', () => {
       getContracts: jasmine.createSpy('getContracts').and.returnValue(of([])),
       getCustomers: jasmine.createSpy('getCustomers').and.returnValue(of([])),
       getCompanies: jasmine.createSpy('getCompanies').and.returnValue(of([])),
+      getVehicles: jasmine.createSpy('getVehicles').and.returnValue(of([])),
       getRentals: jasmine.createSpy('getRentals').and.returnValue(of([])),
+      createRental: jasmine.createSpy('createRental').and.returnValue(Promise.resolve({ id: 'new-rental-id' })),
+      createContract: jasmine.createSpy('createContract').and.returnValue(Promise.resolve({ contractNumber: 'RIF 100', id: 'RIF 100' })),
+      mapToCargosFormat: jasmine.createSpy('mapToCargosFormat').and.returnValue({}),
       updateRental: jasmine.createSpy('updateRental').and.returnValue(Promise.resolve()),
       addCompany: jasmine.createSpy('addCompany').and.returnValue(Promise.resolve()),
       deleteContract: jasmine.createSpy('deleteContract').and.returnValue(Promise.resolve()),
@@ -413,6 +417,84 @@ describe('ContractsTabComponent', () => {
       component.printContract(contractWithUrl, true);
 
       expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('10042', true);
+    });
+  });
+
+  describe('Reference Contract (RIF) functionality', () => {
+    const originalContract: any = {
+      id: 'c-100',
+      contractNumber: '1790',
+      rentalId: 'rental-orig-1',
+      customerId: 'cust-1',
+      customerName: 'Mario Rossi',
+      vehicleId: 'veh-old',
+      vehiclePlate: 'Fiat Panda (AB123CD)',
+      date: { seconds: 1700000000 },
+      details: {
+        baseRate: 50,
+        kmIncluded: '2999 km totali',
+        fuelLevel: '12/12',
+        mainDriverId: 'cust-1'
+      }
+    };
+
+    beforeEach(() => {
+      component.availableVehicles = [
+        { id: 'veh-new', brand: 'Jeep', model: 'Renegade', plate: 'XY987ZT', location: 'Mottola', category: 'SUV', status: 'Attivo', fuelType: 'Diesel' }
+      ];
+      component.allRentals = [
+        { id: 'rental-orig-1', vehicleId: 'veh-old', customerId: 'cust-1', customerName: 'Mario Rossi', startDate: { toDate: () => new Date('2026-09-01') } as any, endDate: { toDate: () => new Date('2026-09-10') } as any, location: 'Mottola', status: 'In Corso' }
+      ];
+    });
+
+    it('should initialize reference modal with prefix RIF and prefilled details from original contract', () => {
+      component.openReferenceModal(originalContract);
+
+      expect(component.isReferenceModalOpen).toBeTrue();
+      expect(component.sourceContractForReference).toBe(originalContract);
+      expect(component.rifContractNumber).toBe('RIF 1790');
+      expect(component.rifDetails.baseRate).toBe(50);
+      expect(component.rifDetails.contractNumber).toBe('RIF 1790');
+      expect(component.rifRentalStartDate).toBe('2026-09-01');
+      expect(component.rifRentalEndDate).toBe('2026-09-10');
+    });
+
+    it('should save and generate reference contract PDF successfully', async () => {
+      spyOn(window, 'alert');
+      spyOn(window, 'open');
+
+      mockRentalService.createContract.and.callFake((doc: any) => Promise.resolve({ contractNumber: doc.contractNumber, id: doc.contractNumber }));
+
+      component.openReferenceModal(originalContract);
+      component.rifVehicleId = 'veh-new';
+
+      await component.saveAndGenerateReferenceContract();
+
+      expect(mockRentalService.createContract).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          contractNumber: 'RIF 1790',
+          vehicleId: 'veh-new'
+        }),
+        jasmine.any(Object)
+      );
+      expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('RIF 1790', true);
+      expect(component.isReferenceModalOpen).toBeFalse();
+    });
+
+    it('should sort RIF contracts alongside their numeric counter', () => {
+      const contracts: any[] = [
+        { id: '1', contractNumber: '1791', customerName: 'A' },
+        { id: '2', contractNumber: 'RIF 1790', customerName: 'B' },
+        { id: '3', contractNumber: '1790', customerName: 'C' }
+      ];
+
+      component.sortField = 'contractNumber';
+      component.sortDirection = 'asc';
+
+      const sorted = component.getFilteredContracts(contracts);
+      expect(sorted[0].contractNumber).toBe('1790');
+      expect(sorted[1].contractNumber).toBe('RIF 1790');
+      expect(sorted[2].contractNumber).toBe('1791');
     });
   });
 });

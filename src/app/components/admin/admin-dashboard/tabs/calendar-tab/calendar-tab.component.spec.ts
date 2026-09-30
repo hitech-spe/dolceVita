@@ -141,6 +141,7 @@ describe('CalendarTabComponent', () => {
     });
 
     it('should automatically assign the atomic contract number and download the corresponding PDF', async () => {
+      component.contractDetails.contractNumber = ''; // Nessun codice inserito a mano
       mockRentalService.createContract.and.returnValue(Promise.resolve({ contractNumber: '732', id: '732' }));
 
       await component.generateContract();
@@ -153,6 +154,20 @@ describe('CalendarTabComponent', () => {
       expect(window.alert).toHaveBeenCalledWith(
         jasmine.stringMatching(/Contratto PDF generato con successo \(N\. 732\)/)
       );
+      expect(component.isContractModalOpen).toBeFalse();
+    });
+
+    it('should use manual custom contract number when specified by user', async () => {
+      component.contractDetails.contractNumber = '1850'; // Codice manuale
+      mockRentalService.createContract.and.returnValue(Promise.resolve({ contractNumber: '1850', id: '1850' }));
+
+      await component.generateContract();
+
+      expect(mockRentalService.createContract).toHaveBeenCalledWith(
+        jasmine.objectContaining({ contractNumber: '1850' }),
+        jasmine.any(Object)
+      );
+      expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('1850', true);
       expect(component.isContractModalOpen).toBeFalse();
     });
 

@@ -1195,7 +1195,7 @@ export class CalendarTabComponent implements OnInit {
     this.isCompanyDropdownOpen = false;
 
     this.contractDetails = {
-      contractNumber: '...', // will be filled by observable subscription
+      contractNumber: '', // Inizialmente vuoto: se l'operatore scrive un codice manuale si usa quello, altrimenti calcolo automatico
       kmOut: undefined, // km uscita non valorizzato inizialmente
       kmIncluded: '2999 km totali', // km inclusi default
       timeOut: '', // Prevalorizzato a vuoto
@@ -1230,7 +1230,6 @@ export class CalendarTabComponent implements OnInit {
     // Calculate sequential numeric contract number automatically
     this.rentalService.getNextContractNumber().pipe(take(1)).subscribe(nextNum => {
       const numStr = String(nextNum);
-      this.contractDetails.contractNumber = numStr;
       this.suggestedContractNumber = numStr;
     });
 

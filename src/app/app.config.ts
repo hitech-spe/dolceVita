@@ -7,6 +7,7 @@ import { routes } from './app.routes';
 import { getFirestore, provideFirestore, initializeFirestore } from "@angular/fire/firestore";
 import { persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getAuth, provideAuth } from "@angular/fire/auth";
+import { getStorage, provideStorage } from "@angular/fire/storage";
 import { initializeApp, provideFirebaseApp, getApp } from "@angular/fire/app";
 import { LogLevel, setLogLevel } from '@angular/fire';
 import { cargosAuthInterceptor } from './interceptors/cargos-auth.interceptor';
@@ -40,6 +41,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([cargosAuthInterceptor]), withInterceptorsFromDi()),
     provideFirebaseApp(() => initializeApp(firebaseConfig)),
     provideAuth(() => getAuth()),
+    provideStorage(() => getStorage()),
     provideFirestore(() => {
       try {
         return initializeFirestore(getApp(), {

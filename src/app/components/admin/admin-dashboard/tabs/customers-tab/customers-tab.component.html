@@ -46,8 +46,13 @@
                             <div class="attachment-list">
                                 @for (att of cust.attachments; track $index) {
                                     <div class="attachment-item">
-                                        <span class="attachment-name" (click)="downloadAttachment(att)" title="Scarica">
-                                            <i class="fa-solid fa-file-pdf"></i> {{ att.name }}
+                                        <span class="attachment-name" (click)="downloadAttachment(att)" title="Visualizza / Scarica">
+                                            @if (att.type && att.type.startsWith('image/')) {
+                                                <i class="fa-solid fa-file-image"></i>
+                                            } @else {
+                                                <i class="fa-solid fa-file-pdf"></i>
+                                            }
+                                            {{ att.name }}
                                         </span>
                                         <button class="btn-delete-file" (click)="removeAttachment(cust, $index)">
                                             <i class="fa-solid fa-xmark"></i>
@@ -176,8 +181,13 @@
                 <div class="attachment-list">
                     @for (att of pendingAttachments; track $index) {
                         <div class="attachment-item">
-                            <span class="attachment-name">
-                                <i class="fa-solid fa-file-pdf"></i> {{ att.name }}
+                            <span class="attachment-name" (click)="downloadAttachment(att)" title="Visualizza / Scarica" style="cursor: pointer;">
+                                @if (att.type && att.type.startsWith('image/')) {
+                                    <i class="fa-solid fa-file-image"></i>
+                                } @else {
+                                    <i class="fa-solid fa-file-pdf"></i>
+                                }
+                                {{ att.name }}
                             </span>
                             <button class="btn-delete-file" (click)="removePendingAttachment($index)">
                                 <i class="fa-solid fa-xmark"></i>

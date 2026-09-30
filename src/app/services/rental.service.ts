@@ -1,4 +1,5 @@
 import { Injectable, inject, Injector, runInInjectionContext } from '@angular/core';
+import { Storage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from '@angular/fire/storage';
 import {
   Firestore,
   collection,
@@ -18,7 +19,7 @@ import {
   limit,
   runTransaction
 } from '@angular/fire/firestore';
-import { Observable, map, shareReplay, combineLatest } from 'rxjs';
+import { Observable, map, shareReplay, combineLatest, firstValueFrom } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { API_CONFIG } from '../config/api.config';
 
@@ -109,6 +110,15 @@ export interface Maintenance {
   maintenancePeriodId?: string;
 }
 
+export interface CustomerAttachment {
+  name: string;
+  url?: string;
+  path?: string;
+  data?: string; // Per retrocompatibilità Base64
+  type?: string;
+  createdAt?: Timestamp;
+}
+
 export interface Customer {
   id?: string;
   firstName: string;
@@ -122,7 +132,7 @@ export interface Customer {
   licenseCountry?: string;
   phone?: string;
   address?: string;
-  attachments?: { name: string, data: string }[]; // Base64 attachments
+  attachments?: CustomerAttachment[];
   createdAt?: Timestamp;
 }
 
@@ -243,6 +253,7 @@ export interface Verbale {
 })
 export class RentalService {
   private firestore = inject(Firestore);
+  private storage = inject(Storage);
   private http = inject(HttpClient);
   private injector = inject(Injector);
 
@@ -716,6 +727,45 @@ export class RentalService {
     return deleteDoc(docRef);
   }
 
+  /**
+   * Carica un documento cliente tramite il microservizio Backend su Render
+   * Endpoint: POST /api/v1/customers/{customerId}/documents
+   */
+  async uploadCustomerDocument(
+    customerId: string,
+    file: File
+  ): Promise<CustomerAttachment> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    const safeCustomerId = encodeURIComponent(customerId || 'pending');
+    const url = `${API_CONFIG.baseUrl}/api/v1/customers/${safeCustomerId}/documents`;
+
+    const response = await firstValueFrom(this.http.post<any>(url, formData));
+
+    return {
+      name: response.name || file.name,
+      url: response.url,
+      path: response.path,
+      type: response.type || file.type || 'application/octet-stream',
+      createdAt: Timestamp.now()
+    };
+  }
+
+  /**
+   * Elimina un file allegato da Firebase Storage tramite il microservizio Backend su Render
+   * Endpoint: DELETE /api/v1/customers/documents?path=...
+   */
+  async deleteCustomerDocument(path: string): Promise<void> {
+    if (!path) return;
+    try {
+      const url = `${API_CONFIG.baseUrl}/api/v1/customers/documents?path=${encodeURIComponent(path)}`;
+      await firstValueFrom(this.http.delete(url));
+    } catch (e) {
+      console.warn('Impossibile eliminare allegato tramite Backend:', e);
+    }
+  }
+
   // ==========================================
   // GESTIONE AZIENDE
   // ==========================================
@@ -908,6 +958,55 @@ export class RentalService {
     contract: ContractDocument,
     cargosData?: any
   ): Promise<{ contractNumber: string; id: string }> {
+    const rawNumber = (contract.contractNumber || '').trim();
+
+    // 1. SE È STATO SCRITTO/SPECIFICATO UN CODICE MANUALE (es. "1795", "RIF 1790", "CT-01", ecc.)
+    if (rawNumber && rawNumber !== '...' && rawNumber.toLowerCase() !== 'calcolo in corso...') {
+      const customId = rawNumber;
+      const docRef = doc(this.firestore, `contracts/${customId}`);
+
+      const contractDataToSave = {
+        ...contract,
+        ...(cargosData || {}),
+        contractNumber: customId,
+        details: {
+          ...(contract.details || {}),
+          contractNumber: customId
+        },
+        contratto_id: customId,
+        createdAt: Timestamp.now()
+      };
+
+      await setDoc(docRef, this.cleanUndefined(contractDataToSave));
+
+      // Se il codice manuale è numerico, aggiorniamo il contatore globale se superiore al contatore attuale
+      // così da garantire che i successivi contratti automatici ripartano da questo numero + 1
+      const num = parseInt(customId, 10);
+      if (!isNaN(num) && String(num) === customId) {
+        try {
+          const counterDocRef = doc(this.firestore, 'counters/contracts');
+          const counterSnap = await getDoc(counterDocRef);
+          const currentCounter = counterSnap.exists()
+            ? (Number(counterSnap.data()?.['lastContractNumber']) || 0)
+            : 0;
+          if (num > currentCounter) {
+            await setDoc(counterDocRef, {
+              lastContractNumber: num,
+              updatedAt: Timestamp.now()
+            }, { merge: true });
+          }
+        } catch (counterError) {
+          console.warn("Impossibile aggiornare contatore contratti per codice manuale:", counterError);
+        }
+      }
+
+      return {
+        contractNumber: customId,
+        id: customId
+      };
+    }
+
+    // 2. SE NON VIENE SCRITTO NULLA: Assegnazione progressiva atomica automatica in sequenza
     const counterDocRef = doc(this.firestore, 'counters/contracts');
 
     // Baseline di sicurezza: recupera velocemente il massimo dai contratti recenti in un'unica query indicizzata
@@ -1170,7 +1269,8 @@ export class RentalService {
 
   downloadContractPdf(contractNumber: string, force: boolean = false): Observable<Blob> {
     const timestamp = new Date().getTime();
-    const url = `${API_CONFIG.baseUrl}/api/v1/contracts/${contractNumber}/pdf?t=${timestamp}${force ? '&force=true' : ''}`;
+    const encodedNumber = encodeURIComponent((contractNumber || '').trim());
+    const url = `${API_CONFIG.baseUrl}/api/v1/contracts/${encodedNumber}/pdf?t=${timestamp}${force ? '&force=true' : ''}`;
     return this.http.get(url, { responseType: 'blob' });
   }
 

@@ -69,6 +69,24 @@ describe('CargosAuthInterceptor', () => {
     expect(responseReceived).toBeTrue();
   }));
 
+  it('should add Authorization Bearer header for /api/v1/customers/ requests', fakeAsync(() => {
+    let responseReceived = false;
+    httpClient.post('/api/v1/customers/cust123/documents', {}).subscribe(response => {
+      expect(response).toBeTruthy();
+      responseReceived = true;
+    });
+
+    tick();
+
+    const req = httpMock.expectOne('/api/v1/customers/cust123/documents');
+    expect(req.request.headers.has('Authorization')).toBeTrue();
+    expect(req.request.headers.get('Authorization')).toBe('Bearer mock-firebase-id-token');
+    req.flush({});
+
+    tick();
+    expect(responseReceived).toBeTrue();
+  }));
+
   it('should NOT add Authorization header for non-cargos requests', () => {
     httpClient.get('/api/v1/other/api').subscribe();
 

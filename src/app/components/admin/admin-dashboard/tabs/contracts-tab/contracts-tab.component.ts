@@ -7,11 +7,12 @@ import { LoadingService } from '../../../../../services/loading.service';
 import { Timestamp } from '@angular/fire/firestore';
 import { API_CONFIG } from '../../../../../config/api.config';
 import { CustomerSelectComponent } from "../../../../../shared/customer-select/customer-select.component";
+import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/vehicle-select.component";
 
 @Component({
   selector: 'app-contracts-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, CustomerSelectComponent],
+  imports: [CommonModule, FormsModule, CustomerSelectComponent, VehicleSelectComponent],
   templateUrl: './contracts-tab.component.html',
   styleUrls: ['./contracts-tab.component.scss']
 })
@@ -39,6 +40,7 @@ export class ContractsTabComponent implements OnInit {
 
   availableCustomers: Customer[] = [];
   availableCompanies: Company[] = [];
+  availableVehicles: Vehicle[] = [];
   allRentals: Rental[] = [];
 
   companySearchTerm = '';
@@ -49,6 +51,21 @@ export class ContractsTabComponent implements OnInit {
   isEditModalOpen = false;
   editingContract: ContractDocument | null = null;
   editedDetails: any = {};
+
+  // --- STATO MODALE CONTRATTO DI RIFERIMENTO (RIF) ---
+  isReferenceModalOpen = false;
+  sourceContractForReference: ContractDocument | null = null;
+  rifContractNumber = '';
+  rifVehicleId = '';
+  rifCustomerId = '';
+  rifDetails: any = {};
+  rifDate = '';
+  rifRentalStartDate = '';
+  rifRentalEndDate = '';
+  rifCompanySearchTerm = '';
+  isRifCompanyDropdownOpen = false;
+  updateCalendarRental = true;
+  isGeneratingRif = false;
 
   selectedContractIds = new Set<string>();
   modifiedContractNumbers = new Set<string>();
@@ -71,12 +88,17 @@ export class ContractsTabComponent implements OnInit {
     
     // Cache customers list to pass for additional driver select
     this.rentalService.getCustomers().subscribe(custs => {
-      this.availableCustomers = custs;
+      this.availableCustomers = custs || [];
     });
 
     // Cache companies list for autocomplete in edit modal
     this.rentalService.getCompanies().subscribe(companies => {
-      this.availableCompanies = companies;
+      this.availableCompanies = companies || [];
+    });
+
+    // Cache vehicles list for replacement vehicle selection
+    this.rentalService.getVehicles().subscribe(vehicles => {
+      this.availableVehicles = vehicles || [];
     });
 
     // Cache rentals list for editing end dates
@@ -122,9 +144,14 @@ export class ContractsTabComponent implements OnInit {
         const timeB = b.date ? ((b.date as any).seconds || new Date(b.date as any).getTime()) : 0;
         comparison = timeA - timeB;
       } else if (this.sortField === 'contractNumber') {
-        const numA = parseInt(a.contractNumber, 10) || 0;
-        const numB = parseInt(b.contractNumber, 10) || 0;
+        const cleanA = (a.contractNumber || '').replace(/^RIF\s*/i, '');
+        const cleanB = (b.contractNumber || '').replace(/^RIF\s*/i, '');
+        const numA = parseInt(cleanA, 10) || 0;
+        const numB = parseInt(cleanB, 10) || 0;
         comparison = numA - numB;
+        if (comparison === 0) {
+          comparison = (a.contractNumber || '').localeCompare(b.contractNumber || '');
+        }
       } else if (this.sortField === 'customerName') {
         comparison = a.customerName.localeCompare(b.customerName);
       }
@@ -472,6 +499,248 @@ export class ContractsTabComponent implements OnInit {
       this.loadingService.hide();
       console.error('Errore durante il salvataggio del contratto modificato:', error);
       alert('Si è verificato un errore durante il salvataggio delle modifiche.');
+    }
+  }
+
+  // --- METODI CONTRATTO DI RIFERIMENTO (RIF) ---
+  openReferenceModal(contract: ContractDocument) {
+    this.sourceContractForReference = contract;
+
+    const baseNumber = (contract.contractNumber || '').replace(/^RIF\s*/i, '').trim();
+    this.rifContractNumber = `RIF ${baseNumber}`;
+
+    this.rifDetails = JSON.parse(JSON.stringify(contract.details || {}));
+    this.rifDetails.contractNumber = this.rifContractNumber;
+
+    this.rifVehicleId = contract.vehicleId || '';
+    this.rifCustomerId = contract.customerId || '';
+
+    this.rifDate = new Date().toISOString().split('T')[0];
+
+    const associatedRental = this.allRentals.find(r => r.id === contract.rentalId);
+    if (associatedRental) {
+      if (associatedRental.startDate) {
+        const startObj = (associatedRental.startDate as any).toDate ? (associatedRental.startDate as any).toDate() : new Date(associatedRental.startDate as any);
+        this.rifRentalStartDate = startObj.toISOString().split('T')[0];
+      } else {
+        this.rifRentalStartDate = this.rifDate;
+      }
+      if (associatedRental.endDate) {
+        const endObj = (associatedRental.endDate as any).toDate ? (associatedRental.endDate as any).toDate() : new Date(associatedRental.endDate as any);
+        this.rifRentalEndDate = endObj.toISOString().split('T')[0];
+      } else {
+        this.rifRentalEndDate = this.rifDate;
+      }
+    } else {
+      this.rifRentalStartDate = this.rifDate;
+      this.rifRentalEndDate = this.rifDate;
+    }
+
+    this.rifCompanySearchTerm = this.rifDetails.isCompany ? (this.rifDetails.companyName || '') : '';
+    this.isRifCompanyDropdownOpen = false;
+    this.updateCalendarRental = true;
+    this.isReferenceModalOpen = true;
+  }
+
+  closeReferenceModal() {
+    this.isReferenceModalOpen = false;
+    this.sourceContractForReference = null;
+    this.rifContractNumber = '';
+    this.rifVehicleId = '';
+    this.rifCustomerId = '';
+    this.rifDetails = {};
+    this.rifDate = '';
+    this.rifRentalStartDate = '';
+    this.rifRentalEndDate = '';
+    this.rifCompanySearchTerm = '';
+    this.isRifCompanyDropdownOpen = false;
+    this.isGeneratingRif = false;
+  }
+
+  onRifVehicleChange() {
+    const v = this.availableVehicles.find(veh => veh.id === this.rifVehicleId);
+    if (v && v.fuelType) {
+      this.rifDetails.vehicleFuelType = v.fuelType;
+    }
+  }
+
+  onRifMainDriverChange() {
+    const driverId = this.rifDetails.mainDriverId;
+    const driver = this.availableCustomers.find(c => c.id === driverId);
+    if (driver) {
+      this.rifDetails.driverBirthPlace = driver.birthPlace || '';
+      this.rifDetails.driverBirthDate = driver.birthDate && (driver.birthDate as any).toDate ? (driver.birthDate as any).toDate().toISOString().split('T')[0] : '';
+      this.rifDetails.driverLicenseNumber = driver.licenseNumber || '';
+      this.rifDetails.driverLicenseIssueDate = driver.licenseIssueDate && (driver.licenseIssueDate as any).toDate ? (driver.licenseIssueDate as any).toDate().toISOString().split('T')[0] : '';
+      this.rifDetails.driverLicenseExpiry = driver.licenseExpiry && (driver.licenseExpiry as any).toDate ? (driver.licenseExpiry as any).toDate().toISOString().split('T')[0] : '';
+      this.rifDetails.driverLicenseReleasedBy = driver.licenseReleasedBy || '';
+      this.rifDetails.driverLicenseCountry = driver.licenseCountry || 'Italia';
+    }
+  }
+
+  onRifAdditionalDriver1Change() {
+    const driverId = this.rifDetails.additionalDriver1Id;
+    const driver = this.availableCustomers.find(c => c.id === driverId);
+    if (driver) {
+      this.rifDetails.additionalDriver1Address = driver.address || '';
+      this.rifDetails.additionalDriver1Phone = driver.phone || '';
+    } else {
+      this.rifDetails.additionalDriver1Address = '';
+      this.rifDetails.additionalDriver1Phone = '';
+    }
+  }
+
+  onRifAdditionalDriver2Change() {
+    const driverId = this.rifDetails.additionalDriver2Id;
+    const driver = this.availableCustomers.find(c => c.id === driverId);
+    if (driver) {
+      this.rifDetails.additionalDriver2Address = driver.address || '';
+      this.rifDetails.additionalDriver2Phone = driver.phone || '';
+    } else {
+      this.rifDetails.additionalDriver2Address = '';
+      this.rifDetails.additionalDriver2Phone = '';
+    }
+  }
+
+  get filteredRifCompanies(): Company[] {
+    const term = this.rifCompanySearchTerm ? this.rifCompanySearchTerm.toLowerCase().trim() : '';
+    if (!term) return this.availableCompanies;
+    return this.availableCompanies.filter(comp =>
+      comp.name.toLowerCase().includes(term) ||
+      comp.vat.toLowerCase().includes(term)
+    );
+  }
+
+  selectRifCompany(comp: Company) {
+    this.rifDetails.companyName = comp.name;
+    this.rifDetails.companyVat = comp.vat;
+    this.rifDetails.companyAddress = comp.address || '';
+    this.rifDetails.companyPhone = comp.phone || '';
+    this.rifDetails.companyPec = comp.pec || '';
+    this.rifCompanySearchTerm = comp.name;
+    this.isRifCompanyDropdownOpen = false;
+  }
+
+  clearRifCompanySearch() {
+    this.rifCompanySearchTerm = '';
+    this.rifDetails.companyName = '';
+    this.rifDetails.companyVat = '';
+    this.rifDetails.companyAddress = '';
+    this.rifDetails.companyPhone = '';
+    this.rifDetails.companyPec = '';
+  }
+
+  onRifCompanySearchBlur() {
+    setTimeout(() => {
+      this.isRifCompanyDropdownOpen = false;
+    }, 250);
+  }
+
+  async saveAndGenerateReferenceContract() {
+    if (!this.sourceContractForReference || !this.rifContractNumber.trim()) {
+      alert('Dati mancanti per la creazione del contratto di riferimento.');
+      return;
+    }
+
+    const selectedVehicle = this.availableVehicles.find(v => v.id === this.rifVehicleId);
+    const selectedCustomer = this.availableCustomers.find(c => c.id === (this.rifDetails.mainDriverId || this.sourceContractForReference!.customerId));
+
+    if (!selectedVehicle) {
+      alert('Seleziona il nuovo veicolo sostitutivo per il contratto di riferimento.');
+      return;
+    }
+
+    try {
+      this.isGeneratingRif = true;
+      this.loadingService.show();
+
+      let rentalIdToLink = this.sourceContractForReference.rentalId;
+      const associatedRental = this.allRentals.find(r => r.id === this.sourceContractForReference!.rentalId);
+
+      // Se richiesto, crea o aggiorna il noleggio a calendario per il veicolo sostitutivo
+      if (this.updateCalendarRental && associatedRental) {
+        const replacementRental: Rental = {
+          vehicleId: selectedVehicle.id!,
+          vehiclePlate: `${selectedVehicle.brand} ${selectedVehicle.model} (${selectedVehicle.plate})`,
+          customerId: selectedCustomer?.id || associatedRental.customerId,
+          customerName: this.rifDetails.isCompany ? (this.rifDetails.companyName || associatedRental.customerName) : (selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : associatedRental.customerName),
+          location: associatedRental.location || 'Mottola',
+          returnLocation: associatedRental.returnLocation || associatedRental.location || 'Mottola',
+          startDate: this.rifRentalStartDate ? Timestamp.fromDate(new Date(this.rifRentalStartDate)) : associatedRental.startDate,
+          endDate: this.rifRentalEndDate ? Timestamp.fromDate(new Date(this.rifRentalEndDate)) : associatedRental.endDate,
+          startPeriod: associatedRental.startPeriod || 'Mat',
+          endPeriod: associatedRental.endPeriod || 'Mat',
+          totalPrice: this.rifDetails.baseRate ?? associatedRental.totalPrice,
+          notes: `Sostituzione veicolo per contratto ${this.rifContractNumber} (veicolo prec: ${this.sourceContractForReference.vehiclePlate})`,
+          status: 'In Corso',
+          createdAt: Timestamp.now()
+        };
+
+        const newRentalRef = await this.rentalService.createRental(replacementRental);
+        rentalIdToLink = newRentalRef.id;
+      }
+
+      const stipulationDate = this.rifDate ? Timestamp.fromDate(new Date(this.rifDate)) : Timestamp.now();
+
+      const newContractDoc: ContractDocument = {
+        contractNumber: this.rifContractNumber.trim(),
+        rentalId: rentalIdToLink,
+        customerId: selectedCustomer?.id || this.sourceContractForReference.customerId,
+        customerName: this.rifDetails.isCompany ? (this.rifDetails.companyName || '') : (selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : this.sourceContractForReference.customerName),
+        vehicleId: selectedVehicle.id || '',
+        vehiclePlate: `${selectedVehicle.brand} ${selectedVehicle.model} (${selectedVehicle.plate})`,
+        date: stipulationDate,
+        details: this.rifDetails
+      };
+
+      const dummyRentalForCargos: Rental = {
+        id: rentalIdToLink,
+        vehicleId: selectedVehicle.id || '',
+        vehiclePlate: `${selectedVehicle.brand} ${selectedVehicle.model} (${selectedVehicle.plate})`,
+        customerId: newContractDoc.customerId,
+        customerName: newContractDoc.customerName,
+        startDate: this.rifRentalStartDate ? Timestamp.fromDate(new Date(this.rifRentalStartDate)) : stipulationDate,
+        endDate: this.rifRentalEndDate ? Timestamp.fromDate(new Date(this.rifRentalEndDate)) : stipulationDate,
+        location: associatedRental?.location || 'Mottola',
+        returnLocation: associatedRental?.returnLocation || 'Mottola',
+        status: 'In Corso'
+      };
+
+      const cargosData = this.rentalService.mapToCargosFormat(
+        dummyRentalForCargos,
+        selectedVehicle,
+        selectedCustomer || { firstName: newContractDoc.customerName, lastName: '' },
+        this.rifDetails,
+        stipulationDate
+      );
+
+      const saveResult = await this.rentalService.createContract(newContractDoc, cargosData);
+      const finalNumber = saveResult.contractNumber;
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      this.rentalService.downloadContractPdf(finalNumber, true).subscribe({
+        next: (pdfBlob: Blob) => {
+          const url = window.URL.createObjectURL(pdfBlob);
+          window.open(url, '_blank');
+          this.loadingService.hide();
+          this.isGeneratingRif = false;
+          this.closeReferenceModal();
+          alert(`Contratto di riferimento ${finalNumber} creato con successo ed aperto in una nuova scheda browser!`);
+        },
+        error: (err) => {
+          console.error('Errore durante la generazione del PDF per il contratto di riferimento:', err);
+          this.loadingService.hide();
+          this.isGeneratingRif = false;
+          this.closeReferenceModal();
+          alert(`Contratto di riferimento ${finalNumber} salvato in archivio, ma si è verificato un errore durante la generazione del PDF dal server.`);
+        }
+      });
+    } catch (error: any) {
+      this.loadingService.hide();
+      this.isGeneratingRif = false;
+      console.error('Errore creazione contratto di riferimento:', error);
+      alert(error?.message || 'Si è verificato un errore durante la creazione del contratto di riferimento.');
     }
   }
 
