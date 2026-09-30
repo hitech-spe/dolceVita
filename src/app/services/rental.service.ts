@@ -910,6 +910,29 @@ export class RentalService {
   ): Promise<{ contractNumber: string; id: string }> {
     const counterDocRef = doc(this.firestore, 'counters/contracts');
 
+    // Baseline di sicurezza: recupera velocemente il massimo dai contratti recenti in un'unica query indicizzata
+    let baselineMax = 730;
+    try {
+      const contractsRef = collection(this.firestore, 'contracts');
+      const qRecent = query(contractsRef, orderBy('date', 'desc'), limit(5));
+      const snapRecent = await getDocs(qRecent);
+      snapRecent.forEach(d => {
+        const data = d.data();
+        const num = parseInt(data['contractNumber'] || d.id, 10);
+        if (!isNaN(num) && num > baselineMax) {
+          baselineMax = num;
+        }
+      });
+    } catch (e) {
+      console.warn('Impossibile recuperare max contratti recenti per baseline:', e);
+    }
+
+    // Se il chiamante suggeriva già un codice contratto numerico valido (es. dalla modale), usalo come riferimento
+    const callerSuggested = parseInt(contract.contractNumber, 10);
+    if (!isNaN(callerSuggested) && callerSuggested > baselineMax) {
+      baselineMax = callerSuggested - 1;
+    }
+
     return await runTransaction(this.firestore, async (transaction) => {
       // 1. All reads must be executed before any writes
       const counterSnap = await transaction.get(counterDocRef);
@@ -917,15 +940,17 @@ export class RentalService {
         ? (Number(counterSnap.data()?.['lastContractNumber']) || 0)
         : 0;
 
-      // Calcola l'ultimo ID + 1 garantito
-      let nextNum = Math.max(currentCounter, 730) + 1;
+      // Il numero progressivo parte dal massimo tra il contatore ufficiale, la baseline recente e 730
+      let nextNum = Math.max(currentCounter, baselineMax, 730) + 1;
 
-      // Verifica atomica che il codice candidato non sia già occupato, altrimenti avanza al successivo libero
+      // Verifica atomica di sicurezza sul candidato (max 5 controlli rapidi se collisione simultanea)
       let candidateDocRef = doc(this.firestore, `contracts/${nextNum}`);
       let candidateSnap = await transaction.get(candidateDocRef);
 
-      while (candidateSnap.exists()) {
+      let attempts = 0;
+      while (candidateSnap.exists() && attempts < 5) {
         nextNum++;
+        attempts++;
         candidateDocRef = doc(this.firestore, `contracts/${nextNum}`);
         candidateSnap = await transaction.get(candidateDocRef);
       }

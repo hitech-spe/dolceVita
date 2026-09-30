@@ -1449,7 +1449,7 @@ export class CalendarTabComponent implements OnInit {
 
       // Persist contract metadata in Firestore
       const contractDoc: ContractDocument = {
-        contractNumber: '',
+        contractNumber: this.contractDetails.contractNumber || '',
         rentalId: this.contractRental.id || '',
         customerId: this.contractCustomer.id || '',
         customerName: this.contractDetails.isCompany ? (this.contractDetails.companyName || '') : `${this.contractCustomer.firstName} ${this.contractCustomer.lastName}`,
