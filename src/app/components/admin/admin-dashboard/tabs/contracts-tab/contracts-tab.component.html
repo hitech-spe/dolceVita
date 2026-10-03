@@ -105,13 +105,13 @@
             </td>
             <td>
               <div class="customer-info">
-                <span class="customer-name">{{ contract.customerName }}</span>
+                <span class="customer-name">{{ getCustomerDisplayName(contract) }}</span>
                 <span class="customer-type">{{ contract.details.isCompany ? 'Azienda' : 'Privato' }}</span>
               </div>
             </td>
             <td>
               <div class="vehicle-info">
-                <span class="vehicle-plate"><i class="fa-solid fa-car-side"></i> {{ contract.vehiclePlate }}</span>
+                <span class="vehicle-plate"><i class="fa-solid fa-car-side"></i> {{ getVehicleDisplayName(contract) }}</span>
               </div>
             </td>
             <td class="font-main">{{ formatDate(contract.date) }}</td>

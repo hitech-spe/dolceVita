@@ -1344,151 +1344,101 @@ export class CalendarTabComponent implements OnInit {
       this.isGeneratingContract = true;
       this.loadingService.show();
 
-      // Update customer registry in Firestore with entered details
-      if (this.contractDetails.mainDriverId) {
-        const updateData: Partial<Customer> = {};
-        if (this.contractDetails.driverBirthPlace) {
-          updateData.birthPlace = this.contractDetails.driverBirthPlace;
-        }
-        if (this.contractDetails.driverBirthDate) {
-          updateData.birthDate = Timestamp.fromDate(new Date(this.contractDetails.driverBirthDate));
-        }
-        if (this.contractDetails.driverLicenseNumber) {
-          updateData.licenseNumber = this.contractDetails.driverLicenseNumber;
-        }
-        if (this.contractDetails.driverLicenseIssueDate) {
-          updateData.licenseIssueDate = Timestamp.fromDate(new Date(this.contractDetails.driverLicenseIssueDate));
-        }
-        if (this.contractDetails.driverLicenseExpiry) {
-          updateData.licenseExpiry = Timestamp.fromDate(new Date(this.contractDetails.driverLicenseExpiry));
-        }
-        if (this.contractDetails.driverLicenseReleasedBy) {
-          updateData.licenseReleasedBy = this.contractDetails.driverLicenseReleasedBy;
-        }
-        if (this.contractDetails.driverLicenseCountry) {
-          updateData.licenseCountry = this.contractDetails.driverLicenseCountry;
-        }
+      // Raccoglie gli aggiornamenti anagrafici del conducente principale se inseriti dall'operatore
+      const customerUpdates: Record<string, any> = {};
+      if (this.contractDetails.driverBirthPlace) customerUpdates['birthPlace'] = this.contractDetails.driverBirthPlace;
+      if (this.contractDetails.driverBirthDate) customerUpdates['birthDate'] = this.contractDetails.driverBirthDate;
+      if (this.contractDetails.driverLicenseNumber) customerUpdates['licenseNumber'] = this.contractDetails.driverLicenseNumber;
+      if (this.contractDetails.driverLicenseIssueDate) customerUpdates['licenseIssueDate'] = this.contractDetails.driverLicenseIssueDate;
+      if (this.contractDetails.driverLicenseExpiry) customerUpdates['licenseExpiry'] = this.contractDetails.driverLicenseExpiry;
+      if (this.contractDetails.driverLicenseReleasedBy) customerUpdates['licenseReleasedBy'] = this.contractDetails.driverLicenseReleasedBy;
+      if (this.contractDetails.driverLicenseCountry) customerUpdates['licenseCountry'] = this.contractDetails.driverLicenseCountry;
 
-        if (Object.keys(updateData).length > 0) {
-          try {
-            await this.rentalService.updateCustomer(this.contractDetails.mainDriverId, updateData);
-            
-            // Sync local cached lists/references
-            const cachedDriver = this.availableCustomers.find(c => c.id === this.contractDetails.mainDriverId);
-            if (cachedDriver) {
-              if (updateData.birthPlace) cachedDriver.birthPlace = updateData.birthPlace;
-              if (updateData.birthDate) cachedDriver.birthDate = updateData.birthDate;
-              if (updateData.licenseNumber) cachedDriver.licenseNumber = updateData.licenseNumber;
-              if (updateData.licenseIssueDate) cachedDriver.licenseIssueDate = updateData.licenseIssueDate;
-              if (updateData.licenseExpiry) cachedDriver.licenseExpiry = updateData.licenseExpiry;
-              if (updateData.licenseReleasedBy) cachedDriver.licenseReleasedBy = updateData.licenseReleasedBy;
-              if (updateData.licenseCountry) cachedDriver.licenseCountry = updateData.licenseCountry;
-            }
-            if (this.contractCustomer && this.contractCustomer.id === this.contractDetails.mainDriverId) {
-              if (updateData.birthPlace) this.contractCustomer.birthPlace = updateData.birthPlace;
-              if (updateData.birthDate) this.contractCustomer.birthDate = updateData.birthDate;
-              if (updateData.licenseNumber) this.contractCustomer.licenseNumber = updateData.licenseNumber;
-              if (updateData.licenseIssueDate) this.contractCustomer.licenseIssueDate = updateData.licenseIssueDate;
-              if (updateData.licenseExpiry) this.contractCustomer.licenseExpiry = updateData.licenseExpiry;
-              if (updateData.licenseReleasedBy) this.contractCustomer.licenseReleasedBy = updateData.licenseReleasedBy;
-              if (updateData.licenseCountry) this.contractCustomer.licenseCountry = updateData.licenseCountry;
-            }
-          } catch (custError) {
-            console.error("Errore nell'aggiornamento dell'anagrafica cliente:", custError);
-          }
-        }
-      }
+      // Dati aziendali opzionali
+      const companyData = (this.contractDetails.isCompany && this.contractDetails.companyName && this.contractDetails.companyVat) ? {
+        name: this.contractDetails.companyName.trim(),
+        vat: this.contractDetails.companyVat.trim(),
+        address: this.contractDetails.companyAddress?.trim() || '',
+        phone: this.contractDetails.companyPhone?.trim() || '',
+        pec: this.contractDetails.companyPec?.trim() || ''
+      } : null;
 
-      // Update vehicle registry in Firestore with entered fuel type if it has changed or is new
-      if (this.contractVehicle && this.contractVehicle.id && this.contractDetails.vehicleFuelType) {
-        if (this.contractVehicle.fuelType !== this.contractDetails.vehicleFuelType) {
-          try {
-            await this.rentalService.updateVehicle(this.contractVehicle.id, {
-              fuelType: this.contractDetails.vehicleFuelType
-            });
-            
-            // Sync local cached lists/references
-            const cachedVehicle = this.availableVehicles.find(v => v.id === this.contractVehicle!.id);
-            if (cachedVehicle) {
-              cachedVehicle.fuelType = this.contractDetails.vehicleFuelType;
-            }
-            this.contractVehicle.fuelType = this.contractDetails.vehicleFuelType;
-          } catch (vehError) {
-            console.error("Errore nell'aggiornamento dell'alimentazione veicolo:", vehError);
-          }
-        }
-      }
+      const stipulationTimestamp = Timestamp.now();
 
-      // Se l'utente ha inserito i dettagli dell'azienda, la salviamo in anagrafica se non esiste già
-      if (this.contractDetails.isCompany && this.contractDetails.companyName && this.contractDetails.companyVat) {
-        const nameUpper = this.contractDetails.companyName.trim().toUpperCase();
-        const vatTrimmed = this.contractDetails.companyVat.trim().toUpperCase();
-        
-        const exists = this.availableCompanies.some(comp => 
-          comp.name.trim().toUpperCase() === nameUpper || 
-          comp.vat.trim().toUpperCase() === vatTrimmed
-        );
-        
-        if (!exists) {
-          try {
-            const newCompany: Company = {
-              name: this.contractDetails.companyName.trim(),
-              vat: this.contractDetails.companyVat.trim(),
-              address: this.contractDetails.companyAddress?.trim() || '',
-              phone: this.contractDetails.companyPhone?.trim() || '',
-              pec: this.contractDetails.companyPec?.trim() || ''
-            };
-            await this.rentalService.addCompany(newCompany);
-            console.log('Nuova azienda salvata con successo!');
-          } catch (compError) {
-            console.error('Errore durante il salvataggio automatico dell\'azienda:', compError);
-          }
-        }
-      }
-
-      // Persist contract metadata in Firestore
-      const contractDoc: ContractDocument = {
-        contractNumber: this.contractDetails.contractNumber || '',
-        rentalId: this.contractRental.id || '',
-        customerId: this.contractCustomer.id || '',
-        customerName: this.contractDetails.isCompany ? (this.contractDetails.companyName || '') : `${this.contractCustomer.firstName} ${this.contractCustomer.lastName}`,
-        vehicleId: this.contractVehicle.id || '',
-        vehiclePlate: `${this.contractVehicle.brand} ${this.contractVehicle.model} (${this.contractVehicle.plate})`,
-        date: Timestamp.now(), // Stipulation timestamp
-        details: this.contractDetails
-      };
-      
+      // Mappatura dati per interoperabilità Cargos
       const cargosData = this.rentalService.mapToCargosFormat(
         this.contractRental,
         this.contractVehicle,
         this.contractCustomer,
         this.contractDetails,
-        contractDoc.date
+        stipulationTimestamp
       );
 
-      const saveResult = await this.rentalService.createContract(contractDoc, cargosData);
+      const customerName = this.contractDetails.isCompany
+        ? (this.contractDetails.companyName || '')
+        : `${this.contractCustomer.firstName} ${this.contractCustomer.lastName}`;
 
-      const finalContractNumber = saveResult.contractNumber;
-      contractDoc.contractNumber = finalContractNumber;
-      this.contractDetails.contractNumber = finalContractNumber;
+      const vehiclePlate = `${this.contractVehicle.brand} ${this.contractVehicle.model} (${this.contractVehicle.plate})`;
 
-      // Breve ritardo di sicurezza per consentire la sincronizzazione della persistenza Firestore con il microservizio Render
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const payload = {
+        rentalId: this.contractRental.id || '',
+        customerId: this.contractCustomer.id || '',
+        customerName: customerName.trim(),
+        vehicleId: this.contractVehicle.id || '',
+        vehiclePlate: vehiclePlate.trim(),
+        contractNumber: (this.contractDetails.contractNumber || '').trim(),
+        company: !!this.contractDetails.isCompany,
+        details: this.contractDetails,
+        customerUpdates: Object.keys(customerUpdates).length > 0 ? customerUpdates : null,
+        vehicleFuelType: this.contractDetails.vehicleFuelType || '',
+        companyData,
+        cargosData
+      };
 
-      // Download generated PDF from microservice and open in new tab
-      this.rentalService.downloadContractPdf(finalContractNumber, true).subscribe({
-        next: (pdfBlob: Blob) => {
-          const url = window.URL.createObjectURL(pdfBlob);
-          window.open(url, '_blank');
+      // Delega completa al microservizio Backend su Render:
+      // Scritture atomiche Firestore in datacenter (zero socket-zombie / timeout) e generazione istantanea PDF
+      this.rentalService.stipulateContractOnBackend(payload).subscribe({
+        next: (res: { pdfBlob: Blob; contractNumber: string }) => {
+          const finalContractNumber = res.contractNumber || this.contractDetails.contractNumber || '';
+          this.contractDetails.contractNumber = finalContractNumber;
+
+          // Aggiorna lo stato dei riferimenti locali in memoria per la UI
+          if (this.contractDetails.mainDriverId) {
+            const cachedDriver = this.availableCustomers.find(c => c.id === this.contractDetails.mainDriverId);
+            if (cachedDriver) {
+              if (customerUpdates['birthPlace']) cachedDriver.birthPlace = customerUpdates['birthPlace'];
+              if (customerUpdates['licenseNumber']) cachedDriver.licenseNumber = customerUpdates['licenseNumber'];
+              if (customerUpdates['licenseReleasedBy']) cachedDriver.licenseReleasedBy = customerUpdates['licenseReleasedBy'];
+              if (customerUpdates['licenseCountry']) cachedDriver.licenseCountry = customerUpdates['licenseCountry'];
+            }
+          }
+          if (this.contractVehicle && this.contractDetails.vehicleFuelType) {
+            this.contractVehicle.fuelType = this.contractDetails.vehicleFuelType;
+          }
+
+          // Apertura / download PDF resiliente
+          const url = window.URL.createObjectURL(res.pdfBlob);
+          const newTab = window.open(url, '_blank');
+          if (!newTab) {
+            // Se il popup è bloccato dal browser, avvia il download diretto del file
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `contratto_${finalContractNumber}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          }
+
           this.loadingService.hide();
           this.closeContractModal();
           alert(`Contratto PDF generato con successo (N. ${finalContractNumber}), salvato in archivio ed aperto in una nuova scheda browser!`);
           this.isGeneratingContract = false;
         },
         error: (error) => {
-          console.error('Errore durante il recupero del PDF dal server:', error);
+          console.error('Errore durante la stipula del contratto sul server:', error);
           this.loadingService.hide();
-          alert('Contratto salvato in archivio, ma si è verificato un errore durante la generazione/recupero del PDF dal server.');
+          const errMsg = error?.headers?.get('X-Error-Message') || error?.message || 'Si è verificato un errore durante la generazione/recupero del PDF dal server.';
+          alert(`Errore durante la stipula del contratto sul server:\n${errMsg}`);
           this.isGeneratingContract = false;
         }
       });

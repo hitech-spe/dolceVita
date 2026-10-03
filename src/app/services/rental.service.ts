@@ -19,7 +19,7 @@ import {
   limit,
   runTransaction
 } from '@angular/fire/firestore';
-import { Observable, map, shareReplay, combineLatest, firstValueFrom } from 'rxjs';
+import { Observable, map, shareReplay, combineLatest, firstValueFrom, catchError, of } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { API_CONFIG } from '../config/api.config';
 
@@ -906,30 +906,37 @@ export class RentalService {
   }
 
   getNextContractNumber(): Observable<number> {
-    const counterRef = collection(this.firestore, 'counters');
-    const contractsRef = collection(this.firestore, 'contracts');
-    const q = query(contractsRef, orderBy('date', 'desc'), limit(10));
+    const url = `${API_CONFIG.baseUrl}/api/v1/contracts/next-number`;
+    return this.http.get<{ nextContractNumber: number }>(url).pipe(
+      map(res => Number(res.nextContractNumber)),
+      catchError(() => {
+        // Fallback locale su Firestore se il backend non è raggiungibile o in assenza di rete
+        const counterRef = collection(this.firestore, 'counters');
+        const contractsRef = collection(this.firestore, 'contracts');
+        const q = query(contractsRef, orderBy('date', 'desc'), limit(10));
 
-    return combineLatest([
-      collectionData(counterRef, { idField: 'id' }) as Observable<any[]>,
-      collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>
-    ]).pipe(
-      map(([counters, contracts]) => {
-        const contractCounter = counters?.find(c => c.id === 'contracts');
-        const maxFromCounter = contractCounter?.lastContractNumber ? Number(contractCounter.lastContractNumber) : 730;
+        return combineLatest([
+          collectionData(counterRef, { idField: 'id' }) as Observable<any[]>,
+          collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>
+        ]).pipe(
+          map(([counters, contracts]) => {
+            const contractCounter = counters?.find(c => c.id === 'contracts');
+            const maxFromCounter = contractCounter?.lastContractNumber ? Number(contractCounter.lastContractNumber) : 730;
 
-        let maxFromContracts = 730;
-        if (contracts && contracts.length > 0) {
-          const nums = contracts
-            .map(c => parseInt(c.contractNumber, 10))
-            .filter(n => !isNaN(n));
-          if (nums.length > 0) {
-            maxFromContracts = Math.max(...nums);
-          }
-        }
+            let maxFromContracts = 730;
+            if (contracts && contracts.length > 0) {
+              const nums = contracts
+                .map(c => parseInt(c.contractNumber, 10))
+                .filter(n => !isNaN(n));
+              if (nums.length > 0) {
+                maxFromContracts = Math.max(...nums);
+              }
+            }
 
-        const max = Math.max(maxFromCounter, maxFromContracts);
-        return max + 1;
+            const max = Math.max(maxFromCounter, maxFromContracts);
+            return max + 1;
+          })
+        );
       })
     );
   }
@@ -1272,6 +1279,32 @@ export class RentalService {
     const encodedNumber = encodeURIComponent((contractNumber || '').trim());
     const url = `${API_CONFIG.baseUrl}/api/v1/contracts/${encodedNumber}/pdf?t=${timestamp}${force ? '&force=true' : ''}`;
     return this.http.get(url, { responseType: 'blob' });
+  }
+
+  /**
+   * Esegue l'intero flusso di stipula contratto direttamente sul Backend (Spring Boot su Render):
+   * 1. Aggiornamento atomico anagrafica cliente e parametri veicolo
+   * 2. Assegnazione progressiva atomica del numero contratto (se non impostato a mano)
+   * 3. Scrittura del documento contratto in Firestore con dati Cargos
+   * 4. Generazione del PDF in tempo reale tramite PDFBox
+   * Restituisce il PDF Blob e il numero contratto assegnato (da header HTTP X-Contract-Number).
+   */
+  stipulateContractOnBackend(payload: any): Observable<{ pdfBlob: Blob; contractNumber: string }> {
+    const url = `${API_CONFIG.baseUrl}/api/v1/contracts/stipulate`;
+    return this.http.post(url, payload, {
+      responseType: 'blob',
+      observe: 'response'
+    }).pipe(
+      map(response => {
+        const contractNumber = response.headers.get('X-Contract-Number') || (payload && payload.contractNumber) || '';
+        const rawBlob = response.body as Blob;
+        const pdfBlob = rawBlob.type === 'application/pdf' ? rawBlob : new Blob([rawBlob], { type: 'application/pdf' });
+        return {
+          pdfBlob,
+          contractNumber
+        };
+      })
+    );
   }
 
   // ==========================================

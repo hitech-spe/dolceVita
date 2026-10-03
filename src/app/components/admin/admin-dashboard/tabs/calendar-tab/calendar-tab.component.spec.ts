@@ -3,7 +3,7 @@ import { CalendarTabComponent } from './calendar-tab.component';
 import { RentalService } from '../../../../../services/rental.service';
 import { LoadingService } from '../../../../../services/loading.service';
 import { WarmupService } from '../../../../../services/warmup.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Timestamp } from '@angular/fire/firestore';
 
 describe('CalendarTabComponent', () => {
@@ -25,6 +25,7 @@ describe('CalendarTabComponent', () => {
       getNextContractNumber: jasmine.createSpy('getNextContractNumber').and.returnValue(of(731)),
       createContract: jasmine.createSpy('createContract').and.returnValue(Promise.resolve({ contractNumber: '731', id: '731' })),
       downloadContractPdf: jasmine.createSpy('downloadContractPdf').and.returnValue(of(new Blob())),
+      stipulateContractOnBackend: jasmine.createSpy('stipulateContractOnBackend').and.returnValue(of({ pdfBlob: new Blob(), contractNumber: '732' })),
       mapToCargosFormat: jasmine.createSpy('mapToCargosFormat').and.returnValue({})
     };
 
@@ -140,17 +141,18 @@ describe('CalendarTabComponent', () => {
       component.suggestedContractNumber = '731';
     });
 
-    it('should automatically assign the atomic contract number and download the corresponding PDF', async () => {
+    it('should automatically delegate contract stipulation to backend and assign atomic number', async () => {
       component.contractDetails.contractNumber = ''; // Nessun codice inserito a mano
-      mockRentalService.createContract.and.returnValue(Promise.resolve({ contractNumber: '732', id: '732' }));
+      mockRentalService.stipulateContractOnBackend.and.returnValue(of({
+        pdfBlob: new Blob(),
+        contractNumber: '732'
+      }));
 
       await component.generateContract();
 
-      expect(mockRentalService.createContract).toHaveBeenCalledWith(
-        jasmine.any(Object),
-        jasmine.any(Object)
+      expect(mockRentalService.stipulateContractOnBackend).toHaveBeenCalledWith(
+        jasmine.objectContaining({ contractNumber: '' })
       );
-      expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('732', true);
       expect(window.alert).toHaveBeenCalledWith(
         jasmine.stringMatching(/Contratto PDF generato con successo \(N\. 732\)/)
       );
@@ -159,25 +161,28 @@ describe('CalendarTabComponent', () => {
 
     it('should use manual custom contract number when specified by user', async () => {
       component.contractDetails.contractNumber = '1850'; // Codice manuale
-      mockRentalService.createContract.and.returnValue(Promise.resolve({ contractNumber: '1850', id: '1850' }));
+      mockRentalService.stipulateContractOnBackend.and.returnValue(of({
+        pdfBlob: new Blob(),
+        contractNumber: '1850'
+      }));
 
       await component.generateContract();
 
-      expect(mockRentalService.createContract).toHaveBeenCalledWith(
-        jasmine.objectContaining({ contractNumber: '1850' }),
-        jasmine.any(Object)
+      expect(mockRentalService.stipulateContractOnBackend).toHaveBeenCalledWith(
+        jasmine.objectContaining({ contractNumber: '1850' })
       );
-      expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('1850', true);
       expect(component.isContractModalOpen).toBeFalse();
     });
 
-    it('should catch error and alert user when createContract rejects unexpectedly', async () => {
-      const dbError = new Error('Errore di connessione Firestore');
-      mockRentalService.createContract.and.returnValue(Promise.reject(dbError));
+    it('should catch error and alert user when stipulateContractOnBackend fails', async () => {
+      const serverError = new Error('Errore di connessione backend');
+      mockRentalService.stipulateContractOnBackend.and.returnValue(throwError(() => serverError));
 
       await component.generateContract();
 
-      expect(window.alert).toHaveBeenCalledWith('Errore di connessione Firestore');
+      expect(window.alert).toHaveBeenCalledWith(
+        jasmine.stringMatching(/Errore durante la stipula del contratto sul server/)
+      );
       expect(component.isGeneratingContract).toBeFalse();
       expect(mockLoadingService.hide).toHaveBeenCalled();
     });

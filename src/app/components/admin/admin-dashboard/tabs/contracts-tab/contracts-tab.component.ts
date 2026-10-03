@@ -107,6 +107,43 @@ export class ContractsTabComponent implements OnInit {
     });
   }
 
+  getCustomerDisplayName(contract: ContractDocument): string {
+    if (contract.customerName && contract.customerName.trim()) {
+      return contract.customerName;
+    }
+    if (contract.details?.isCompany && contract.details?.companyName) {
+      return contract.details.companyName;
+    }
+    if (contract.customerId && this.availableCustomers && this.availableCustomers.length > 0) {
+      const cust = this.availableCustomers.find(c => c.id === contract.customerId);
+      if (cust) {
+        return `${cust.firstName} ${cust.lastName}`.trim();
+      }
+    }
+    const associatedRental = this.allRentals?.find(r => r.id === contract.rentalId);
+    if (associatedRental?.customerName) {
+      return associatedRental.customerName;
+    }
+    return contract.customerName || 'Cliente non specificato';
+  }
+
+  getVehicleDisplayName(contract: ContractDocument): string {
+    if (contract.vehiclePlate && contract.vehiclePlate.trim()) {
+      return contract.vehiclePlate;
+    }
+    if (contract.vehicleId && this.availableVehicles && this.availableVehicles.length > 0) {
+      const veh = this.availableVehicles.find(v => v.id === contract.vehicleId);
+      if (veh) {
+        return `${veh.brand} ${veh.model} (${veh.plate})`;
+      }
+    }
+    const associatedRental = this.allRentals?.find(r => r.id === contract.rentalId);
+    if (associatedRental?.vehiclePlate) {
+      return associatedRental.vehiclePlate;
+    }
+    return contract.vehiclePlate || 'Veicolo non specificato';
+  }
+
   getFilteredContracts(contracts: ContractDocument[] | null): ContractDocument[] {
     if (!contracts) return [];
     
@@ -115,9 +152,9 @@ export class ContractsTabComponent implements OnInit {
     const search = this.searchTerm.toLowerCase().trim();
     if (search) {
       result = result.filter(c => 
-        c.contractNumber.toLowerCase().includes(search) ||
-        c.customerName.toLowerCase().includes(search) ||
-        (c.vehiclePlate && c.vehiclePlate.toLowerCase().includes(search))
+        (c.contractNumber || '').toLowerCase().includes(search) ||
+        this.getCustomerDisplayName(c).toLowerCase().includes(search) ||
+        this.getVehicleDisplayName(c).toLowerCase().includes(search)
       );
     }
 
@@ -153,7 +190,7 @@ export class ContractsTabComponent implements OnInit {
           comparison = (a.contractNumber || '').localeCompare(b.contractNumber || '');
         }
       } else if (this.sortField === 'customerName') {
-        comparison = a.customerName.localeCompare(b.customerName);
+        comparison = this.getCustomerDisplayName(a).localeCompare(this.getCustomerDisplayName(b));
       }
 
       return this.sortDirection === 'desc' ? -comparison : comparison;
