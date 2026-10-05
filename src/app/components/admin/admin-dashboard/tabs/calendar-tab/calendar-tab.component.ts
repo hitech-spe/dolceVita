@@ -97,6 +97,9 @@ export class CalendarTabComponent implements OnInit {
   private dateSubject = new BehaviorSubject<Date>(new Date());
 
   ngOnInit() {
+    // Risveglia preventivamente il microservizio Render all'ingresso dell'operatore nel calendario
+    this.warmupService.pingBackend();
+
     this.generateMonthOptions();
     this.startDate = new Date();
     this.startDate.setDate(this.startDate.getDate() - 3);
@@ -987,6 +990,7 @@ export class CalendarTabComponent implements OnInit {
 
   async saveAndStipulateContract() {
     try {
+      this.warmupService.pingBackend();
       this.loadingService.show();
       const saved = await this.saveRentalSilent();
       this.loadingService.hide();

@@ -19,6 +19,20 @@ export class WarmupService {
 
   private keepAliveSub?: Subscription;
 
+  constructor() {
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          const last = this.lastPingTimestamp();
+          // Se la scheda torna visibile e sono trascorsi più di 4 minuti dall'ultimo ping, risveglia anticipatamente
+          if (!last || (Date.now() - last.getTime() > 4 * 60 * 1000)) {
+            this.pingBackend();
+          }
+        }
+      });
+    }
+  }
+
   /**
    * Pings the backend once to trigger its boot sequence if sleeping.
    * Tolerates 401/403 or any HTTP response, as any network hit wakes up Render.

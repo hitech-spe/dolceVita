@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Observable, tap } from 'rxjs';
 import { RentalService, ContractDocument, Customer, Vehicle, Rental, Company } from '../../../../../services/rental.service';
 import { LoadingService } from '../../../../../services/loading.service';
+import { WarmupService } from '../../../../../services/warmup.service';
 import { Timestamp } from '@angular/fire/firestore';
 import { API_CONFIG } from '../../../../../config/api.config';
 import { CustomerSelectComponent } from "../../../../../shared/customer-select/customer-select.component";
@@ -19,6 +20,7 @@ import { VehicleSelectComponent } from "../../../../../shared/vehicle-select/veh
 export class ContractsTabComponent implements OnInit {
   private rentalService = inject(RentalService);
   private loadingService = inject(LoadingService);
+  private warmupService = inject(WarmupService);
 
   contracts$!: Observable<ContractDocument[]>;
   allContracts: ContractDocument[] = [];
@@ -72,6 +74,7 @@ export class ContractsTabComponent implements OnInit {
   isSendingBulk = false;
 
   ngOnInit() {
+    this.warmupService.pingBackend();
     this.loadingService.show();
     this.contracts$ = this.rentalService.getContracts().pipe(
       tap({

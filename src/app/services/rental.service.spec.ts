@@ -32,7 +32,7 @@ describe('RentalService (Backend Contract Endpoints)', () => {
   });
 
   it('should call backend to get the next contract number', () => {
-    service.getNextContractNumber().subscribe(nextNum => {
+    service.getNextContractNumberFromBackend().subscribe(nextNum => {
       expect(nextNum).toBe(1815);
     });
 

@@ -906,38 +906,40 @@ export class RentalService {
   }
 
   getNextContractNumber(): Observable<number> {
+    // Calcolo istantaneo (0-15ms) da cache e listener realtime Firestore:
+    // Nessuna dipendenza dalla latenza di rete o sleep del server all'apertura del modale
+    const counterRef = collection(this.firestore, 'counters');
+    const contractsRef = collection(this.firestore, 'contracts');
+    const q = query(contractsRef, orderBy('date', 'desc'), limit(10));
+
+    return combineLatest([
+      collectionData(counterRef, { idField: 'id' }) as Observable<any[]>,
+      collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>
+    ]).pipe(
+      map(([counters, contracts]) => {
+        const contractCounter = counters?.find(c => c.id === 'contracts');
+        const maxFromCounter = contractCounter?.lastContractNumber ? Number(contractCounter.lastContractNumber) : 730;
+
+        let maxFromContracts = 730;
+        if (contracts && contracts.length > 0) {
+          const nums = contracts
+            .map(c => parseInt(c.contractNumber, 10))
+            .filter(n => !isNaN(n));
+          if (nums.length > 0) {
+            maxFromContracts = Math.max(...nums);
+          }
+        }
+
+        const max = Math.max(maxFromCounter, maxFromContracts);
+        return max + 1;
+      })
+    );
+  }
+
+  getNextContractNumberFromBackend(): Observable<number> {
     const url = `${API_CONFIG.baseUrl}/api/v1/contracts/next-number`;
     return this.http.get<{ nextContractNumber: number }>(url).pipe(
-      map(res => Number(res.nextContractNumber)),
-      catchError(() => {
-        // Fallback locale su Firestore se il backend non è raggiungibile o in assenza di rete
-        const counterRef = collection(this.firestore, 'counters');
-        const contractsRef = collection(this.firestore, 'contracts');
-        const q = query(contractsRef, orderBy('date', 'desc'), limit(10));
-
-        return combineLatest([
-          collectionData(counterRef, { idField: 'id' }) as Observable<any[]>,
-          collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>
-        ]).pipe(
-          map(([counters, contracts]) => {
-            const contractCounter = counters?.find(c => c.id === 'contracts');
-            const maxFromCounter = contractCounter?.lastContractNumber ? Number(contractCounter.lastContractNumber) : 730;
-
-            let maxFromContracts = 730;
-            if (contracts && contracts.length > 0) {
-              const nums = contracts
-                .map(c => parseInt(c.contractNumber, 10))
-                .filter(n => !isNaN(n));
-              if (nums.length > 0) {
-                maxFromContracts = Math.max(...nums);
-              }
-            }
-
-            const max = Math.max(maxFromCounter, maxFromContracts);
-            return max + 1;
-          })
-        );
-      })
+      map(res => Number(res.nextContractNumber))
     );
   }
 
