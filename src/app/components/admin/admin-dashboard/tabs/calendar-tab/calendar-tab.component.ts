@@ -1,7 +1,7 @@
 import { Component, Input, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Observable, combineLatest, map, switchMap, BehaviorSubject, tap, take } from 'rxjs';
+import { Observable, combineLatest, map, switchMap, BehaviorSubject, tap, take, catchError, of } from 'rxjs';
 import { Rental, RentalService, Vehicle, Customer, TemporaryTransfer, MaintenancePeriod, Maintenance, ContractDocument, ContractDetails, Company } from "../../../../../services/rental.service";
 import { LoadingService } from '../../../../../services/loading.service';
 import { WarmupService } from '../../../../../services/warmup.service';
@@ -59,6 +59,7 @@ export class CalendarTabComponent implements OnInit {
   manualEndDate: string = '';
   isEditMode = false;
   editingRentalId?: string;
+  isSavingRental = false;
 
   // Form data
   newRental: any = { location: 'Mottola', returnLocation: 'Mottola', status: 'Prenotato', isServiceRental: false };
@@ -917,8 +918,18 @@ export class CalendarTabComponent implements OnInit {
   // --- SALVATAGGIO DATI ---
 
   async saveRentalSilent(): Promise<Rental | null> {
-    if (!this.newRental.vehicleId || !this.newRental.startDate) return null;
-    if (!this.isQuickCustomer && !this.newRental.customerId) return null;
+    if (!this.newRental.vehicleId) {
+      alert('Attenzione: Seleziona un veicolo prima di proseguire.');
+      return null;
+    }
+    if (!this.newRental.startDate) {
+      alert('Attenzione: Inserisci la data di inizio del noleggio.');
+      return null;
+    }
+    if (!this.isQuickCustomer && !this.newRental.customerId) {
+      alert('Attenzione: Seleziona un cliente esistente oppure spunta "Nuovo Cliente (Registrazione Rapida)".');
+      return null;
+    }
     if (this.isQuickCustomer && (!this.quickCustomer.firstName || !this.quickCustomer.lastName)) {
       alert('Inserisci Nome e Cognome per il nuovo cliente.');
       return null;
@@ -930,14 +941,19 @@ export class CalendarTabComponent implements OnInit {
 
       if (this.isQuickCustomer) {
         // Creazione rapida del cliente
-        const customerRef = await this.rentalService.addCustomer({
-          firstName: this.quickCustomer.firstName,
-          lastName: this.quickCustomer.lastName,
-          phone: this.quickCustomer.phone || '',
-          address: this.quickCustomer.address || ''
-        });
+        const customerData: Customer = {
+          firstName: (this.quickCustomer.firstName || '').trim(),
+          lastName: (this.quickCustomer.lastName || '').trim(),
+          phone: (this.quickCustomer.phone || '').trim(),
+          address: (this.quickCustomer.address || '').trim()
+        };
+        const customerRef = await this.rentalService.addCustomer(customerData);
         customerId = customerRef.id;
-        customerName = `${this.quickCustomer.firstName} ${this.quickCustomer.lastName}`;
+        customerName = `${customerData.firstName} ${customerData.lastName}`;
+
+        // Inserisci immediatamente il nuovo cliente nella lista locale in cache
+        const newCustomerObj: Customer = { ...customerData, id: customerId };
+        this.availableCustomers = [newCustomerObj, ...this.availableCustomers.filter(c => c.id !== customerId)];
       } else {
         const selectedCustomer = this.availableCustomers.find(c => c.id === customerId);
         customerName = selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : (this.newRental.customerName || 'Cliente non trovato');
@@ -945,16 +961,36 @@ export class CalendarTabComponent implements OnInit {
 
       const selectedCar = this.availableVehicles.find(v => v.id === this.newRental.vehicleId);
 
+      const parseDateToTimestamp = (val: any): Timestamp => {
+        if (!val) return Timestamp.now();
+        if (val instanceof Timestamp) return val;
+        if (typeof val.toDate === 'function') return Timestamp.fromDate(val.toDate());
+        if (val instanceof Date) return Timestamp.fromDate(val);
+        if (typeof val === 'string') {
+          const d = new Date(val);
+          if (!isNaN(d.getTime())) return Timestamp.fromDate(d);
+        }
+        return Timestamp.now();
+      };
+
+      const startTimestamp = parseDateToTimestamp(this.newRental.startDate);
+      const endTimestamp = parseDateToTimestamp(this.newRental.endDate || this.newRental.startDate);
+
       const rentalToSave: Rental = {
-        ...this.newRental,
+        vehicleId: this.newRental.vehicleId,
         customerId: customerId,
+        location: this.newRental.location || 'Mottola',
+        returnLocation: this.newRental.returnLocation || this.newRental.location || 'Mottola',
+        status: 'Prenotato',
         isServiceRental: !!this.newRental.isServiceRental,
         startPeriod: this.newRental.startPeriod || 'Mat',
         endPeriod: this.newRental.endPeriod || 'Mat',
         customerName: customerName,
+        customerPhone: this.newRental.customerPhone || '',
         vehiclePlate: selectedCar ? `${selectedCar.brand} ${selectedCar.model} (${selectedCar.plate})` : (this.newRental.vehiclePlate || 'Veicolo non trovato'),
-        startDate: Timestamp.fromDate(new Date(this.newRental.startDate)),
-        endDate: this.newRental.endDate ? Timestamp.fromDate(new Date(this.newRental.endDate)) : Timestamp.now()
+        startDate: startTimestamp,
+        endDate: endTimestamp,
+        notes: this.newRental.notes || ''
       };
 
       rentalToSave.status = this.rentalService.calculateStatus(rentalToSave);
@@ -968,37 +1004,48 @@ export class CalendarTabComponent implements OnInit {
         savedRental = { ...rentalToSave, id: docRef.id };
       }
       return savedRental;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Errore noleggio:', error);
-      alert('Si è verificato un errore durante il salvataggio del noleggio.');
+      const msg = error?.message || 'Si è verificato un errore durante il salvataggio del noleggio.';
+      alert(`Errore: ${msg}`);
       return null;
     }
   }
 
   async saveRental() {
+    if (this.isSavingRental) return;
     try {
+      this.isSavingRental = true;
       this.loadingService.show();
       const saved = await this.saveRentalSilent();
-      this.loadingService.hide();
       if (saved) {
         this.closeModals();
       }
     } catch (error) {
+      console.error('Errore salvataggio noleggio:', error);
+    } finally {
+      this.isSavingRental = false;
       this.loadingService.hide();
     }
   }
 
   async saveAndStipulateContract() {
+    if (this.isSavingRental) return;
     try {
+      this.isSavingRental = true;
       this.warmupService.pingBackend();
       this.loadingService.show();
       const saved = await this.saveRentalSilent();
-      this.loadingService.hide();
       if (saved) {
         this.isRentalModalOpen = false;
         this.openContractModal(saved);
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Errore durante salva e stipula contratto:', error);
+      const errMsg = error?.message || 'Si è verificato un errore imprevisto durante il salvataggio o la stipula del contratto.';
+      alert(`Attenzione: ${errMsg}`);
+    } finally {
+      this.isSavingRental = false;
       this.loadingService.hide();
     }
   }
@@ -1184,6 +1231,40 @@ export class CalendarTabComponent implements OnInit {
     }
   }
 
+  private formatDateForInput(val: any): string {
+    if (!val) return '';
+    try {
+      if (typeof val === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+        if (val.includes('T')) return val.split('T')[0];
+        if (val.includes('/')) {
+          const parts = val.split('/');
+          if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        return '';
+      }
+      if (typeof val.toDate === 'function') {
+        const d = val.toDate();
+        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        return '';
+      }
+      if (val instanceof Date) {
+        if (!isNaN(val.getTime())) return val.toISOString().split('T')[0];
+        return '';
+      }
+      if (typeof val.seconds === 'number') {
+        const d = new Date(val.seconds * 1000);
+        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        return '';
+      }
+    } catch (e) {
+      console.warn('Errore parsing data per input:', e);
+    }
+    return '';
+  }
+
   // --- CONTROLLER CONTRATTI (PDF) ---
 
   openContractModal(rental: Rental) {
@@ -1194,6 +1275,16 @@ export class CalendarTabComponent implements OnInit {
     this.contractRental = rental;
     this.contractVehicle = this.availableVehicles.find(v => v.id === rental.vehicleId);
     this.contractCustomer = this.availableCustomers.find(c => c.id === rental.customerId);
+
+    // Se per qualche motivo il cliente non è ancora in cache (es. appena registrato o sincronizzazione realtime pendente)
+    if (!this.contractCustomer && rental.customerId) {
+      this.contractCustomer = {
+        id: rental.customerId,
+        firstName: rental.customerName ? rental.customerName.split(' ')[0] : 'Cliente',
+        lastName: rental.customerName ? rental.customerName.split(' ').slice(1).join(' ') : ''
+      };
+      this.availableCustomers = [this.contractCustomer, ...this.availableCustomers];
+    }
     
     this.companySearchTerm = '';
     this.isCompanyDropdownOpen = false;
@@ -1232,7 +1323,13 @@ export class CalendarTabComponent implements OnInit {
 
     this.suggestedContractNumber = '';
     // Calculate sequential numeric contract number automatically
-    this.rentalService.getNextContractNumber().pipe(take(1)).subscribe(nextNum => {
+    this.rentalService.getNextContractNumber().pipe(
+      take(1),
+      catchError(err => {
+        console.warn('Impossibile ottenere il prossimo numero contratto da Firestore/Backend:', err);
+        return of(731);
+      })
+    ).subscribe(nextNum => {
       const numStr = String(nextNum);
       this.suggestedContractNumber = numStr;
     });
@@ -1282,10 +1379,10 @@ export class CalendarTabComponent implements OnInit {
     const driver = this.availableCustomers.find(c => c.id === driverId);
     if (driver) {
       this.contractDetails.driverBirthPlace = driver.birthPlace || '';
-      this.contractDetails.driverBirthDate = driver.birthDate && (driver.birthDate as any).toDate ? (driver.birthDate as any).toDate().toISOString().split('T')[0] : '';
+      this.contractDetails.driverBirthDate = this.formatDateForInput(driver.birthDate);
       this.contractDetails.driverLicenseNumber = driver.licenseNumber || '';
-      this.contractDetails.driverLicenseIssueDate = driver.licenseIssueDate && (driver.licenseIssueDate as any).toDate ? (driver.licenseIssueDate as any).toDate().toISOString().split('T')[0] : '';
-      this.contractDetails.driverLicenseExpiry = driver.licenseExpiry && (driver.licenseExpiry as any).toDate ? (driver.licenseExpiry as any).toDate().toISOString().split('T')[0] : '';
+      this.contractDetails.driverLicenseIssueDate = this.formatDateForInput(driver.licenseIssueDate);
+      this.contractDetails.driverLicenseExpiry = this.formatDateForInput(driver.licenseExpiry);
       this.contractDetails.driverLicenseReleasedBy = driver.licenseReleasedBy || '';
       this.contractDetails.driverLicenseCountry = driver.licenseCountry || 'Italia';
     } else {

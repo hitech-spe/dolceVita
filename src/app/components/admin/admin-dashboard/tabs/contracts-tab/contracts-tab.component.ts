@@ -297,15 +297,49 @@ export class ContractsTabComponent implements OnInit {
     }, 250);
   }
 
+  private formatDateForInput(val: any): string {
+    if (!val) return '';
+    try {
+      if (typeof val === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+        if (val.includes('T')) return val.split('T')[0];
+        if (val.includes('/')) {
+          const parts = val.split('/');
+          if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        return '';
+      }
+      if (typeof val.toDate === 'function') {
+        const d = val.toDate();
+        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        return '';
+      }
+      if (val instanceof Date) {
+        if (!isNaN(val.getTime())) return val.toISOString().split('T')[0];
+        return '';
+      }
+      if (typeof val.seconds === 'number') {
+        const d = new Date(val.seconds * 1000);
+        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        return '';
+      }
+    } catch (e) {
+      console.warn('Errore parsing data per input:', e);
+    }
+    return '';
+  }
+
   onEditMainDriverChange() {
     const driverId = this.editedDetails.mainDriverId;
     const driver = this.availableCustomers.find(c => c.id === driverId);
     if (driver) {
       this.editedDetails.driverBirthPlace = driver.birthPlace || '';
-      this.editedDetails.driverBirthDate = driver.birthDate && (driver.birthDate as any).toDate ? (driver.birthDate as any).toDate().toISOString().split('T')[0] : '';
+      this.editedDetails.driverBirthDate = this.formatDateForInput(driver.birthDate);
       this.editedDetails.driverLicenseNumber = driver.licenseNumber || '';
-      this.editedDetails.driverLicenseIssueDate = driver.licenseIssueDate && (driver.licenseIssueDate as any).toDate ? (driver.licenseIssueDate as any).toDate().toISOString().split('T')[0] : '';
-      this.editedDetails.driverLicenseExpiry = driver.licenseExpiry && (driver.licenseExpiry as any).toDate ? (driver.licenseExpiry as any).toDate().toISOString().split('T')[0] : '';
+      this.editedDetails.driverLicenseIssueDate = this.formatDateForInput(driver.licenseIssueDate);
+      this.editedDetails.driverLicenseExpiry = this.formatDateForInput(driver.licenseExpiry);
       this.editedDetails.driverLicenseReleasedBy = driver.licenseReleasedBy || '';
       this.editedDetails.driverLicenseCountry = driver.licenseCountry || 'Italia';
     } else {
@@ -609,10 +643,10 @@ export class ContractsTabComponent implements OnInit {
     const driver = this.availableCustomers.find(c => c.id === driverId);
     if (driver) {
       this.rifDetails.driverBirthPlace = driver.birthPlace || '';
-      this.rifDetails.driverBirthDate = driver.birthDate && (driver.birthDate as any).toDate ? (driver.birthDate as any).toDate().toISOString().split('T')[0] : '';
+      this.rifDetails.driverBirthDate = this.formatDateForInput(driver.birthDate);
       this.rifDetails.driverLicenseNumber = driver.licenseNumber || '';
-      this.rifDetails.driverLicenseIssueDate = driver.licenseIssueDate && (driver.licenseIssueDate as any).toDate ? (driver.licenseIssueDate as any).toDate().toISOString().split('T')[0] : '';
-      this.rifDetails.driverLicenseExpiry = driver.licenseExpiry && (driver.licenseExpiry as any).toDate ? (driver.licenseExpiry as any).toDate().toISOString().split('T')[0] : '';
+      this.rifDetails.driverLicenseIssueDate = this.formatDateForInput(driver.licenseIssueDate);
+      this.rifDetails.driverLicenseExpiry = this.formatDateForInput(driver.licenseExpiry);
       this.rifDetails.driverLicenseReleasedBy = driver.licenseReleasedBy || '';
       this.rifDetails.driverLicenseCountry = driver.licenseCountry || 'Italia';
     }

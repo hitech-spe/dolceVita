@@ -23,6 +23,10 @@ describe('CalendarTabComponent', () => {
       getTemporaryTransfers: () => of([]),
       getRentals: () => of([]),
       getNextContractNumber: jasmine.createSpy('getNextContractNumber').and.returnValue(of(731)),
+      createRental: jasmine.createSpy('createRental').and.returnValue(Promise.resolve({ id: 'new-rent-id' })),
+      updateRental: jasmine.createSpy('updateRental').and.returnValue(Promise.resolve()),
+      addCustomer: jasmine.createSpy('addCustomer').and.returnValue(Promise.resolve({ id: 'quick-cust-id' })),
+      calculateStatus: jasmine.createSpy('calculateStatus').and.returnValue('Prenotato'),
       createContract: jasmine.createSpy('createContract').and.returnValue(Promise.resolve({ contractNumber: '731', id: '731' })),
       downloadContractPdf: jasmine.createSpy('downloadContractPdf').and.returnValue(of(new Blob())),
       stipulateContractOnBackend: jasmine.createSpy('stipulateContractOnBackend').and.returnValue(of({ pdfBlob: new Blob(), contractNumber: '732' })),
@@ -191,6 +195,54 @@ describe('CalendarTabComponent', () => {
       const dummyRental: any = { id: 'rent-99', vehicleId: 'v1', customerId: 'c1' };
       component.openContractModal(dummyRental);
       expect(mockWarmupService.pingBackend).toHaveBeenCalled();
+      expect(component.isContractModalOpen).toBeTrue();
+    });
+
+    it('should alert and return null if vehicleId is missing when calling saveRentalSilent', async () => {
+      component.newRental = { vehicleId: '', startDate: '2026-10-06', customerId: 'c1' };
+
+      const result = await component.saveRentalSilent();
+      expect(result).toBeNull();
+      expect(window.alert).toHaveBeenCalledWith(jasmine.stringMatching(/Seleziona un veicolo/));
+    });
+
+    it('should alert and return null if customerId is missing when calling saveRentalSilent without quickCustomer', async () => {
+      component.newRental = { vehicleId: 'v1', startDate: '2026-10-06', customerId: '' };
+      component.isQuickCustomer = false;
+
+      const result = await component.saveRentalSilent();
+      expect(result).toBeNull();
+      expect(window.alert).toHaveBeenCalledWith(jasmine.stringMatching(/Seleziona un cliente esistente/));
+    });
+
+    it('should save rental and open contract modal in saveAndStipulateContract', async () => {
+      component.newRental = { vehicleId: 'v1', startDate: '2026-10-06', customerId: 'c1', location: 'Mottola' };
+      component.availableCustomers = [{ id: 'c1', firstName: 'Mario', lastName: 'Rossi' }];
+      component.availableVehicles = [{ id: 'v1', brand: 'Fiat', model: 'Panda', plate: 'AA111BB' } as any];
+      component.isRentalModalOpen = true;
+
+      spyOn(component, 'openContractModal').and.callThrough();
+
+      await component.saveAndStipulateContract();
+
+      expect(mockRentalService.createRental).toHaveBeenCalled();
+      expect(component.openContractModal).toHaveBeenCalled();
+      expect(component.isContractModalOpen).toBeTrue();
+      expect(component.isRentalModalOpen).toBeFalse();
+    });
+
+    it('should handle quickCustomer creation and immediately populate availableCustomers for the contract modal', async () => {
+      component.newRental = { vehicleId: 'v1', startDate: '2026-10-06', location: 'Mottola' };
+      component.isQuickCustomer = true;
+      component.quickCustomer = { firstName: 'Giuseppe', lastName: 'Verdi', phone: '1234567890', address: 'Via Roma 1' };
+      component.availableCustomers = [];
+      component.availableVehicles = [{ id: 'v1', brand: 'Fiat', model: 'Panda', plate: 'AA111BB' } as any];
+
+      await component.saveAndStipulateContract();
+
+      expect(mockRentalService.addCustomer).toHaveBeenCalledWith(jasmine.objectContaining({ firstName: 'Giuseppe', lastName: 'Verdi' }));
+      expect(component.availableCustomers.length).toBeGreaterThan(0);
+      expect(component.contractCustomer?.firstName).toBe('Giuseppe');
       expect(component.isContractModalOpen).toBeTrue();
     });
   });

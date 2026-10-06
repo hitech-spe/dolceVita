@@ -17,9 +17,10 @@ import {
   getDocs,
   writeBatch,
   limit,
-  runTransaction
+  runTransaction,
+  docData
 } from '@angular/fire/firestore';
-import { Observable, map, shareReplay, combineLatest, firstValueFrom, catchError, of } from 'rxjs';
+import { Observable, map, shareReplay, combineLatest, firstValueFrom, catchError, of, timeout } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { API_CONFIG } from '../config/api.config';
 
@@ -310,8 +311,9 @@ export class RentalService {
 
   /** Modifica un'auto (es. cambio stato in Manutenzione) */
   async updateVehicle(id: string, data: Partial<Vehicle>) {
+    if (!id) return;
     const docRef = doc(this.firestore, `vehicles/${id}`);
-    return updateDoc(docRef, data);
+    return updateDoc(docRef, this.cleanUndefined(data));
   }
 
   /** Aggiunge un veicolo con dettagli opzionali (assicurazione, revisione, manutenzione) in un batch */
@@ -477,12 +479,12 @@ export class RentalService {
   /** Registra un nuovo noleggio */
   async createRental(rental: Rental) {
     const rentalsRef = collection(this.firestore, 'rentals');
-    const docRef = await addDoc(rentalsRef, { ...rental, createdAt: Timestamp.now() });
+    const docRef = await addDoc(rentalsRef, this.cleanUndefined({ ...rental, createdAt: Timestamp.now() }));
     
     // Aggiorna sempre la sede del veicolo con la sede di rientro (o la sede del noleggio se non specificata)
     // per riflettere lo spostamento automatico del veicolo.
     const targetLocation = rental.returnLocation || rental.location;
-    if (targetLocation) {
+    if (targetLocation && rental.vehicleId) {
       await this.updateVehicle(rental.vehicleId, { location: targetLocation });
     }
     
@@ -492,7 +494,7 @@ export class RentalService {
   /** Modifica un noleggio (es. se il cliente allunga i giorni o annulla) */
   async updateRental(id: string, data: Partial<Rental>) {
     const docRef = doc(this.firestore, `rentals/${id}`);
-    await updateDoc(docRef, data);
+    await updateDoc(docRef, this.cleanUndefined(data));
     
     const targetLocation = data.returnLocation || data.location;
     if (targetLocation && data.vehicleId) {
@@ -906,33 +908,39 @@ export class RentalService {
   }
 
   getNextContractNumber(): Observable<number> {
-    // Calcolo istantaneo (0-15ms) da cache e listener realtime Firestore:
-    // Nessuna dipendenza dalla latenza di rete o sleep del server all'apertura del modale
-    const counterRef = collection(this.firestore, 'counters');
-    const contractsRef = collection(this.firestore, 'contracts');
-    const q = query(contractsRef, orderBy('date', 'desc'), limit(10));
+    // 1. Tenta prima la chiamata rapida al backend (Render) con timeout di 2.5s
+    return this.getNextContractNumberFromBackend().pipe(
+      timeout(2500),
+      catchError(() => {
+        // 2. Fallback locale istantaneo su Firestore se il backend non risponde in tempo o è offline
+        const counterDocRef = doc(this.firestore, 'counters/contracts');
+        const contractsRef = collection(this.firestore, 'contracts');
+        const q = query(contractsRef, orderBy('date', 'desc'), limit(10));
 
-    return combineLatest([
-      collectionData(counterRef, { idField: 'id' }) as Observable<any[]>,
-      collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>
-    ]).pipe(
-      map(([counters, contracts]) => {
-        const contractCounter = counters?.find(c => c.id === 'contracts');
-        const maxFromCounter = contractCounter?.lastContractNumber ? Number(contractCounter.lastContractNumber) : 730;
+        return combineLatest([
+          docData(counterDocRef).pipe(catchError(() => of(null))),
+          (collectionData(q, { idField: 'id' }) as Observable<ContractDocument[]>).pipe(catchError(() => of([])))
+        ]).pipe(
+          map(([counterDoc, contracts]) => {
+            const maxFromCounter = (counterDoc as any)?.lastContractNumber ? Number((counterDoc as any).lastContractNumber) : 730;
 
-        let maxFromContracts = 730;
-        if (contracts && contracts.length > 0) {
-          const nums = contracts
-            .map(c => parseInt(c.contractNumber, 10))
-            .filter(n => !isNaN(n));
-          if (nums.length > 0) {
-            maxFromContracts = Math.max(...nums);
-          }
-        }
+            let maxFromContracts = 730;
+            if (contracts && contracts.length > 0) {
+              const nums = contracts
+                .map(c => parseInt(c.contractNumber, 10))
+                .filter(n => !isNaN(n));
+              if (nums.length > 0) {
+                maxFromContracts = Math.max(...nums);
+              }
+            }
 
-        const max = Math.max(maxFromCounter, maxFromContracts);
-        return max + 1;
-      })
+            const max = Math.max(maxFromCounter, maxFromContracts);
+            return max + 1;
+          }),
+          catchError(() => of(731))
+        );
+      }),
+      catchError(() => of(731))
     );
   }
 

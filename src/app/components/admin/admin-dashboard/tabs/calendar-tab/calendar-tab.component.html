@@ -316,12 +316,22 @@
                 <i class="fa-regular fa-trash-can"></i> Elimina Noleggio
               </button>
             } @else {
-              <button type="button" class="btn-accent" (click)="saveAndStipulateContract()" style="margin-right: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
-                <i class="fa-solid fa-file-pdf"></i> Salva e Stipula Contratto (PDF)
+              <button type="button" class="btn-accent" (click)="saveAndStipulateContract()" [disabled]="isSavingRental" style="margin-right: auto; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                @if (isSavingRental) {
+                  <i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...
+                } @else {
+                  <i class="fa-solid fa-file-pdf"></i> Salva e Stipula Contratto (PDF)
+                }
               </button>
             }
-            <button type="button" class="btn-utility" (click)="closeModals()">Annulla</button>
-            <button type="submit" class="btn-primary">Salva Noleggio</button>
+            <button type="button" class="btn-utility" (click)="closeModals()" [disabled]="isSavingRental">Annulla</button>
+            <button type="submit" class="btn-primary" [disabled]="isSavingRental">
+              @if (isSavingRental) {
+                <i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...
+              } @else {
+                Salva Noleggio
+              }
+            </button>
           </div>
         </form>
       </div>
