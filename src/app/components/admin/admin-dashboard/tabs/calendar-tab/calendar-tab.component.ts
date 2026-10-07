@@ -822,6 +822,7 @@ export class CalendarTabComponent implements OnInit {
   // --- AZIONI MODALI ---
 
   openRentalModal(rental?: Rental) {
+    this.warmupService.pingBackend();
     this.isQuickCustomer = false;
     this.quickCustomer = { firstName: '', lastName: '', phone: '', address: '' };
     if (rental) {

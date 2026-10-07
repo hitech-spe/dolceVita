@@ -578,6 +578,7 @@ export class ContractsTabComponent implements OnInit {
 
   // --- METODI CONTRATTO DI RIFERIMENTO (RIF) ---
   openReferenceModal(contract: ContractDocument) {
+    this.warmupService.pingBackend();
     this.sourceContractForReference = contract;
 
     const baseNumber = (contract.contractNumber || '').replace(/^RIF\s*/i, '').trim();
