@@ -1288,7 +1288,9 @@ export class RentalService {
     const timestamp = new Date().getTime();
     const encodedNumber = encodeURIComponent((contractNumber || '').trim());
     const url = `${API_CONFIG.baseUrl}/api/v1/contracts/${encodedNumber}/pdf?t=${timestamp}${force ? '&force=true' : ''}`;
-    return this.http.get(url, { responseType: 'blob' });
+    return this.http.get(url, { responseType: 'blob' }).pipe(
+      timeout(45000)
+    );
   }
 
   /**
@@ -1305,6 +1307,7 @@ export class RentalService {
       responseType: 'blob',
       observe: 'response'
     }).pipe(
+      timeout(45000),
       map(response => {
         const contractNumber = response.headers.get('X-Contract-Number') || (payload && payload.contractNumber) || '';
         const rawBlob = response.body as Blob;

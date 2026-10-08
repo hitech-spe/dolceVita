@@ -997,11 +997,17 @@ export class CalendarTabComponent implements OnInit {
       rentalToSave.status = this.rentalService.calculateStatus(rentalToSave);
 
       let savedRental: Rental;
+      const timeoutPromise = <T>(p: Promise<T>, ms: number = 8000): Promise<T> =>
+        Promise.race([
+          p,
+          new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Timeout durante il salvataggio Firestore. Verifica la connessione o ricarica la pagina.')), ms))
+        ]);
+
       if (this.isEditMode && this.editingRentalId) {
-        await this.rentalService.updateRental(this.editingRentalId, rentalToSave);
+        await timeoutPromise(this.rentalService.updateRental(this.editingRentalId, rentalToSave));
         savedRental = { ...rentalToSave, id: this.editingRentalId };
       } else {
-        const docRef = await this.rentalService.createRental(rentalToSave);
+        const docRef = await timeoutPromise(this.rentalService.createRental(rentalToSave));
         savedRental = { ...rentalToSave, id: docRef.id };
       }
       return savedRental;
@@ -1032,18 +1038,107 @@ export class CalendarTabComponent implements OnInit {
 
   async saveAndStipulateContract() {
     if (this.isSavingRental) return;
+
+    // 1. Validazione preventiva immediata (senza spinner bloccante)
+    if (!this.newRental.vehicleId) {
+      alert('Attenzione: Seleziona un veicolo prima di proseguire.');
+      return;
+    }
+    if (!this.newRental.startDate) {
+      alert('Attenzione: Inserisci la data di inizio del noleggio.');
+      return;
+    }
+    if (!this.isQuickCustomer && !this.newRental.customerId) {
+      alert('Attenzione: Seleziona un cliente esistente oppure spunta "Nuovo Cliente (Registrazione Rapida)".');
+      return;
+    }
+    if (this.isQuickCustomer && (!this.quickCustomer.firstName || !this.quickCustomer.lastName)) {
+      alert('Inserisci Nome e Cognome per il nuovo cliente.');
+      return;
+    }
+
     try {
       this.isSavingRental = true;
       this.warmupService.pingBackend();
-      this.loadingService.show();
-      const saved = await this.saveRentalSilent();
-      if (saved) {
-        this.isRentalModalOpen = false;
-        this.openContractModal(saved);
+
+      let customerId = this.newRental.customerId;
+      let customerName = '';
+
+      if (this.isQuickCustomer) {
+        this.loadingService.show();
+        const customerData: Customer = {
+          firstName: (this.quickCustomer.firstName || '').trim(),
+          lastName: (this.quickCustomer.lastName || '').trim(),
+          phone: (this.quickCustomer.phone || '').trim(),
+          address: (this.quickCustomer.address || '').trim()
+        };
+        const customerRef = await Promise.race([
+          this.rentalService.addCustomer(customerData),
+          new Promise<any>((_, reject) => setTimeout(() => reject(new Error('Timeout durante la registrazione rapida cliente.')), 5000))
+        ]);
+        customerId = customerRef.id;
+        customerName = `${customerData.firstName} ${customerData.lastName}`;
+
+        const newCustomerObj: Customer = { ...customerData, id: customerId };
+        this.availableCustomers = [newCustomerObj, ...this.availableCustomers.filter(c => c.id !== customerId)];
+        this.loadingService.hide();
+      } else {
+        const selectedCustomer = this.availableCustomers.find(c => c.id === customerId);
+        customerName = selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : (this.newRental.customerName || 'Cliente non trovato');
       }
+
+      const selectedCar = this.availableVehicles.find(v => v.id === this.newRental.vehicleId);
+
+      const parseDateToTimestamp = (val: any): Timestamp => {
+        if (!val) return Timestamp.now();
+        if (val instanceof Timestamp) return val;
+        if (typeof val.toDate === 'function') return Timestamp.fromDate(val.toDate());
+        if (val instanceof Date) return Timestamp.fromDate(val);
+        if (typeof val === 'string') {
+          const d = new Date(val);
+          if (!isNaN(d.getTime())) return Timestamp.fromDate(d);
+        }
+        return Timestamp.now();
+      };
+
+      const startTimestamp = parseDateToTimestamp(this.newRental.startDate);
+      const endTimestamp = parseDateToTimestamp(this.newRental.endDate || this.newRental.startDate);
+
+      const rentalToStipulate: Rental = {
+        id: this.isEditMode ? (this.editingRentalId || '') : '',
+        vehicleId: this.newRental.vehicleId,
+        customerId: customerId,
+        location: this.newRental.location || 'Mottola',
+        returnLocation: this.newRental.returnLocation || this.newRental.location || 'Mottola',
+        status: 'Prenotato',
+        isServiceRental: !!this.newRental.isServiceRental,
+        startPeriod: this.newRental.startPeriod || 'Mat',
+        endPeriod: this.newRental.endPeriod || 'Mat',
+        customerName: customerName,
+        customerPhone: this.newRental.customerPhone || '',
+        vehiclePlate: selectedCar ? `${selectedCar.brand} ${selectedCar.model} (${selectedCar.plate})` : (this.newRental.vehiclePlate || 'Veicolo non trovato'),
+        startDate: startTimestamp,
+        endDate: endTimestamp,
+        notes: this.newRental.notes || ''
+      };
+
+      rentalToStipulate.status = this.rentalService.calculateStatus(rentalToStipulate);
+
+      // Se eravamo in edit mode su un noleggio esistente, salviamo le modifiche apportate
+      if (this.isEditMode && this.editingRentalId) {
+        await Promise.race([
+          this.rentalService.updateRental(this.editingRentalId, rentalToStipulate),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout salvataggio modifiche noleggio.')), 5000))
+        ]).catch(err => console.warn('Aggiornamento noleggio offline/differito:', err));
+      }
+
+      // Transizione istantanea (0ms) alla modale contratto SENZA blocchi di rete
+      this.isRentalModalOpen = false;
+      this.openContractModal(rentalToStipulate);
+
     } catch (error: any) {
       console.error('Errore durante salva e stipula contratto:', error);
-      const errMsg = error?.message || 'Si è verificato un errore imprevisto durante il salvataggio o la stipula del contratto.';
+      const errMsg = error?.message || 'Si è verificato un errore imprevisto durante la preparazione della stipula.';
       alert(`Attenzione: ${errMsg}`);
     } finally {
       this.isSavingRental = false;
@@ -1482,8 +1577,31 @@ export class CalendarTabComponent implements OnInit {
 
       const vehiclePlate = `${this.contractVehicle.brand} ${this.contractVehicle.model} (${this.contractVehicle.plate})`;
 
+      // Se il noleggio è nuovo e non ha ancora un ID Firestore salvato, inviamo rentalData per la creazione atomica sul BE
+      const rentalData = (!this.contractRental.id) ? {
+        vehicleId: this.contractRental.vehicleId,
+        customerId: this.contractRental.customerId,
+        location: this.contractRental.location || 'Mottola',
+        returnLocation: this.contractRental.returnLocation || this.contractRental.location || 'Mottola',
+        status: this.contractRental.status || 'Prenotato',
+        isServiceRental: !!this.contractRental.isServiceRental,
+        startPeriod: this.contractRental.startPeriod || 'Mat',
+        endPeriod: this.contractRental.endPeriod || 'Mat',
+        customerName: customerName.trim(),
+        customerPhone: this.contractRental.customerPhone || '',
+        vehiclePlate: vehiclePlate.trim(),
+        startDate: (this.contractRental.startDate && typeof (this.contractRental.startDate as any).toDate === 'function')
+          ? (this.contractRental.startDate as any).toDate().toISOString()
+          : (this.contractRental.startDate instanceof Date ? this.contractRental.startDate.toISOString() : (this.contractRental.startDate || '')),
+        endDate: (this.contractRental.endDate && typeof (this.contractRental.endDate as any).toDate === 'function')
+          ? (this.contractRental.endDate as any).toDate().toISOString()
+          : (this.contractRental.endDate instanceof Date ? this.contractRental.endDate.toISOString() : (this.contractRental.endDate || '')),
+        notes: this.contractRental.notes || ''
+      } : null;
+
       const payload = {
         rentalId: this.contractRental.id || '',
+        rentalData,
         customerId: this.contractCustomer.id || '',
         customerName: customerName.trim(),
         vehicleId: this.contractVehicle.id || '',

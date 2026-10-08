@@ -215,7 +215,7 @@ describe('CalendarTabComponent', () => {
       expect(window.alert).toHaveBeenCalledWith(jasmine.stringMatching(/Seleziona un cliente esistente/));
     });
 
-    it('should save rental and open contract modal in saveAndStipulateContract', async () => {
+    it('should prepare rental draft and open contract modal immediately in saveAndStipulateContract', async () => {
       component.newRental = { vehicleId: 'v1', startDate: '2026-10-06', customerId: 'c1', location: 'Mottola' };
       component.availableCustomers = [{ id: 'c1', firstName: 'Mario', lastName: 'Rossi' }];
       component.availableVehicles = [{ id: 'v1', brand: 'Fiat', model: 'Panda', plate: 'AA111BB' } as any];
@@ -225,10 +225,31 @@ describe('CalendarTabComponent', () => {
 
       await component.saveAndStipulateContract();
 
-      expect(mockRentalService.createRental).toHaveBeenCalled();
       expect(component.openContractModal).toHaveBeenCalled();
       expect(component.isContractModalOpen).toBeTrue();
       expect(component.isRentalModalOpen).toBeFalse();
+      expect(component.contractRental?.vehicleId).toBe('v1');
+    });
+
+    it('should send rentalData to backend when contractRental has no id yet', async () => {
+      component.contractRental = { vehicleId: 'v1', customerId: 'c1', startDate: '2026-10-06' } as any;
+      component.contractVehicle = { id: 'v1', brand: 'Fiat', model: 'Panda', plate: 'AA111BB' } as any;
+      component.contractCustomer = { id: 'c1', firstName: 'Mario', lastName: 'Rossi' };
+      component.contractDetails = { contractNumber: '' };
+
+      mockRentalService.stipulateContractOnBackend.and.returnValue(of({
+        pdfBlob: new Blob(),
+        contractNumber: '733'
+      }));
+
+      await component.generateContract();
+
+      expect(mockRentalService.stipulateContractOnBackend).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          rentalId: '',
+          rentalData: jasmine.objectContaining({ vehicleId: 'v1' })
+        })
+      );
     });
 
     it('should handle quickCustomer creation and immediately populate availableCustomers for the contract modal', async () => {
