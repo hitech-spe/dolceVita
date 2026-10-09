@@ -252,7 +252,7 @@ export class CalendarTabComponent implements OnInit {
       const label = d.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
       options.push({
         label: label.charAt(0).toUpperCase() + label.slice(1),
-        value: d.toISOString().split('T')[0]
+        value: this.formatDateForInput(d)
       });
     }
     this.monthOptions = options;
@@ -320,7 +320,7 @@ export class CalendarTabComponent implements OnInit {
       if (status && status.type) {
         this.selectedStatusForAction = status;
         this.selectedDayForAction = this.selectedDay;
-        this.manualEndDate = this.selectedDay.toISOString().split('T')[0];
+        this.manualEndDate = this.formatDateForInput(this.selectedDay);
         this.isConfirmationModalOpen = true;
       } else {
         this.openRentalModal();
@@ -828,8 +828,8 @@ export class CalendarTabComponent implements OnInit {
     if (rental) {
       this.isEditMode = true;
       this.editingRentalId = rental.id;
-      const startDate = rental.startDate && (rental.startDate as any).toDate ? (rental.startDate as any).toDate().toISOString().split('T')[0] : '';
-      const endDate = rental.endDate && (rental.endDate as any).toDate ? (rental.endDate as any).toDate().toISOString().split('T')[0] : '';
+      const startDate = this.formatDateForInput(rental.startDate);
+      const endDate = this.formatDateForInput(rental.endDate);
       this.newRental = { 
         ...rental, 
         startDate, 
@@ -841,7 +841,7 @@ export class CalendarTabComponent implements OnInit {
     } else {
       this.isEditMode = false;
       this.editingRentalId = undefined;
-      const dateStr = this.selectedDay ? this.selectedDay.toISOString().split('T')[0] : '';
+      const dateStr = this.selectedDay ? this.formatDateForInput(this.selectedDay) : '';
       this.newRental = { 
         vehicleId: this.selectedVehicleId || '',
         customerId: '',
@@ -860,7 +860,7 @@ export class CalendarTabComponent implements OnInit {
 
   openMaintenanceModal(vehicleId?: string) {
     const defaultVeh = vehicleId || this.selectedVehicleId || '';
-    const dateStr = this.selectedDay ? this.selectedDay.toISOString().split('T')[0] : '';
+    const dateStr = this.selectedDay ? this.formatDateForInput(this.selectedDay) : '';
     this.newMaintenance = { 
       vehicleId: defaultVeh, 
       startDate: dateStr, 
@@ -872,7 +872,7 @@ export class CalendarTabComponent implements OnInit {
 
   openTransferModal(vehicleId?: string) {
     const defaultVeh = vehicleId || this.selectedVehicleId || '';
-    const dateStr = this.selectedDay ? this.selectedDay.toISOString().split('T')[0] : '';
+    const dateStr = this.selectedDay ? this.formatDateForInput(this.selectedDay) : '';
     this.newTransfer = { 
       vehicleId: defaultVeh, 
       startDate: dateStr, 
@@ -886,7 +886,7 @@ export class CalendarTabComponent implements OnInit {
   openSaleModal() {
     this.newSale = { 
       vehicleId: this.selectedVehicleId || '', 
-      soldDate: this.selectedDay ? this.selectedDay.toISOString().split('T')[0] : new Date().toISOString().split('T')[0] 
+      soldDate: this.selectedDay ? this.formatDateForInput(this.selectedDay) : this.formatDateForInput(new Date()) 
     };
     this.isSaleModalOpen = true;
   }
@@ -962,20 +962,8 @@ export class CalendarTabComponent implements OnInit {
 
       const selectedCar = this.availableVehicles.find(v => v.id === this.newRental.vehicleId);
 
-      const parseDateToTimestamp = (val: any): Timestamp => {
-        if (!val) return Timestamp.now();
-        if (val instanceof Timestamp) return val;
-        if (typeof val.toDate === 'function') return Timestamp.fromDate(val.toDate());
-        if (val instanceof Date) return Timestamp.fromDate(val);
-        if (typeof val === 'string') {
-          const d = new Date(val);
-          if (!isNaN(d.getTime())) return Timestamp.fromDate(d);
-        }
-        return Timestamp.now();
-      };
-
-      const startTimestamp = parseDateToTimestamp(this.newRental.startDate);
-      const endTimestamp = parseDateToTimestamp(this.newRental.endDate || this.newRental.startDate);
+      const startTimestamp = this.parseDateToTimestamp(this.newRental.startDate);
+      const endTimestamp = this.parseDateToTimestamp(this.newRental.endDate || this.newRental.startDate);
 
       const rentalToSave: Rental = {
         vehicleId: this.newRental.vehicleId,
@@ -1087,20 +1075,8 @@ export class CalendarTabComponent implements OnInit {
 
       const selectedCar = this.availableVehicles.find(v => v.id === this.newRental.vehicleId);
 
-      const parseDateToTimestamp = (val: any): Timestamp => {
-        if (!val) return Timestamp.now();
-        if (val instanceof Timestamp) return val;
-        if (typeof val.toDate === 'function') return Timestamp.fromDate(val.toDate());
-        if (val instanceof Date) return Timestamp.fromDate(val);
-        if (typeof val === 'string') {
-          const d = new Date(val);
-          if (!isNaN(d.getTime())) return Timestamp.fromDate(d);
-        }
-        return Timestamp.now();
-      };
-
-      const startTimestamp = parseDateToTimestamp(this.newRental.startDate);
-      const endTimestamp = parseDateToTimestamp(this.newRental.endDate || this.newRental.startDate);
+      const startTimestamp = this.parseDateToTimestamp(this.newRental.startDate);
+      const endTimestamp = this.parseDateToTimestamp(this.newRental.endDate || this.newRental.startDate);
 
       const rentalToStipulate: Rental = {
         id: this.isEditMode ? (this.editingRentalId || '') : '',
@@ -1189,8 +1165,8 @@ export class CalendarTabComponent implements OnInit {
       this.loadingService.show();
       await this.rentalService.addMaintenancePeriod({
         vehicleId: this.newMaintenance.vehicleId,
-        startDate: Timestamp.fromDate(new Date(this.newMaintenance.startDate)),
-        endDate: Timestamp.fromDate(new Date(this.newMaintenance.endDate)),
+        startDate: this.parseDateToTimestamp(this.newMaintenance.startDate),
+        endDate: this.parseDateToTimestamp(this.newMaintenance.endDate),
         notes: this.newMaintenance.notes
       });
       this.loadingService.hide();
@@ -1207,8 +1183,8 @@ export class CalendarTabComponent implements OnInit {
       this.loadingService.show();
       await this.rentalService.addTemporaryTransfer({
         vehicleId: this.newTransfer.vehicleId,
-        startDate: Timestamp.fromDate(new Date(this.newTransfer.startDate)),
-        endDate: Timestamp.fromDate(new Date(this.newTransfer.endDate)),
+        startDate: this.parseDateToTimestamp(this.newTransfer.startDate),
+        endDate: this.parseDateToTimestamp(this.newTransfer.endDate),
         location: this.newTransfer.location,
         notes: this.newTransfer.notes
       });
@@ -1246,7 +1222,7 @@ export class CalendarTabComponent implements OnInit {
     if (status && status.type) {
       this.selectedStatusForAction = status;
       this.selectedDayForAction = day;
-      this.manualEndDate = day.toISOString().split('T')[0];
+      this.manualEndDate = this.formatDateForInput(day);
       this.isConfirmationModalOpen = true;
     }
   }
@@ -1325,38 +1301,51 @@ export class CalendarTabComponent implements OnInit {
     }
   }
 
-  private formatDateForInput(val: any): string {
+  formatDateForInput(val: any): string {
     if (!val) return '';
     try {
       if (typeof val === 'string') {
         if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
-        if (val.includes('T')) return val.split('T')[0];
         if (val.includes('/')) {
           const parts = val.split('/');
           if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
         }
-        const d = new Date(val);
-        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-        return '';
       }
-      if (typeof val.toDate === 'function') {
-        const d = val.toDate();
-        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-        return '';
+      let d: Date;
+      if (typeof val?.toDate === 'function') {
+        d = val.toDate();
+      } else if (val instanceof Date) {
+        d = val;
+      } else if (typeof val?.seconds === 'number') {
+        d = new Date(val.seconds * 1000);
+      } else {
+        d = new Date(val);
       }
-      if (val instanceof Date) {
-        if (!isNaN(val.getTime())) return val.toISOString().split('T')[0];
-        return '';
-      }
-      if (typeof val.seconds === 'number') {
-        const d = new Date(val.seconds * 1000);
-        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-        return '';
-      }
+      if (isNaN(d.getTime())) return '';
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
     } catch (e) {
       console.warn('Errore parsing data per input:', e);
     }
     return '';
+  }
+
+  parseDateToTimestamp(val: any): Timestamp {
+    if (!val) return Timestamp.now();
+    if (val instanceof Timestamp) return val;
+    if (typeof val?.toDate === 'function') return Timestamp.fromDate(val.toDate());
+    if (val instanceof Date) return Timestamp.fromDate(val);
+    if (typeof val === 'string') {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        const [y, m, d] = val.split('-').map(Number);
+        return Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0));
+      }
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) return Timestamp.fromDate(d);
+    }
+    return Timestamp.now();
   }
 
   // --- CONTROLLER CONTRATTI (PDF) ---

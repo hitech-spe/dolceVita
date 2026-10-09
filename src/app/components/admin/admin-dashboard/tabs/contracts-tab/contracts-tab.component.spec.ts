@@ -496,5 +496,57 @@ describe('ContractsTabComponent', () => {
       expect(sorted[1].contractNumber).toBe('RIF 1790');
       expect(sorted[2].contractNumber).toBe('1791');
     });
+
+    it('should synchronize rifRentalStartDate when rifDate changes unless manually edited', () => {
+      component.openReferenceModal(originalContract);
+      expect(component.rifRentalStartDateManuallyEdited).toBeFalse();
+
+      component.onRifDateChange('2026-10-09');
+      expect(component.rifRentalStartDate).toBe('2026-10-09');
+
+      component.onRifRentalStartDateChange('2026-10-15');
+      expect(component.rifRentalStartDateManuallyEdited).toBeTrue();
+      expect(component.rifRentalStartDate).toBe('2026-10-15');
+
+      component.onRifDateChange('2026-10-12');
+      expect(component.rifRentalStartDate).toBe('2026-10-15');
+    });
+
+    it('should correctly format local dates for HTML input without UTC day shift', () => {
+      const dateLocal = new Date(2026, 9, 9, 0, 0, 0); // Oct 9, 2026 local
+      expect(component.formatDateForInput(dateLocal)).toBe('2026-10-09');
+
+      expect(component.formatDateForInput('2026-10-09')).toBe('2026-10-09');
+      expect(component.formatDateForInput('09/10/2026')).toBe('2026-10-09');
+    });
+  });
+
+  describe('Contract and linked rental deletion', () => {
+    it('should call rentalService.deleteContract with deleteAssociatedRental=true when confirmed', async () => {
+      spyOn(window, 'confirm').and.returnValue(true);
+      spyOn(window, 'alert');
+      mockRentalService.deleteContract.and.returnValue(Promise.resolve());
+
+      const contractToDelete: any = {
+        id: '1854',
+        contractNumber: '1854',
+        rentalId: 'rent-1854'
+      };
+
+      await component.deleteContract(contractToDelete);
+
+      expect(mockRentalService.deleteContract).toHaveBeenCalledWith('1854', true);
+      expect(window.alert).toHaveBeenCalledWith(jasmine.stringMatching(/Contratto \(N\. 1854\) e relativo noleggio eliminati con successo!/));
+    });
+
+    it('should NOT call rentalService.deleteContract if user cancels confirmation', async () => {
+      spyOn(window, 'confirm').and.returnValue(false);
+      mockRentalService.deleteContract.calls.reset();
+
+      const contractToDelete: any = { id: '1854', contractNumber: '1854' };
+      await component.deleteContract(contractToDelete);
+
+      expect(mockRentalService.deleteContract).not.toHaveBeenCalled();
+    });
   });
 });

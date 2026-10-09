@@ -1102,8 +1102,43 @@ export class RentalService {
     });
   }
 
-  async deleteContract(id: string) {
+  async deleteContract(id: string, deleteAssociatedRental: boolean = true) {
     const docRef = doc(this.firestore, `contracts/${id}`);
+
+    if (deleteAssociatedRental) {
+      try {
+        const snap = await getDoc(docRef);
+        let rentalId: string | undefined;
+
+        if (snap.exists()) {
+          const contractData = snap.data() as ContractDocument;
+          rentalId = contractData.rentalId;
+        } else {
+          // Fallback se id è contractNumber ma il docId è diverso o viceversa
+          const contractsRef = collection(this.firestore, 'contracts');
+          const q = query(contractsRef, where('contractNumber', '==', id));
+          const qSnap = await getDocs(q);
+          if (!qSnap.empty) {
+            rentalId = (qSnap.docs[0].data() as ContractDocument).rentalId;
+          }
+        }
+
+        if (rentalId) {
+          const rentalDocRef = doc(this.firestore, `rentals/${rentalId}`);
+          const rentalSnap = await getDoc(rentalDocRef);
+          if (rentalSnap.exists()) {
+            const rental = rentalSnap.data() as Rental;
+            if (rental.vehicleId && rental.location) {
+              await this.updateVehicle(rental.vehicleId, { location: rental.location });
+            }
+            await deleteDoc(rentalDocRef);
+          }
+        }
+      } catch (e) {
+        console.error("Errore durante l'eliminazione del noleggio collegato al contratto:", e);
+      }
+    }
+
     return deleteDoc(docRef);
   }
 

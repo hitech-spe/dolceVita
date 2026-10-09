@@ -68,6 +68,7 @@ export class ContractsTabComponent implements OnInit {
   isRifCompanyDropdownOpen = false;
   updateCalendarRental = true;
   isGeneratingRif = false;
+  rifRentalStartDateManuallyEdited = false;
 
   selectedContractIds = new Set<string>();
   modifiedContractNumbers = new Set<string>();
@@ -225,13 +226,12 @@ export class ContractsTabComponent implements OnInit {
     }
     this.editingContract = contract;
     this.editedDetails = { ...contract.details };
-    this.editedContractDate = contract.date ? (contract.date as any).toDate().toISOString().split('T')[0] : '';
+    this.editedContractDate = this.formatDateForInput(contract.date);
     
     // Recupera la data di fine noleggio dal noleggio associato
     const associatedRental = this.allRentals.find(r => r.id === contract.rentalId);
     if (associatedRental && associatedRental.endDate) {
-      const dateObj = (associatedRental.endDate as any).toDate ? (associatedRental.endDate as any).toDate() : new Date(associatedRental.endDate as any);
-      this.editedRentalEndDate = dateObj.toISOString().split('T')[0];
+      this.editedRentalEndDate = this.formatDateForInput(associatedRental.endDate);
     } else {
       this.editedRentalEndDate = '';
     }
@@ -297,38 +297,51 @@ export class ContractsTabComponent implements OnInit {
     }, 250);
   }
 
-  private formatDateForInput(val: any): string {
+  formatDateForInput(val: any): string {
     if (!val) return '';
     try {
       if (typeof val === 'string') {
         if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
-        if (val.includes('T')) return val.split('T')[0];
         if (val.includes('/')) {
           const parts = val.split('/');
           if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
         }
-        const d = new Date(val);
-        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-        return '';
       }
-      if (typeof val.toDate === 'function') {
-        const d = val.toDate();
-        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-        return '';
+      let d: Date;
+      if (typeof val?.toDate === 'function') {
+        d = val.toDate();
+      } else if (val instanceof Date) {
+        d = val;
+      } else if (typeof val?.seconds === 'number') {
+        d = new Date(val.seconds * 1000);
+      } else {
+        d = new Date(val);
       }
-      if (val instanceof Date) {
-        if (!isNaN(val.getTime())) return val.toISOString().split('T')[0];
-        return '';
-      }
-      if (typeof val.seconds === 'number') {
-        const d = new Date(val.seconds * 1000);
-        if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-        return '';
-      }
+      if (isNaN(d.getTime())) return '';
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
     } catch (e) {
       console.warn('Errore parsing data per input:', e);
     }
     return '';
+  }
+
+  parseDateInputToTimestamp(val: any): Timestamp {
+    if (!val) return Timestamp.now();
+    if (val instanceof Timestamp) return val;
+    if (typeof val?.toDate === 'function') return Timestamp.fromDate(val.toDate());
+    if (val instanceof Date) return Timestamp.fromDate(val);
+    if (typeof val === 'string') {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        const [y, m, d] = val.split('-').map(Number);
+        return Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0));
+      }
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) return Timestamp.fromDate(d);
+    }
+    return Timestamp.now();
   }
 
   onEditMainDriverChange() {
@@ -385,8 +398,7 @@ export class ContractsTabComponent implements OnInit {
       let datePostponed = false;
       const associatedRental = this.allRentals.find(r => r.id === this.editingContract!.rentalId);
       if (associatedRental && this.editedRentalEndDate) {
-        const oldEndDateObj = (associatedRental.endDate as any).toDate ? (associatedRental.endDate as any).toDate() : new Date(associatedRental.endDate as any);
-        const oldEndDateStr = oldEndDateObj.toISOString().split('T')[0];
+        const oldEndDateStr = this.formatDateForInput(associatedRental.endDate);
         const newEndDateStr = this.editedRentalEndDate;
         
         if (newEndDateStr !== oldEndDateStr) {
@@ -395,9 +407,9 @@ export class ContractsTabComponent implements OnInit {
           }
           
           // Aggiorna il noleggio su Firestore e sul Calendario
-          const newEndDateObj = new Date(newEndDateStr);
+          const newEndDateObj = this.parseDateInputToTimestamp(newEndDateStr);
           await this.rentalService.updateRental(associatedRental.id!, {
-            endDate: Timestamp.fromDate(newEndDateObj)
+            endDate: newEndDateObj
           });
         }
       }
@@ -474,13 +486,14 @@ export class ContractsTabComponent implements OnInit {
       }
 
       if (this.editedContractDate) {
-        const dateObj = new Date(this.editedContractDate);
-        updatedContract.date = Timestamp.fromDate(dateObj);
+        const dateObj = this.parseDateInputToTimestamp(this.editedContractDate);
+        updatedContract.date = dateObj;
         
         // Aggiorna anche il campo flat per Cargos della data contratto
-        const dd = String(dateObj.getDate()).padStart(2, '0');
-        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const yyyy = dateObj.getFullYear();
+        const d = dateObj.toDate();
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
         updatedContract.contratto_data = `${dd}/${mm}/${yyyy} 12:00`;
       }
 
@@ -590,19 +603,18 @@ export class ContractsTabComponent implements OnInit {
     this.rifVehicleId = contract.vehicleId || '';
     this.rifCustomerId = contract.customerId || '';
 
-    this.rifDate = new Date().toISOString().split('T')[0];
+    this.rifDate = this.formatDateForInput(new Date());
+    this.rifRentalStartDateManuallyEdited = false;
 
     const associatedRental = this.allRentals.find(r => r.id === contract.rentalId);
     if (associatedRental) {
       if (associatedRental.startDate) {
-        const startObj = (associatedRental.startDate as any).toDate ? (associatedRental.startDate as any).toDate() : new Date(associatedRental.startDate as any);
-        this.rifRentalStartDate = startObj.toISOString().split('T')[0];
+        this.rifRentalStartDate = this.formatDateForInput(associatedRental.startDate);
       } else {
         this.rifRentalStartDate = this.rifDate;
       }
       if (associatedRental.endDate) {
-        const endObj = (associatedRental.endDate as any).toDate ? (associatedRental.endDate as any).toDate() : new Date(associatedRental.endDate as any);
-        this.rifRentalEndDate = endObj.toISOString().split('T')[0];
+        this.rifRentalEndDate = this.formatDateForInput(associatedRental.endDate);
       } else {
         this.rifRentalEndDate = this.rifDate;
       }
@@ -617,6 +629,19 @@ export class ContractsTabComponent implements OnInit {
     this.isReferenceModalOpen = true;
   }
 
+  onRifDateChange(newDate: string) {
+    this.rifDate = newDate;
+    // Se l'utente non ha impostato manualmente una data inizio noleggio differente, sincronizziamo con la data stipula
+    if (!this.rifRentalStartDateManuallyEdited) {
+      this.rifRentalStartDate = newDate;
+    }
+  }
+
+  onRifRentalStartDateChange(newDate: string) {
+    this.rifRentalStartDate = newDate;
+    this.rifRentalStartDateManuallyEdited = true;
+  }
+
   closeReferenceModal() {
     this.isReferenceModalOpen = false;
     this.sourceContractForReference = null;
@@ -627,6 +652,7 @@ export class ContractsTabComponent implements OnInit {
     this.rifDate = '';
     this.rifRentalStartDate = '';
     this.rifRentalEndDate = '';
+    this.rifRentalStartDateManuallyEdited = false;
     this.rifCompanySearchTerm = '';
     this.isRifCompanyDropdownOpen = false;
     this.isGeneratingRif = false;
@@ -732,6 +758,10 @@ export class ContractsTabComponent implements OnInit {
       let rentalIdToLink = this.sourceContractForReference.rentalId;
       const associatedRental = this.allRentals.find(r => r.id === this.sourceContractForReference!.rentalId);
 
+      const stipulationDate = this.rifDate ? this.parseDateInputToTimestamp(this.rifDate) : Timestamp.now();
+      const refRentalStartDateTS = this.rifRentalStartDate ? this.parseDateInputToTimestamp(this.rifRentalStartDate) : stipulationDate;
+      const refRentalEndDateTS = this.rifRentalEndDate ? this.parseDateInputToTimestamp(this.rifRentalEndDate) : (associatedRental?.endDate || stipulationDate);
+
       // Se richiesto, crea o aggiorna il noleggio a calendario per il veicolo sostitutivo
       if (this.updateCalendarRental && associatedRental) {
         const replacementRental: Rental = {
@@ -741,8 +771,8 @@ export class ContractsTabComponent implements OnInit {
           customerName: this.rifDetails.isCompany ? (this.rifDetails.companyName || associatedRental.customerName) : (selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : associatedRental.customerName),
           location: associatedRental.location || 'Mottola',
           returnLocation: associatedRental.returnLocation || associatedRental.location || 'Mottola',
-          startDate: this.rifRentalStartDate ? Timestamp.fromDate(new Date(this.rifRentalStartDate)) : associatedRental.startDate,
-          endDate: this.rifRentalEndDate ? Timestamp.fromDate(new Date(this.rifRentalEndDate)) : associatedRental.endDate,
+          startDate: refRentalStartDateTS,
+          endDate: refRentalEndDateTS,
           startPeriod: associatedRental.startPeriod || 'Mat',
           endPeriod: associatedRental.endPeriod || 'Mat',
           totalPrice: this.rifDetails.baseRate ?? associatedRental.totalPrice,
@@ -754,8 +784,6 @@ export class ContractsTabComponent implements OnInit {
         const newRentalRef = await this.rentalService.createRental(replacementRental);
         rentalIdToLink = newRentalRef.id;
       }
-
-      const stipulationDate = this.rifDate ? Timestamp.fromDate(new Date(this.rifDate)) : Timestamp.now();
 
       const newContractDoc: ContractDocument = {
         contractNumber: this.rifContractNumber.trim(),
@@ -774,8 +802,8 @@ export class ContractsTabComponent implements OnInit {
         vehiclePlate: `${selectedVehicle.brand} ${selectedVehicle.model} (${selectedVehicle.plate})`,
         customerId: newContractDoc.customerId,
         customerName: newContractDoc.customerName,
-        startDate: this.rifRentalStartDate ? Timestamp.fromDate(new Date(this.rifRentalStartDate)) : stipulationDate,
-        endDate: this.rifRentalEndDate ? Timestamp.fromDate(new Date(this.rifRentalEndDate)) : stipulationDate,
+        startDate: refRentalStartDateTS,
+        endDate: refRentalEndDateTS,
         location: associatedRental?.location || 'Mottola',
         returnLocation: associatedRental?.returnLocation || 'Mottola',
         status: 'In Corso'
@@ -913,16 +941,28 @@ export class ContractsTabComponent implements OnInit {
     });
   }
 
-  async deleteContract(id: string) {
-    if (!confirm('Sei sicuro di voler eliminare questo contratto dallo storico? L\'operazione non eliminerà il noleggio associato.')) {
+  async deleteContract(contractOrId: ContractDocument | string) {
+    let contract: ContractDocument | undefined;
+    let contractId: string;
+
+    if (typeof contractOrId === 'string') {
+      contractId = contractOrId;
+      contract = this.allContracts?.find(c => c.id === contractId || c.contractNumber === contractId);
+    } else {
+      contract = contractOrId;
+      contractId = contract.id || contract.contractNumber;
+    }
+
+    const numLabel = contract?.contractNumber ? `(N. ${contract.contractNumber})` : '';
+    if (!confirm(`Sei sicuro di voler eliminare definitivamente il contratto ${numLabel} e il relativo noleggio collegato dal calendario? L'operazione non è reversibile.`)) {
       return;
     }
     
     try {
       this.loadingService.show();
-      await this.rentalService.deleteContract(id);
+      await this.rentalService.deleteContract(contractId, true);
       this.loadingService.hide();
-      alert('Contratto eliminato con successo dallo storico!');
+      alert(`Contratto ${numLabel} e relativo noleggio eliminati con successo!`);
     } catch (error) {
       this.loadingService.hide();
       console.error('Errore nell\'eliminazione del contratto:', error);
