@@ -50,6 +50,7 @@ describe('RentalService (Backend Contract Endpoints)', () => {
 
     service.stipulateContractOnBackend(payload).subscribe(res => {
       expect(res.contractNumber).toBe('1816');
+      expect(res.customerId).toBe('cust-new-999');
       expect(res.pdfBlob).toBeTruthy();
       expect(res.pdfBlob.type).toBe('application/pdf');
     });
@@ -61,6 +62,7 @@ describe('RentalService (Backend Contract Endpoints)', () => {
     req.flush(dummyBlob, {
       headers: {
         'X-Contract-Number': '1816',
+        'X-Customer-Id': 'cust-new-999',
         'Content-Type': 'application/pdf'
       }
     });

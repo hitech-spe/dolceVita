@@ -252,7 +252,7 @@ describe('CalendarTabComponent', () => {
       );
     });
 
-    it('should handle quickCustomer creation and immediately populate availableCustomers for the contract modal', async () => {
+    it('should handle quickCustomer creation in memory and immediately open the contract modal', async () => {
       component.newRental = { vehicleId: 'v1', startDate: '2026-10-06', location: 'Mottola' };
       component.isQuickCustomer = true;
       component.quickCustomer = { firstName: 'Giuseppe', lastName: 'Verdi', phone: '1234567890', address: 'Via Roma 1' };
@@ -261,7 +261,6 @@ describe('CalendarTabComponent', () => {
 
       await component.saveAndStipulateContract();
 
-      expect(mockRentalService.addCustomer).toHaveBeenCalledWith(jasmine.objectContaining({ firstName: 'Giuseppe', lastName: 'Verdi' }));
       expect(component.availableCustomers.length).toBeGreaterThan(0);
       expect(component.contractCustomer?.firstName).toBe('Giuseppe');
       expect(component.isContractModalOpen).toBeTrue();

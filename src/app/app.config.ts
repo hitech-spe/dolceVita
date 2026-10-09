@@ -46,7 +46,8 @@ export const appConfig: ApplicationConfig = {
       try {
         return initializeFirestore(getApp(), {
           localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-          ignoreUndefinedProperties: true
+          ignoreUndefinedProperties: true,
+          experimentalForceLongPolling: true
         });
       } catch (e) {
         return getFirestore();

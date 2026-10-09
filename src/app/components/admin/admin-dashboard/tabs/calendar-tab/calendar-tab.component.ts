@@ -1065,26 +1065,24 @@ export class CalendarTabComponent implements OnInit {
       let customerName = '';
 
       if (this.isQuickCustomer) {
-        this.loadingService.show();
+        // Nessuna scrittura bloccante o chiamata di rete su Firestore:
+        // L'anagrafica cliente verrà creata atomicamente sul Backend in generateContract()
         const customerData: Customer = {
           firstName: (this.quickCustomer.firstName || '').trim(),
           lastName: (this.quickCustomer.lastName || '').trim(),
           phone: (this.quickCustomer.phone || '').trim(),
           address: (this.quickCustomer.address || '').trim()
         };
-        const customerRef = await Promise.race([
-          this.rentalService.addCustomer(customerData),
-          new Promise<any>((_, reject) => setTimeout(() => reject(new Error('Timeout durante la registrazione rapida cliente.')), 5000))
-        ]);
-        customerId = customerRef.id;
-        customerName = `${customerData.firstName} ${customerData.lastName}`;
+        customerId = '';
+        customerName = `${customerData.firstName} ${customerData.lastName}`.trim();
 
-        const newCustomerObj: Customer = { ...customerData, id: customerId };
-        this.availableCustomers = [newCustomerObj, ...this.availableCustomers.filter(c => c.id !== customerId)];
-        this.loadingService.hide();
+        const newCustomerObj: Customer = { ...customerData, id: '' };
+        this.contractCustomer = newCustomerObj;
+        this.availableCustomers = [newCustomerObj, ...this.availableCustomers.filter(c => c.id)];
       } else {
         const selectedCustomer = this.availableCustomers.find(c => c.id === customerId);
         customerName = selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : (this.newRental.customerName || 'Cliente non trovato');
+        this.contractCustomer = selectedCustomer;
       }
 
       const selectedCar = this.availableVehicles.find(v => v.id === this.newRental.vehicleId);
@@ -1370,12 +1368,14 @@ export class CalendarTabComponent implements OnInit {
     this.isRentalModalOpen = false; // chiudi modale noleggio standard
     this.contractRental = rental;
     this.contractVehicle = this.availableVehicles.find(v => v.id === rental.vehicleId);
-    this.contractCustomer = this.availableCustomers.find(c => c.id === rental.customerId);
+    if (!this.contractCustomer) {
+      this.contractCustomer = this.availableCustomers.find(c => c.id && c.id === rental.customerId);
+    }
 
     // Se per qualche motivo il cliente non è ancora in cache (es. appena registrato o sincronizzazione realtime pendente)
-    if (!this.contractCustomer && rental.customerId) {
+    if (!this.contractCustomer && rental.customerName) {
       this.contractCustomer = {
-        id: rental.customerId,
+        id: rental.customerId || '',
         firstName: rental.customerName ? rental.customerName.split(' ')[0] : 'Cliente',
         lastName: rental.customerName ? rental.customerName.split(' ').slice(1).join(' ') : ''
       };
@@ -1399,7 +1399,7 @@ export class CalendarTabComponent implements OnInit {
       companyAddress: '',
       companyPhone: '',
       companyPec: '',
-      mainDriverId: rental.customerId,
+      mainDriverId: rental.customerId || '',
       driverBirthPlace: '',
       driverBirthDate: '',
       driverLicenseNumber: '',
@@ -1472,7 +1472,7 @@ export class CalendarTabComponent implements OnInit {
 
   onMainDriverChange() {
     const driverId = this.contractDetails.mainDriverId;
-    const driver = this.availableCustomers.find(c => c.id === driverId);
+    const driver = this.availableCustomers.find(c => c.id && c.id === driverId) || this.contractCustomer;
     if (driver) {
       this.contractDetails.driverBirthPlace = driver.birthPlace || '';
       this.contractDetails.driverBirthDate = this.formatDateForInput(driver.birthDate);
@@ -1543,6 +1543,12 @@ export class CalendarTabComponent implements OnInit {
 
       // Raccoglie gli aggiornamenti anagrafici del conducente principale se inseriti dall'operatore
       const customerUpdates: Record<string, any> = {};
+      if (this.isQuickCustomer && this.quickCustomer) {
+        if (this.quickCustomer.firstName) customerUpdates['firstName'] = this.quickCustomer.firstName.trim();
+        if (this.quickCustomer.lastName) customerUpdates['lastName'] = this.quickCustomer.lastName.trim();
+        if (this.quickCustomer.phone) customerUpdates['phone'] = this.quickCustomer.phone.trim();
+        if (this.quickCustomer.address) customerUpdates['address'] = this.quickCustomer.address.trim();
+      }
       if (this.contractDetails.driverBirthPlace) customerUpdates['birthPlace'] = this.contractDetails.driverBirthPlace;
       if (this.contractDetails.driverBirthDate) customerUpdates['birthDate'] = this.contractDetails.driverBirthDate;
       if (this.contractDetails.driverLicenseNumber) customerUpdates['licenseNumber'] = this.contractDetails.driverLicenseNumber;
@@ -1618,9 +1624,19 @@ export class CalendarTabComponent implements OnInit {
       // Delega completa al microservizio Backend su Render:
       // Scritture atomiche Firestore in datacenter (zero socket-zombie / timeout) e generazione istantanea PDF
       this.rentalService.stipulateContractOnBackend(payload).subscribe({
-        next: (res: { pdfBlob: Blob; contractNumber: string }) => {
+        next: (res: { pdfBlob: Blob; contractNumber: string; customerId?: string }) => {
           const finalContractNumber = res.contractNumber || this.contractDetails.contractNumber || '';
           this.contractDetails.contractNumber = finalContractNumber;
+
+          // Se il cliente era nuovo rapido ed è stato creato dal server, aggiorniamo il suo ID
+          if (res.customerId && this.contractCustomer) {
+            this.contractCustomer.id = res.customerId;
+            if (this.contractRental) this.contractRental.customerId = res.customerId;
+            const idx = this.availableCustomers.findIndex(c => c === this.contractCustomer || (!c.id && c.firstName === this.contractCustomer?.firstName));
+            if (idx >= 0) {
+              this.availableCustomers[idx] = { ...this.availableCustomers[idx], id: res.customerId };
+            }
+          }
 
           // Aggiorna lo stato dei riferimenti locali in memoria per la UI
           if (this.contractDetails.mainDriverId) {

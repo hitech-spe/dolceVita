@@ -715,8 +715,10 @@ export class RentalService {
   }
 
   async addCustomer(customer: Customer) {
-    const ref = collection(this.firestore, 'customers');
-    return addDoc(ref, this.cleanUndefined({ ...customer, createdAt: Timestamp.now() }));
+    const docRef = doc(collection(this.firestore, 'customers'));
+    const data = this.cleanUndefined({ ...customer, createdAt: Timestamp.now() });
+    setDoc(docRef, data).catch(err => console.error('Errore persistenza cliente Firestore:', err));
+    return docRef;
   }
 
   async updateCustomer(id: string, data: Partial<Customer>) {
@@ -1301,7 +1303,7 @@ export class RentalService {
    * 4. Generazione del PDF in tempo reale tramite PDFBox
    * Restituisce il PDF Blob e il numero contratto assegnato (da header HTTP X-Contract-Number).
    */
-  stipulateContractOnBackend(payload: any): Observable<{ pdfBlob: Blob; contractNumber: string }> {
+  stipulateContractOnBackend(payload: any): Observable<{ pdfBlob: Blob; contractNumber: string; customerId?: string }> {
     const url = `${API_CONFIG.baseUrl}/api/v1/contracts/stipulate`;
     return this.http.post(url, payload, {
       responseType: 'blob',
@@ -1310,11 +1312,13 @@ export class RentalService {
       timeout(45000),
       map(response => {
         const contractNumber = response.headers.get('X-Contract-Number') || (payload && payload.contractNumber) || '';
+        const customerId = response.headers.get('X-Customer-Id') || (payload && payload.customerId) || '';
         const rawBlob = response.body as Blob;
         const pdfBlob = rawBlob.type === 'application/pdf' ? rawBlob : new Blob([rawBlob], { type: 'application/pdf' });
         return {
           pdfBlob,
-          contractNumber
+          contractNumber,
+          customerId
         };
       })
     );
