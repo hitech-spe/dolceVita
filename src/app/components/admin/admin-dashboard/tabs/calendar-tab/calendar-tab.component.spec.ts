@@ -264,6 +264,45 @@ describe('CalendarTabComponent', () => {
       expect(component.availableCustomers.length).toBeGreaterThan(0);
       expect(component.contractCustomer?.firstName).toBe('Giuseppe');
       expect(component.isContractModalOpen).toBeTrue();
+      expect(component.contractDetails.mainDriverId).toBe('new-customer');
+    });
+
+    it('should include driver details in customerUpdates when stipulating with a new quick customer', async () => {
+      component.newRental = { vehicleId: 'v1', startDate: '2026-10-06', location: 'Mottola' };
+      component.isQuickCustomer = true;
+      component.quickCustomer = { firstName: 'Mario', lastName: 'Rossi', phone: '3331234567', address: 'Via Roma 10' };
+      component.availableVehicles = [{ id: 'v1', brand: 'Fiat', model: 'Panda', plate: 'AA111BB' } as any];
+
+      await component.saveAndStipulateContract();
+      expect(component.isContractModalOpen).toBeTrue();
+
+      component.contractDetails.driverBirthPlace = 'Mottola (TA)';
+      component.contractDetails.driverBirthDate = '1985-05-12';
+      component.contractDetails.driverLicenseNumber = 'U1234567X';
+      component.contractDetails.kmIncluded = 'Senza Limiti';
+      component.contractDetails.timeOut = '10:00';
+      component.contractDetails.timeIn = '10:00';
+
+      mockRentalService.stipulateContractOnBackend.and.returnValue(of({
+        pdfBlob: new Blob(['pdf']),
+        contractNumber: '1855',
+        customerId: 'cust-created-123'
+      }));
+
+      await component.generateContract();
+
+      expect(mockRentalService.stipulateContractOnBackend).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          customerUpdates: jasmine.objectContaining({
+            firstName: 'Mario',
+            lastName: 'Rossi',
+            birthPlace: 'Mottola (TA)',
+            birthDate: '1985-05-12',
+            licenseNumber: 'U1234567X'
+          })
+        })
+      );
+      expect(component.availableCustomers.find(c => c.id === 'cust-created-123')).toBeDefined();
     });
   });
 });

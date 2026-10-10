@@ -75,6 +75,8 @@ export class CalendarTabComponent implements OnInit {
   isGeneratingContract = false;
   contractDetails: ContractDetails = {};
   suggestedContractNumber = '';
+  contractRentalStartDate = '';
+  contractRentalEndDate = '';
   contractRental?: Rental;
   contractVehicle?: Vehicle;
   contractCustomer?: Customer;
@@ -1388,14 +1390,14 @@ export class CalendarTabComponent implements OnInit {
       companyAddress: '',
       companyPhone: '',
       companyPec: '',
-      mainDriverId: rental.customerId || '',
-      driverBirthPlace: '',
-      driverBirthDate: '',
-      driverLicenseNumber: '',
-      driverLicenseIssueDate: '',
-      driverLicenseExpiry: '',
-      driverLicenseReleasedBy: '',
-      driverLicenseCountry: 'Italia',
+      mainDriverId: rental.customerId || (this.contractCustomer ? (this.contractCustomer.id || 'new-customer') : 'new-customer'),
+      driverBirthPlace: this.contractCustomer?.birthPlace || (this.quickCustomer?.birthPlace || ''),
+      driverBirthDate: this.formatDateForInput(this.contractCustomer?.birthDate || this.quickCustomer?.birthDate),
+      driverLicenseNumber: this.contractCustomer?.licenseNumber || (this.quickCustomer?.licenseNumber || ''),
+      driverLicenseIssueDate: this.formatDateForInput(this.contractCustomer?.licenseIssueDate),
+      driverLicenseExpiry: this.formatDateForInput(this.contractCustomer?.licenseExpiry),
+      driverLicenseReleasedBy: this.contractCustomer?.licenseReleasedBy || '',
+      driverLicenseCountry: this.contractCustomer?.licenseCountry || 'Italia',
       additionalDriver1Id: '',
       additionalDriver2Id: '',
       baseRate: 0,
@@ -1421,6 +1423,9 @@ export class CalendarTabComponent implements OnInit {
 
     // Populate main driver details initially
     this.onMainDriverChange();
+
+    this.contractRentalStartDate = this.formatDateForInput(rental.startDate);
+    this.contractRentalEndDate = this.formatDateForInput(rental.endDate);
 
     this.isContractModalOpen = true;
   }
@@ -1463,13 +1468,13 @@ export class CalendarTabComponent implements OnInit {
     const driverId = this.contractDetails.mainDriverId;
     const driver = this.availableCustomers.find(c => c.id && c.id === driverId) || this.contractCustomer;
     if (driver) {
-      this.contractDetails.driverBirthPlace = driver.birthPlace || '';
-      this.contractDetails.driverBirthDate = this.formatDateForInput(driver.birthDate);
-      this.contractDetails.driverLicenseNumber = driver.licenseNumber || '';
-      this.contractDetails.driverLicenseIssueDate = this.formatDateForInput(driver.licenseIssueDate);
-      this.contractDetails.driverLicenseExpiry = this.formatDateForInput(driver.licenseExpiry);
-      this.contractDetails.driverLicenseReleasedBy = driver.licenseReleasedBy || '';
-      this.contractDetails.driverLicenseCountry = driver.licenseCountry || 'Italia';
+      this.contractDetails.driverBirthPlace = driver.birthPlace || this.contractDetails.driverBirthPlace || '';
+      this.contractDetails.driverBirthDate = this.formatDateForInput(driver.birthDate) || this.contractDetails.driverBirthDate || '';
+      this.contractDetails.driverLicenseNumber = driver.licenseNumber || this.contractDetails.driverLicenseNumber || '';
+      this.contractDetails.driverLicenseIssueDate = this.formatDateForInput(driver.licenseIssueDate) || this.contractDetails.driverLicenseIssueDate || '';
+      this.contractDetails.driverLicenseExpiry = this.formatDateForInput(driver.licenseExpiry) || this.contractDetails.driverLicenseExpiry || '';
+      this.contractDetails.driverLicenseReleasedBy = driver.licenseReleasedBy || this.contractDetails.driverLicenseReleasedBy || '';
+      this.contractDetails.driverLicenseCountry = driver.licenseCountry || this.contractDetails.driverLicenseCountry || 'Italia';
     } else {
       this.contractDetails.driverBirthPlace = '';
       this.contractDetails.driverBirthDate = '';
@@ -1506,8 +1511,10 @@ export class CalendarTabComponent implements OnInit {
   }
 
   onCompanyCheckboxChange() {
-    if (!this.contractDetails.isCompany && this.contractRental) {
-      this.contractDetails.mainDriverId = this.contractRental.customerId;
+    if (!this.contractDetails.isCompany) {
+      this.contractDetails.mainDriverId = (this.contractRental && this.contractRental.customerId)
+        ? this.contractRental.customerId
+        : (this.contractCustomer?.id || 'new-customer');
     }
     this.onMainDriverChange();
   }
@@ -1517,6 +1524,8 @@ export class CalendarTabComponent implements OnInit {
     this.contractRental = undefined;
     this.contractVehicle = undefined;
     this.contractCustomer = undefined;
+    this.contractRentalStartDate = '';
+    this.contractRentalEndDate = '';
     this.contractDetails = {};
   }
 
@@ -1529,6 +1538,20 @@ export class CalendarTabComponent implements OnInit {
     try {
       this.isGeneratingContract = true;
       this.loadingService.show();
+
+      // Sincronizza ed aggiorna le date del noleggio se modificate dall'operatore nella modale contratto
+      if (this.contractRentalStartDate) {
+        this.contractRental.startDate = this.parseDateToTimestamp(this.contractRentalStartDate);
+      }
+      if (this.contractRentalEndDate) {
+        this.contractRental.endDate = this.parseDateToTimestamp(this.contractRentalEndDate);
+      }
+      if (this.contractRental.id) {
+        await this.rentalService.updateRental(this.contractRental.id, {
+          startDate: this.contractRental.startDate,
+          endDate: this.contractRental.endDate
+        });
+      }
 
       // Raccoglie gli aggiornamenti anagrafici del conducente principale se inseriti dall'operatore
       const customerUpdates: Record<string, any> = {};

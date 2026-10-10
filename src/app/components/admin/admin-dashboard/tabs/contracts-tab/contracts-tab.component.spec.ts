@@ -1,13 +1,15 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ContractsTabComponent } from './contracts-tab.component';
 import { RentalService } from '../../../../../services/rental.service';
+import { WarmupService } from '../../../../../services/warmup.service';
 import { Firestore } from '@angular/fire/firestore';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 
 describe('ContractsTabComponent', () => {
   let component: ContractsTabComponent;
   let fixture: ComponentFixture<ContractsTabComponent>;
   let mockRentalService: any;
+  let mockWarmupService: any;
   let mockFirestore: any;
 
   beforeEach(async () => {
@@ -25,7 +27,14 @@ describe('ContractsTabComponent', () => {
       deleteContract: jasmine.createSpy('deleteContract').and.returnValue(Promise.resolve()),
       updateContract: jasmine.createSpy('updateContract').and.returnValue(Promise.resolve()),
       sendBulkContracts: jasmine.createSpy('sendBulkContracts').and.returnValue(of([])),
-      downloadContractPdf: jasmine.createSpy('downloadContractPdf').and.returnValue(of(new Blob()))
+      downloadContractPdf: jasmine.createSpy('downloadContractPdf').and.returnValue(of(new Blob())),
+      stipulateContractOnBackend: jasmine.createSpy('stipulateContractOnBackend').and.returnValue(of({ pdfBlob: new Blob(['pdf']), contractNumber: 'RIF 1790' }))
+    };
+
+    mockWarmupService = {
+      pingBackend: jasmine.createSpy('pingBackend').and.returnValue(of('OK')),
+      startKeepAlive: jasmine.createSpy('startKeepAlive'),
+      stopKeepAlive: jasmine.createSpy('stopKeepAlive')
     };
 
     mockFirestore = {};
@@ -34,6 +43,7 @@ describe('ContractsTabComponent', () => {
       imports: [ContractsTabComponent],
       providers: [
         { provide: RentalService, useValue: mockRentalService },
+        { provide: WarmupService, useValue: mockWarmupService },
         { provide: Firestore, useValue: mockFirestore }
       ]
     }).compileComponents();
@@ -455,14 +465,33 @@ describe('ContractsTabComponent', () => {
       expect(component.rifContractNumber).toBe('RIF 1790');
       expect(component.rifDetails.baseRate).toBe(50);
       expect(component.rifDetails.contractNumber).toBe('RIF 1790');
-      expect(component.rifRentalStartDate).toBe('2026-09-01');
+      expect(component.rifRentalStartDate).toBe(component.rifDate);
       expect(component.rifRentalEndDate).toBe('2026-09-10');
     });
 
-    it('should save and generate reference contract PDF successfully', async () => {
+    it('should save and generate reference contract PDF successfully via backend stipulation', async () => {
       spyOn(window, 'alert');
       spyOn(window, 'open');
 
+      component.openReferenceModal(originalContract);
+      component.rifVehicleId = 'veh-new';
+
+      await component.saveAndGenerateReferenceContract();
+
+      expect(mockRentalService.stipulateContractOnBackend).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          contractNumber: 'RIF 1790',
+          vehicleId: 'veh-new'
+        })
+      );
+      expect(component.isReferenceModalOpen).toBeFalse();
+    });
+
+    it('should fallback to createContract and downloadContractPdf if backend stipulation fails', async () => {
+      spyOn(window, 'alert');
+      spyOn(window, 'open');
+
+      mockRentalService.stipulateContractOnBackend.and.returnValue(throwError(() => new Error('Backend offline')));
       mockRentalService.createContract.and.callFake((doc: any) => Promise.resolve({ contractNumber: doc.contractNumber, id: doc.contractNumber }));
 
       component.openReferenceModal(originalContract);

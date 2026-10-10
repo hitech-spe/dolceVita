@@ -48,6 +48,7 @@ export class ContractsTabComponent implements OnInit {
   companySearchTerm = '';
   isCompanyDropdownOpen = false;
   editedContractDate = '';
+  editedRentalStartDate = '';
   editedRentalEndDate = '';
 
   isEditModalOpen = false;
@@ -228,10 +229,22 @@ export class ContractsTabComponent implements OnInit {
     this.editedDetails = { ...contract.details };
     this.editedContractDate = this.formatDateForInput(contract.date);
     
-    // Recupera la data di fine noleggio dal noleggio associato
+    // Recupera la data di inizio e fine noleggio dal noleggio associato o dai dati del contratto
     const associatedRental = this.allRentals.find(r => r.id === contract.rentalId);
+    if (associatedRental && associatedRental.startDate) {
+      this.editedRentalStartDate = this.formatDateForInput(associatedRental.startDate);
+    } else if (contract.contratto_checkout_data) {
+      const part = contract.contratto_checkout_data.split(' ')[0];
+      this.editedRentalStartDate = this.formatDateForInput(part);
+    } else {
+      this.editedRentalStartDate = this.editedContractDate;
+    }
+
     if (associatedRental && associatedRental.endDate) {
       this.editedRentalEndDate = this.formatDateForInput(associatedRental.endDate);
+    } else if (contract.contratto_checkin_data) {
+      const part = contract.contratto_checkin_data.split(' ')[0];
+      this.editedRentalEndDate = this.formatDateForInput(part);
     } else {
       this.editedRentalEndDate = '';
     }
@@ -258,6 +271,7 @@ export class ContractsTabComponent implements OnInit {
     this.editingContract = null;
     this.editedDetails = {};
     this.editedContractDate = '';
+    this.editedRentalStartDate = '';
     this.editedRentalEndDate = '';
     this.companySearchTerm = '';
     this.isCompanyDropdownOpen = false;
@@ -397,20 +411,31 @@ export class ContractsTabComponent implements OnInit {
       this.loadingService.show();
       let datePostponed = false;
       const associatedRental = this.allRentals.find(r => r.id === this.editingContract!.rentalId);
-      if (associatedRental && this.editedRentalEndDate) {
-        const oldEndDateStr = this.formatDateForInput(associatedRental.endDate);
-        const newEndDateStr = this.editedRentalEndDate;
-        
-        if (newEndDateStr !== oldEndDateStr) {
-          if (newEndDateStr > oldEndDateStr) {
+      if (associatedRental) {
+        const rentalUpdates: Partial<Rental> = {};
+
+        if (this.editedRentalStartDate) {
+          const oldStartDateStr = this.formatDateForInput(associatedRental.startDate);
+          const newStartDateStr = this.editedRentalStartDate;
+          if (newStartDateStr !== oldStartDateStr) {
             datePostponed = true;
+            rentalUpdates.startDate = this.parseDateInputToTimestamp(newStartDateStr);
           }
-          
-          // Aggiorna il noleggio su Firestore e sul Calendario
-          const newEndDateObj = this.parseDateInputToTimestamp(newEndDateStr);
-          await this.rentalService.updateRental(associatedRental.id!, {
-            endDate: newEndDateObj
-          });
+        }
+
+        if (this.editedRentalEndDate) {
+          const oldEndDateStr = this.formatDateForInput(associatedRental.endDate);
+          const newEndDateStr = this.editedRentalEndDate;
+          if (newEndDateStr !== oldEndDateStr) {
+            if (newEndDateStr > oldEndDateStr) {
+              datePostponed = true;
+            }
+            rentalUpdates.endDate = this.parseDateInputToTimestamp(newEndDateStr);
+          }
+        }
+
+        if (Object.keys(rentalUpdates).length > 0) {
+          await this.rentalService.updateRental(associatedRental.id!, rentalUpdates);
         }
       }
 
@@ -429,24 +454,17 @@ export class ContractsTabComponent implements OnInit {
         return cleaned;
       };
 
+      // Formatta la data di uscita per Cargos
+      const checkoutDateStr = this.editedRentalStartDate 
+        ? this.editedRentalStartDate.split('-').reverse().join('/') 
+        : (this.editingContract.contratto_checkout_data ? this.editingContract.contratto_checkout_data.split(' ')[0] : '20/08/2026');
+      const checkoutTimeStr = cleanTime(this.editedDetails.timeOut);
+
       // Formatta la data di rientro per Cargos se modificata
       const checkinDateStr = this.editedRentalEndDate 
         ? this.editedRentalEndDate.split('-').reverse().join('/') 
         : (this.editingContract.contratto_checkin_data ? this.editingContract.contratto_checkin_data.split(' ')[0] : '25/08/2026');
       const checkinTimeStr = cleanTime(this.editedDetails.timeIn);
-
-      // Formatta la data di uscita per Cargos
-      let checkoutDateStr = '20/08/2026';
-      if (associatedRental && associatedRental.startDate) {
-        const dObj = (associatedRental.startDate as any).toDate ? (associatedRental.startDate as any).toDate() : new Date(associatedRental.startDate as any);
-        const dd = String(dObj.getDate()).padStart(2, '0');
-        const mm = String(dObj.getMonth() + 1).padStart(2, '0');
-        const yyyy = dObj.getFullYear();
-        checkoutDateStr = `${dd}/${mm}/${yyyy}`;
-      } else if (this.editingContract.contratto_checkout_data) {
-        checkoutDateStr = this.editingContract.contratto_checkout_data.split(' ')[0];
-      }
-      const checkoutTimeStr = cleanTime(this.editedDetails.timeOut);
 
       const updatedContract: Partial<ContractDocument> = {
         details: this.editedDetails,
@@ -608,11 +626,13 @@ export class ContractsTabComponent implements OnInit {
 
     const associatedRental = this.allRentals.find(r => r.id === contract.rentalId);
     if (associatedRental) {
-      if (associatedRental.startDate) {
-        this.rifRentalStartDate = this.formatDateForInput(associatedRental.startDate);
+      const origStart = associatedRental.startDate ? this.formatDateForInput(associatedRental.startDate) : '';
+      if (origStart && origStart > this.rifDate) {
+        this.rifRentalStartDate = origStart;
       } else {
         this.rifRentalStartDate = this.rifDate;
       }
+
       if (associatedRental.endDate) {
         this.rifRentalEndDate = this.formatDateForInput(associatedRental.endDate);
       } else {
@@ -817,27 +837,75 @@ export class ContractsTabComponent implements OnInit {
         stipulationDate
       );
 
-      const saveResult = await this.rentalService.createContract(newContractDoc, cargosData);
-      const finalNumber = saveResult.contractNumber;
+      const companyData = (this.rifDetails.isCompany && this.rifDetails.companyName && this.rifDetails.companyVat) ? {
+        name: this.rifDetails.companyName.trim(),
+        vat: this.rifDetails.companyVat.trim(),
+        address: this.rifDetails.companyAddress?.trim() || '',
+        phone: this.rifDetails.companyPhone?.trim() || '',
+        pec: this.rifDetails.companyPec?.trim() || ''
+      } : null;
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const payload = {
+        rentalId: rentalIdToLink,
+        customerId: newContractDoc.customerId,
+        customerName: newContractDoc.customerName,
+        vehicleId: selectedVehicle.id || '',
+        vehiclePlate: `${selectedVehicle.brand} ${selectedVehicle.model} (${selectedVehicle.plate})`,
+        contractNumber: this.rifContractNumber.trim(),
+        company: !!this.rifDetails.isCompany,
+        details: this.rifDetails,
+        customerUpdates: null,
+        vehicleFuelType: this.rifDetails.vehicleFuelType || '',
+        companyData,
+        cargosData
+      };
 
-      this.rentalService.downloadContractPdf(finalNumber, true).subscribe({
-        next: (pdfBlob: Blob) => {
-          const url = window.URL.createObjectURL(pdfBlob);
-          window.open(url, '_blank');
-          this.loadingService.hide();
-          this.isGeneratingRif = false;
-          this.closeReferenceModal();
-          alert(`Contratto di riferimento ${finalNumber} creato con successo ed aperto in una nuova scheda browser!`);
-        },
-        error: (err) => {
-          console.error('Errore durante la generazione del PDF per il contratto di riferimento:', err);
-          this.loadingService.hide();
-          this.isGeneratingRif = false;
-          this.closeReferenceModal();
-          alert(`Contratto di riferimento ${finalNumber} salvato in archivio, ma si è verificato un errore durante la generazione del PDF dal server.`);
-        }
+      return new Promise<void>((resolve) => {
+        this.rentalService.stipulateContractOnBackend(payload).subscribe({
+          next: (res: { pdfBlob: Blob; contractNumber: string }) => {
+            const finalNumber = res.contractNumber || this.rifContractNumber.trim();
+            const url = window.URL.createObjectURL(res.pdfBlob);
+            window.open(url, '_blank');
+            this.loadingService.hide();
+            this.isGeneratingRif = false;
+            this.closeReferenceModal();
+            alert(`Contratto di riferimento ${finalNumber} creato con successo ed aperto in una nuova scheda browser!`);
+            resolve();
+          },
+          error: async (err) => {
+            console.warn('Stipula RIF su backend non riuscita, esecuzione fallback locale Firestore:', err);
+            try {
+              const saveResult = await this.rentalService.createContract(newContractDoc, cargosData);
+              const finalNumber = saveResult.contractNumber;
+
+              this.rentalService.downloadContractPdf(finalNumber, true).subscribe({
+                next: (pdfBlob: Blob) => {
+                  const url = window.URL.createObjectURL(pdfBlob);
+                  window.open(url, '_blank');
+                  this.loadingService.hide();
+                  this.isGeneratingRif = false;
+                  this.closeReferenceModal();
+                  alert(`Contratto di riferimento ${finalNumber} creato con successo ed aperto in una nuova scheda browser!`);
+                  resolve();
+                },
+                error: (pdfErr) => {
+                  console.error('Errore durante la generazione del PDF per il contratto di riferimento:', pdfErr);
+                  this.loadingService.hide();
+                  this.isGeneratingRif = false;
+                  this.closeReferenceModal();
+                  alert(`Contratto di riferimento ${finalNumber} salvato in archivio, ma si è verificato un errore durante la generazione del PDF dal server.`);
+                  resolve();
+                }
+              });
+            } catch (fallbackErr: any) {
+              this.loadingService.hide();
+              this.isGeneratingRif = false;
+              console.error('Errore creazione contratto di riferimento (fallback):', fallbackErr);
+              alert(fallbackErr?.message || 'Si è verificato un errore durante la creazione del contratto di riferimento.');
+              resolve();
+            }
+          }
+        });
       });
     } catch (error: any) {
       this.loadingService.hide();
