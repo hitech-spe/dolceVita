@@ -109,4 +109,65 @@ describe('CustomersTabComponent', () => {
       expect(mockRentalService.updateCustomer).toHaveBeenCalledWith('cust-1', { attachments: [] });
     });
   });
+
+  describe('Customer creation and list navigation', () => {
+    it('should alert if firstName or lastName is missing in saveCustomer', async () => {
+      spyOn(window, 'alert');
+      component.newCustomer = { firstName: '', lastName: 'Rossi' };
+
+      await component.saveCustomer();
+
+      expect(window.alert).toHaveBeenCalledWith('Inserisci Nome e Cognome per il cliente.');
+      expect(mockRentalService.addCustomer).not.toHaveBeenCalled();
+    });
+
+    it('should save new customer, reset page to 1, clear searchTerm, and close modal', async () => {
+      component.newCustomer = {
+        firstName: ' Mario ',
+        lastName: ' Rossi ',
+        phone: '123456789',
+        birthDate: '1990-05-20'
+      };
+      component.currentPage = 3;
+      component.searchTerm = 'VecchioFiltro';
+      component.isModalOpen = true;
+
+      await component.saveCustomer();
+
+      expect(mockRentalService.addCustomer).toHaveBeenCalledWith(jasmine.objectContaining({
+        firstName: 'Mario',
+        lastName: 'Rossi',
+        phone: '123456789'
+      }));
+      expect(component.currentPage).toBe(1);
+      expect(component.searchTerm).toBe('');
+      expect(component.sortOrder).toBe('newest');
+      expect(component.isModalOpen).toBeFalse();
+      expect(component.isSaving).toBeFalse();
+    });
+
+    it('should prevent concurrent submissions when isSaving is true', async () => {
+      component.isSaving = true;
+      component.newCustomer = { firstName: 'Mario', lastName: 'Rossi' };
+
+      await component.saveCustomer();
+
+      expect(mockRentalService.addCustomer).not.toHaveBeenCalled();
+    });
+
+    it('should correctly sort customers by newest using robust timestamp extraction', () => {
+      const customers: any[] = [
+        { id: '1', firstName: 'A', lastName: 'Old', createdAt: { seconds: 1000 } },
+        { id: '2', firstName: 'B', lastName: 'New', createdAt: { seconds: 5000 } },
+        { id: '3', firstName: 'C', lastName: 'Date', createdAt: new Date('2026-10-14T10:00:00Z') }
+      ];
+
+      component.sortOrder = 'newest';
+      const sorted = component.getFiltered(customers);
+
+      expect(sorted[0].id).toBe('3'); // Date is 2026 (highest seconds)
+      expect(sorted[1].id).toBe('2'); // 5000
+      expect(sorted[2].id).toBe('1'); // 1000
+    });
+  });
 });

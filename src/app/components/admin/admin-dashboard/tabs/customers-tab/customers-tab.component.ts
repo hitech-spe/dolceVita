@@ -24,6 +24,7 @@ export class CustomersTabComponent implements OnInit {
 
   isModalOpen = false;
   isEditMode = false;
+  isSaving = false;
   editingCustomerId?: string;
   newCustomer: any = {};
   pendingAttachments: CustomerAttachment[] = [];
@@ -66,17 +67,37 @@ export class CustomersTabComponent implements OnInit {
     this.isModalOpen = true;
   }
 
-  closeModal() { this.isModalOpen = false; this.newCustomer = {}; this.pendingAttachments = []; }
+  closeModal() {
+    this.isModalOpen = false;
+    this.newCustomer = {};
+    this.pendingAttachments = [];
+    this.isSaving = false;
+  }
 
   async saveCustomer() {
-    if (!this.newCustomer.firstName || !this.newCustomer.lastName) return;
+    if (this.isSaving) return;
+    const firstName = (this.newCustomer.firstName || '').trim();
+    const lastName = (this.newCustomer.lastName || '').trim();
+    if (!firstName || !lastName) {
+      alert('Inserisci Nome e Cognome per il cliente.');
+      return;
+    }
+
     try {
+      this.isSaving = true;
       this.loadingService.show();
       const data: Customer = {
         ...this.newCustomer,
-        birthDate: this.newCustomer.birthDate ? Timestamp.fromDate(new Date(this.newCustomer.birthDate)) : null,
-        licenseExpiry: this.newCustomer.licenseExpiry ? Timestamp.fromDate(new Date(this.newCustomer.licenseExpiry)) : null,
-        licenseIssueDate: this.newCustomer.licenseIssueDate ? Timestamp.fromDate(new Date(this.newCustomer.licenseIssueDate)) : null,
+        firstName: firstName,
+        lastName: lastName,
+        phone: (this.newCustomer.phone || '').trim(),
+        address: (this.newCustomer.address || '').trim(),
+        licenseNumber: (this.newCustomer.licenseNumber || '').trim(),
+        birthPlace: (this.newCustomer.birthPlace || '').trim(),
+        licenseReleasedBy: (this.newCustomer.licenseReleasedBy || '').trim(),
+        birthDate: this.parseToTimestamp(this.newCustomer.birthDate),
+        licenseExpiry: this.parseToTimestamp(this.newCustomer.licenseExpiry),
+        licenseIssueDate: this.parseToTimestamp(this.newCustomer.licenseIssueDate),
         attachments: this.pendingAttachments
       };
 
@@ -85,13 +106,30 @@ export class CustomersTabComponent implements OnInit {
       } else {
         await this.rentalService.addCustomer(data);
       }
-      this.loadingService.hide();
+
+      this.currentPage = 1;
+      this.searchTerm = '';
+      this.sortOrder = 'newest';
       this.closeModal();
     } catch (error) {
-      this.loadingService.hide();
       console.error('Errore durante il salvataggio del cliente:', error);
       alert('Si è verificato un errore durante il salvataggio del cliente.');
+    } finally {
+      this.isSaving = false;
+      this.loadingService.hide();
     }
+  }
+
+  private parseToTimestamp(val: any): Timestamp | null {
+    if (!val) return null;
+    if (val instanceof Timestamp) return val;
+    if (typeof val?.toDate === 'function') return Timestamp.fromDate(val.toDate());
+    if (val instanceof Date && !isNaN(val.getTime())) return Timestamp.fromDate(val);
+    if (typeof val === 'string' && val.trim()) {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) return Timestamp.fromDate(d);
+    }
+    return null;
   }
 
   async onNewFileSelected(event: any) {
@@ -190,6 +228,18 @@ export class CustomersTabComponent implements OnInit {
     return new Date(timestamp).toLocaleDateString('it-IT');
   }
 
+  private getTimestampSeconds(val: any): number {
+    if (!val) return 0;
+    if (typeof val?.seconds === 'number') return val.seconds;
+    if (typeof val?.toDate === 'function') return Math.floor(val.toDate().getTime() / 1000);
+    if (val instanceof Date) return Math.floor(val.getTime() / 1000);
+    if (typeof val === 'string') {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) return Math.floor(d.getTime() / 1000);
+    }
+    return 0;
+  }
+
   getFiltered(items: Customer[] | null): Customer[] {
     if (!items) return [];
     let filtered = items
@@ -202,15 +252,17 @@ export class CustomersTabComponent implements OnInit {
 
     return filtered.sort((a, b) => {
       if (this.sortOrder === 'newest') {
-        const dateA = (a.createdAt as any)?.seconds || 0;
-        const dateB = (b.createdAt as any)?.seconds || 0;
-        return dateB - dateA;
+        const dateA = this.getTimestampSeconds(a.createdAt);
+        const dateB = this.getTimestampSeconds(b.createdAt);
+        if (dateA !== dateB) return dateB - dateA;
+        return (a.lastName || '').localeCompare(b.lastName || '');
       } else if (this.sortOrder === 'oldest') {
-        const dateA = (a.createdAt as any)?.seconds || 0;
-        const dateB = (b.createdAt as any)?.seconds || 0;
-        return dateA - dateB;
+        const dateA = this.getTimestampSeconds(a.createdAt);
+        const dateB = this.getTimestampSeconds(b.createdAt);
+        if (dateA !== dateB) return dateA - dateB;
+        return (a.lastName || '').localeCompare(b.lastName || '');
       } else {
-        return a.lastName.localeCompare(b.lastName);
+        return (a.lastName || '').localeCompare(b.lastName || '');
       }
     });
   }

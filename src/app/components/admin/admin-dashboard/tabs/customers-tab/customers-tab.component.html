@@ -202,8 +202,14 @@
             </div>
 
             <div class="modal-actions">
-                <button class="btn btn-outline" (click)="closeModal()">Annulla</button>
-                <button class="btn btn-accent" (click)="saveCustomer()">{{ isEditMode ? 'Aggiorna' : 'Salva' }} Cliente</button>
+                <button class="btn btn-outline" (click)="closeModal()" [disabled]="isSaving">Annulla</button>
+                <button class="btn btn-accent" (click)="saveCustomer()" [disabled]="isSaving">
+                    @if (isSaving) {
+                        <i class="fa-solid fa-spinner fa-spin"></i> Salvataggio...
+                    } @else {
+                        {{ isEditMode ? 'Aggiorna' : 'Salva' }} Cliente
+                    }
+                </button>
             </div>
         </div>
     </div>

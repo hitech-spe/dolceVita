@@ -706,8 +706,7 @@ export class RentalService {
   getCustomers(): Observable<Customer[]> {
     if (!this.customers$) {
       const ref = collection(this.firestore, 'customers');
-      const q = query(ref, orderBy('lastName'));
-      this.customers$ = (collectionData(q, { idField: 'id' }) as Observable<Customer[]>).pipe(
+      this.customers$ = (collectionData(ref, { idField: 'id' }) as Observable<Customer[]>).pipe(
         shareReplay({ bufferSize: 1, refCount: false })
       );
     }
@@ -717,7 +716,12 @@ export class RentalService {
   async addCustomer(customer: Customer) {
     const docRef = doc(collection(this.firestore, 'customers'));
     const data = this.cleanUndefined({ ...customer, createdAt: Timestamp.now() });
-    setDoc(docRef, data).catch(err => console.error('Errore persistenza cliente Firestore:', err));
+    await Promise.race([
+      setDoc(docRef, data),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout durante il salvataggio cliente su Firestore. Verifica la connessione di rete.')), 10000)
+      )
+    ]);
     return docRef;
   }
 
@@ -960,7 +964,7 @@ export class RentalService {
     if (typeof obj !== 'object') {
       return obj;
     }
-    if (obj instanceof Timestamp || obj instanceof Date) {
+    if (obj instanceof Timestamp || obj instanceof Date || (obj && typeof obj.toDate === 'function')) {
       return obj;
     }
     const result: any = Array.isArray(obj) ? [] : {};
