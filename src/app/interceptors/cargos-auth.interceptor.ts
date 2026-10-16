@@ -9,11 +9,11 @@ import { from, switchMap, catchError, of } from 'rxjs';
  */
 export const cargosAuthInterceptor: HttpInterceptorFn = (req, next) => {
   const isTargetEndpoint =
-    req.url.includes('/api/v1/cargos/') ||
-    req.url.includes('/api/v1/contracts/') ||
-    req.url.includes('/api/v1/customers/') ||
-    req.url.includes('/api/v1/verbali/') ||
-    req.url.includes('/api/verbali/');
+    req.url.includes('/api/v1/cargos') ||
+    req.url.includes('/api/v1/contracts') ||
+    req.url.includes('/api/v1/customers') ||
+    req.url.includes('/api/v1/verbali') ||
+    req.url.includes('/api/verbali');
 
   // Check if the request is targeting our microservice endpoints
   if (isTargetEndpoint) {

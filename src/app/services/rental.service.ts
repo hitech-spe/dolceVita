@@ -171,6 +171,8 @@ export interface ContractDetails {
   driverLicenseExpiry?: string;
   driverLicenseReleasedBy?: string;
   driverLicenseCountry?: string;
+  driverAddress?: string;
+  driverPhone?: string;
   additionalDriver1Id?: string;
   additionalDriver1Address?: string;
   additionalDriver1Phone?: string;
@@ -713,26 +715,74 @@ export class RentalService {
     return this.customers$;
   }
 
-  async addCustomer(customer: Customer) {
-    const docRef = doc(collection(this.firestore, 'customers'));
-    const data = this.cleanUndefined({ ...customer, createdAt: Timestamp.now() });
-    await Promise.race([
-      setDoc(docRef, data),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout durante il salvataggio cliente su Firestore. Verifica la connessione di rete.')), 10000)
-      )
-    ]);
-    return docRef;
+  async addCustomer(customer: Customer): Promise<{ id: string } & Partial<Customer>> {
+    const url = `${API_CONFIG.baseUrl}/api/v1/customers`;
+    const payload = this.serializeForBackend(this.cleanUndefined(customer));
+    try {
+      const response = await firstValueFrom(
+        this.http.post<{ id: string } & Partial<Customer>>(url, payload).pipe(timeout(10000))
+      );
+      return response;
+    } catch (err) {
+      console.warn('Salvataggio cliente su backend non riuscito, fallback locale Firestore:', err);
+      const docRef = doc(collection(this.firestore, 'customers'));
+      const data = this.cleanUndefined({ ...customer, createdAt: Timestamp.now() });
+      await Promise.race([
+        setDoc(docRef, data),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout durante il salvataggio cliente su Firestore. Verifica la connessione di rete.')), 10000)
+        )
+      ]);
+      return { ...data, id: docRef.id };
+    }
   }
 
-  async updateCustomer(id: string, data: Partial<Customer>) {
-    const docRef = doc(this.firestore, `customers/${id}`);
-    return updateDoc(docRef, this.cleanUndefined(data));
+  async updateCustomer(id: string, data: Partial<Customer>): Promise<any> {
+    const url = `${API_CONFIG.baseUrl}/api/v1/customers/${id}`;
+    const payload = this.serializeForBackend(this.cleanUndefined(data));
+    try {
+      return await firstValueFrom(
+        this.http.put<any>(url, payload).pipe(timeout(10000))
+      );
+    } catch (err) {
+      console.warn('Aggiornamento cliente su backend non riuscito, fallback locale Firestore:', err);
+      const docRef = doc(this.firestore, `customers/${id}`);
+      return updateDoc(docRef, this.cleanUndefined(data));
+    }
   }
 
-  async deleteCustomer(id: string) {
-    const docRef = doc(this.firestore, `customers/${id}`);
-    return deleteDoc(docRef);
+  async deleteCustomer(id: string): Promise<any> {
+    const url = `${API_CONFIG.baseUrl}/api/v1/customers/${id}`;
+    try {
+      return await firstValueFrom(
+        this.http.delete<any>(url).pipe(timeout(10000))
+      );
+    } catch (err) {
+      console.warn('Eliminazione cliente su backend non riuscito, fallback locale Firestore:', err);
+      const docRef = doc(this.firestore, `customers/${id}`);
+      return deleteDoc(docRef);
+    }
+  }
+
+  private serializeForBackend(obj: any): any {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (obj instanceof Timestamp || (obj && typeof obj.toDate === 'function')) {
+      return obj.toDate().toISOString();
+    }
+    if (obj instanceof Date) {
+      return obj.toISOString();
+    }
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.serializeForBackend(item));
+    }
+    const result: Record<string, any> = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (val !== undefined) {
+        result[key] = this.serializeForBackend(val);
+      }
+    }
+    return result;
   }
 
   /**

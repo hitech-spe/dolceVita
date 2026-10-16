@@ -1390,7 +1390,7 @@ export class CalendarTabComponent implements OnInit {
       companyAddress: '',
       companyPhone: '',
       companyPec: '',
-      mainDriverId: rental.customerId || (this.contractCustomer ? (this.contractCustomer.id || 'new-customer') : 'new-customer'),
+      mainDriverId: rental.customerId || (this.contractCustomer ? (this.contractCustomer.id || '') : ''),
       driverBirthPlace: this.contractCustomer?.birthPlace || (this.quickCustomer?.birthPlace || ''),
       driverBirthDate: this.formatDateForInput(this.contractCustomer?.birthDate || this.quickCustomer?.birthDate),
       driverLicenseNumber: this.contractCustomer?.licenseNumber || (this.quickCustomer?.licenseNumber || ''),
@@ -1398,6 +1398,8 @@ export class CalendarTabComponent implements OnInit {
       driverLicenseExpiry: this.formatDateForInput(this.contractCustomer?.licenseExpiry),
       driverLicenseReleasedBy: this.contractCustomer?.licenseReleasedBy || '',
       driverLicenseCountry: this.contractCustomer?.licenseCountry || 'Italia',
+      driverAddress: this.contractCustomer?.address || (this.quickCustomer?.address || ''),
+      driverPhone: this.contractCustomer?.phone || (this.quickCustomer?.phone || ''),
       additionalDriver1Id: '',
       additionalDriver2Id: '',
       baseRate: 0,
@@ -1475,6 +1477,8 @@ export class CalendarTabComponent implements OnInit {
       this.contractDetails.driverLicenseExpiry = this.formatDateForInput(driver.licenseExpiry) || this.contractDetails.driverLicenseExpiry || '';
       this.contractDetails.driverLicenseReleasedBy = driver.licenseReleasedBy || this.contractDetails.driverLicenseReleasedBy || '';
       this.contractDetails.driverLicenseCountry = driver.licenseCountry || this.contractDetails.driverLicenseCountry || 'Italia';
+      this.contractDetails.driverAddress = driver.address || this.contractDetails.driverAddress || '';
+      this.contractDetails.driverPhone = driver.phone || this.contractDetails.driverPhone || '';
     } else {
       this.contractDetails.driverBirthPlace = '';
       this.contractDetails.driverBirthDate = '';
@@ -1483,6 +1487,8 @@ export class CalendarTabComponent implements OnInit {
       this.contractDetails.driverLicenseExpiry = '';
       this.contractDetails.driverLicenseReleasedBy = '';
       this.contractDetails.driverLicenseCountry = 'Italia';
+      this.contractDetails.driverAddress = '';
+      this.contractDetails.driverPhone = '';
     }
   }
 
@@ -1514,7 +1520,7 @@ export class CalendarTabComponent implements OnInit {
     if (!this.contractDetails.isCompany) {
       this.contractDetails.mainDriverId = (this.contractRental && this.contractRental.customerId)
         ? this.contractRental.customerId
-        : (this.contractCustomer?.id || 'new-customer');
+        : (this.contractCustomer?.id || '');
     }
     this.onMainDriverChange();
   }
@@ -1568,6 +1574,8 @@ export class CalendarTabComponent implements OnInit {
       if (this.contractDetails.driverLicenseExpiry) customerUpdates['licenseExpiry'] = this.contractDetails.driverLicenseExpiry;
       if (this.contractDetails.driverLicenseReleasedBy) customerUpdates['licenseReleasedBy'] = this.contractDetails.driverLicenseReleasedBy;
       if (this.contractDetails.driverLicenseCountry) customerUpdates['licenseCountry'] = this.contractDetails.driverLicenseCountry;
+      if (this.contractDetails.driverAddress) customerUpdates['address'] = this.contractDetails.driverAddress.trim();
+      if (this.contractDetails.driverPhone) customerUpdates['phone'] = this.contractDetails.driverPhone.trim();
 
       // Dati aziendali opzionali
       const companyData = (this.contractDetails.isCompany && this.contractDetails.companyName && this.contractDetails.companyVat) ? {

@@ -264,7 +264,7 @@ describe('CalendarTabComponent', () => {
       expect(component.availableCustomers.length).toBeGreaterThan(0);
       expect(component.contractCustomer?.firstName).toBe('Giuseppe');
       expect(component.isContractModalOpen).toBeTrue();
-      expect(component.contractDetails.mainDriverId).toBe('new-customer');
+      expect(component.contractDetails.mainDriverId).toBe('');
     });
 
     it('should include driver details in customerUpdates when stipulating with a new quick customer', async () => {

@@ -617,6 +617,9 @@ export class ContractsTabComponent implements OnInit {
 
     this.rifDetails = JSON.parse(JSON.stringify(contract.details || {}));
     this.rifDetails.contractNumber = this.rifContractNumber;
+    if (this.rifDetails.mainDriverId === 'new-customer') {
+      this.rifDetails.mainDriverId = contract.customerId || '';
+    }
 
     this.rifVehicleId = contract.vehicleId || '';
     this.rifCustomerId = contract.customerId || '';
@@ -696,6 +699,8 @@ export class ContractsTabComponent implements OnInit {
       this.rifDetails.driverLicenseExpiry = this.formatDateForInput(driver.licenseExpiry);
       this.rifDetails.driverLicenseReleasedBy = driver.licenseReleasedBy || '';
       this.rifDetails.driverLicenseCountry = driver.licenseCountry || 'Italia';
+      this.rifDetails.driverAddress = driver.address || this.rifDetails.driverAddress || '';
+      this.rifDetails.driverPhone = driver.phone || this.rifDetails.driverPhone || '';
     }
   }
 
