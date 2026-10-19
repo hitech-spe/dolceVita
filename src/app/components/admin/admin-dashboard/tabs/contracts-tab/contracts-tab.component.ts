@@ -227,6 +227,27 @@ export class ContractsTabComponent implements OnInit {
     }
     this.editingContract = contract;
     this.editedDetails = { ...contract.details };
+    // Pre-popola driverAddress e driverPhone se presenti a livello di radice del contratto o dall'anagrafica cliente
+    if (!this.editedDetails.driverAddress) {
+      if (contract.conducente_contraente_residenza_indirizzo) {
+        this.editedDetails.driverAddress = contract.conducente_contraente_residenza_indirizzo;
+      } else if (this.editedDetails.mainDriverId) {
+        const driver = this.availableCustomers.find(c => c.id === this.editedDetails.mainDriverId);
+        if (driver?.address) {
+          this.editedDetails.driverAddress = driver.address;
+        }
+      }
+    }
+    if (!this.editedDetails.driverPhone) {
+      if (contract.conducente_contraente_recapito) {
+        this.editedDetails.driverPhone = contract.conducente_contraente_recapito;
+      } else if (this.editedDetails.mainDriverId) {
+        const driver = this.availableCustomers.find(c => c.id === this.editedDetails.mainDriverId);
+        if (driver?.phone) {
+          this.editedDetails.driverPhone = driver.phone;
+        }
+      }
+    }
     this.editedContractDate = this.formatDateForInput(contract.date);
     
     // Recupera la data di inizio e fine noleggio dal noleggio associato o dai dati del contratto
@@ -369,6 +390,8 @@ export class ContractsTabComponent implements OnInit {
       this.editedDetails.driverLicenseExpiry = this.formatDateForInput(driver.licenseExpiry);
       this.editedDetails.driverLicenseReleasedBy = driver.licenseReleasedBy || '';
       this.editedDetails.driverLicenseCountry = driver.licenseCountry || 'Italia';
+      this.editedDetails.driverAddress = driver.address || '';
+      this.editedDetails.driverPhone = driver.phone || '';
     } else {
       this.editedDetails.driverBirthPlace = '';
       this.editedDetails.driverBirthDate = '';
@@ -377,6 +400,8 @@ export class ContractsTabComponent implements OnInit {
       this.editedDetails.driverLicenseExpiry = '';
       this.editedDetails.driverLicenseReleasedBy = '';
       this.editedDetails.driverLicenseCountry = 'Italia';
+      this.editedDetails.driverAddress = '';
+      this.editedDetails.driverPhone = '';
     }
   }
 
@@ -479,7 +504,11 @@ export class ContractsTabComponent implements OnInit {
         conducente_contraente_patente_luogoril_paese: this.editedDetails.driverLicenseCountry || 'Italia',
         conducente_contraente_docide_numero: this.editedDetails.driverLicenseNumber || 'PA987654321',
         conducente_contraente_docide_luogoril: this.editedDetails.driverLicenseReleasedBy || this.editedDetails.driverBirthPlace || 'Mottola',
-        conducente_contraente_docide_luogoril_paese: this.editedDetails.driverLicenseCountry || 'Italia'
+        conducente_contraente_docide_luogoril_paese: this.editedDetails.driverLicenseCountry || 'Italia',
+        conducente_contraente_residenza_indirizzo: this.editedDetails.driverAddress ? this.editedDetails.driverAddress.trim() : (this.editingContract.conducente_contraente_residenza_indirizzo || null as any),
+        conducente_contraente_recapito: this.editedDetails.driverPhone ? this.editedDetails.driverPhone.trim() : (this.editingContract.conducente_contraente_recapito || null as any),
+        conducente_contraente_residenza_luogo: null as any,
+        conducente_contraente_residenza_luogo_cod: null as any
       };
 
       // Se posticipa la data (o se il contratto non era ancora stato inviato), resettiamo lo stato di Cargos.
@@ -544,6 +573,12 @@ export class ContractsTabComponent implements OnInit {
         if (this.editedDetails.driverLicenseCountry) {
           updateData.licenseCountry = this.editedDetails.driverLicenseCountry;
         }
+        if (this.editedDetails.driverAddress) {
+          updateData.address = this.editedDetails.driverAddress.trim();
+        }
+        if (this.editedDetails.driverPhone) {
+          updateData.phone = this.editedDetails.driverPhone.trim();
+        }
 
         if (Object.keys(updateData).length > 0) {
           try {
@@ -559,6 +594,8 @@ export class ContractsTabComponent implements OnInit {
               if (updateData.licenseExpiry) cachedDriver.licenseExpiry = updateData.licenseExpiry;
               if (updateData.licenseReleasedBy) cachedDriver.licenseReleasedBy = updateData.licenseReleasedBy;
               if (updateData.licenseCountry) cachedDriver.licenseCountry = updateData.licenseCountry;
+              if (updateData.address) cachedDriver.address = updateData.address;
+              if (updateData.phone) cachedDriver.phone = updateData.phone;
             }
           } catch (custError) {
             console.error("Errore nell'aggiornamento dell'anagrafica cliente da modifica contratto:", custError);

@@ -218,6 +218,10 @@ export interface ContractDocument {
   conducente_contraente_docide_numero?: string;
   conducente_contraente_docide_luogoril?: string;
   conducente_contraente_docide_luogoril_paese?: string;
+  conducente_contraente_residenza_luogo?: string | null;
+  conducente_contraente_residenza_luogo_cod?: number | null;
+  conducente_contraente_residenza_indirizzo?: string | null;
+  conducente_contraente_recapito?: string | null;
 }
 
 export interface Company {

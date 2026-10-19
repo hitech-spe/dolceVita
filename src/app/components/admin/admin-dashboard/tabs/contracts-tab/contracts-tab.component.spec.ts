@@ -26,6 +26,7 @@ describe('ContractsTabComponent', () => {
       addCompany: jasmine.createSpy('addCompany').and.returnValue(Promise.resolve()),
       deleteContract: jasmine.createSpy('deleteContract').and.returnValue(Promise.resolve()),
       updateContract: jasmine.createSpy('updateContract').and.returnValue(Promise.resolve()),
+      updateCustomer: jasmine.createSpy('updateCustomer').and.returnValue(Promise.resolve()),
       sendBulkContracts: jasmine.createSpy('sendBulkContracts').and.returnValue(of([])),
       downloadContractPdf: jasmine.createSpy('downloadContractPdf').and.returnValue(of(new Blob())),
       stipulateContractOnBackend: jasmine.createSpy('stipulateContractOnBackend').and.returnValue(of({ pdfBlob: new Blob(['pdf']), contractNumber: 'RIF 1790' }))
@@ -205,7 +206,9 @@ describe('ContractsTabComponent', () => {
         licenseIssueDate: { toDate: () => new Date('2010-01-01') } as any,
         licenseExpiry: { toDate: () => new Date('2030-01-01') } as any,
         licenseReleasedBy: 'MCTC',
-        licenseCountry: 'Italia'
+        licenseCountry: 'Italia',
+        address: 'Via Roma 10, Mottola',
+        phone: '+393331234567'
       }
     ];
 
@@ -216,33 +219,44 @@ describe('ContractsTabComponent', () => {
     expect(component.editedDetails.driverBirthDate).toBe('1990-01-01');
     expect(component.editedDetails.driverLicenseNumber).toBe('PAT123');
     expect(component.editedDetails.driverLicenseCountry).toBe('Italia');
+    expect(component.editedDetails.driverAddress).toBe('Via Roma 10, Mottola');
+    expect(component.editedDetails.driverPhone).toBe('+393331234567');
   });
 
-  it('should save edited contract, updating customerName and resetting Cargos status', async () => {
+  it('should save edited contract, updating customerName, residence address, and resetting Cargos status', async () => {
     component.availableCustomers = [
-      { id: 'c_xyz', firstName: 'Luigi', lastName: 'Bianchi' }
+      { id: 'c_xyz', firstName: 'Luigi', lastName: 'Bianchi', address: 'Via Roma 10, Mottola' }
     ];
 
     const mockContract = {
       id: 'c_id_1',
       contractNumber: '555',
-      details: { baseRate: 100, mainDriverId: 'c_xyz' }
+      conducente_contraente_residenza_indirizzo: 'VIA VECCHIA 1',
+      details: { baseRate: 100, mainDriverId: 'c_xyz', driverAddress: 'VIA VECCHIA 1' }
     } as any;
 
     component.editingContract = mockContract;
-    component.editedDetails = { baseRate: 190, mainDriverId: 'c_xyz' };
+    component.editedDetails = { baseRate: 190, mainDriverId: 'c_xyz', driverAddress: 'VIA G.MARCONI 28, NOCERA INFERIORE', driverPhone: '+393339999999' };
     component.isEditModalOpen = true;
 
     await component.saveContractEdit();
 
     expect(mockRentalService.updateContract).toHaveBeenCalledWith('c_id_1', jasmine.objectContaining({
-      details: { baseRate: 190, mainDriverId: 'c_xyz' },
+      details: jasmine.objectContaining({ baseRate: 190, mainDriverId: 'c_xyz', driverAddress: 'VIA G.MARCONI 28, NOCERA INFERIORE' }),
       cargos_status: null as any,
       cargos_transaction_id: null as any,
       cargos_error: null as any,
       cargos_sync_time: null as any,
       pdfBase64: null as any,
-      customerName: 'Luigi Bianchi'
+      customerName: 'Luigi Bianchi',
+      conducente_contraente_residenza_indirizzo: 'VIA G.MARCONI 28, NOCERA INFERIORE',
+      conducente_contraente_recapito: '+393339999999',
+      conducente_contraente_residenza_luogo: null as any,
+      conducente_contraente_residenza_luogo_cod: null as any
+    }));
+    expect(mockRentalService.updateCustomer).toHaveBeenCalledWith('c_xyz', jasmine.objectContaining({
+      address: 'VIA G.MARCONI 28, NOCERA INFERIORE',
+      phone: '+393339999999'
     }));
     expect(component.isEditModalOpen).toBeFalse();
   });
