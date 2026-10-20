@@ -304,5 +304,18 @@ describe('CalendarTabComponent', () => {
       );
       expect(component.availableCustomers.find(c => c.id === 'cust-created-123')).toBeDefined();
     });
+
+    it('should calculate exactly 7 days between Oct 20 and Oct 27 during daylight saving time change', () => {
+      const d1 = new Date(2026, 9, 20, 12, 0, 0);
+      const d2 = new Date(2026, 9, 27, 12, 0, 0);
+      const days = component.calculateRentalDays(d1, d2);
+      expect(days).toBe(7);
+
+      // Same day returns 1
+      expect(component.calculateRentalDays(d1, d1)).toBe(1);
+
+      // String format
+      expect(component.calculateRentalDays('2026-10-20', '2026-10-27')).toBe(7);
+    });
   });
 });

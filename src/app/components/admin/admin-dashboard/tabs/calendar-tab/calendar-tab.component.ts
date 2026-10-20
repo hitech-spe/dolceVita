@@ -1198,6 +1198,15 @@ export class CalendarTabComponent implements OnInit {
     }
   }
 
+  calculateRentalDays(startDate: any, endDate: any): number {
+    if (!startDate || !endDate) return 1;
+    const start = startDate.toDate ? startDate.toDate() : new Date(startDate);
+    const end = endDate.toDate ? endDate.toDate() : new Date(endDate);
+    const dStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const dEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    return Math.max(1, Math.round(Math.abs(dEnd.getTime() - dStart.getTime()) / (1000 * 60 * 60 * 24)));
+  }
+
   getFormattedTooltip(type: string, data: any): string {
     if (type === 'sold') {
       const dateStr = data.soldDate ? (data.soldDate as any).toDate().toLocaleDateString('it-IT') : '-';
@@ -1206,8 +1215,10 @@ export class CalendarTabComponent implements OnInit {
     if (type === 'rental') {
       const start = data.startDate.toDate().toLocaleDateString('it-IT');
       const end = data.endDate.toDate().toLocaleDateString('it-IT');
+      const days = this.calculateRentalDays(data.startDate, data.endDate);
+      const daysLabel = days === 1 ? '1 giorno' : `${days} giorni`;
       const typeLabel = data.isServiceRental ? 'Noleggio per Servizi' : 'Noleggio Standard';
-      return `${typeLabel}: ${data.customerName}\nDal ${start} al ${end}\nSede: ${data.location} -> ${data.returnLocation || data.location}\n\nClicca su un giorno per terminare o allungare il noleggio`;
+      return `${typeLabel}: ${data.customerName}\nDal ${start} al ${end} (${daysLabel})\nSede: ${data.location} -> ${data.returnLocation || data.location}\n\nClicca su un giorno per terminare o allungare il noleggio`;
     }
     if (type === 'maintenance') {
       return `In Manutenzione\nNote: ${data.notes || '-'}\n\nClicca su un giorno per terminare o allungare la manutenzione`;
@@ -1376,6 +1387,10 @@ export class CalendarTabComponent implements OnInit {
     this.companySearchTerm = '';
     this.isCompanyDropdownOpen = false;
 
+    const diffDays = this.calculateRentalDays(rental.startDate, rental.endDate);
+    const dailyPrice = this.contractVehicle?.dailyPrice || 0;
+    const calculatedBaseRate = diffDays * dailyPrice;
+
     this.contractDetails = {
       contractNumber: '', // Inizialmente vuoto: se l'operatore scrive un codice manuale si usa quello, altrimenti calcolo automatico
       kmOut: undefined, // km uscita non valorizzato inizialmente
@@ -1402,7 +1417,7 @@ export class CalendarTabComponent implements OnInit {
       driverPhone: this.contractCustomer?.phone || (this.quickCustomer?.phone || ''),
       additionalDriver1Id: '',
       additionalDriver2Id: '',
-      baseRate: 0,
+      baseRate: rental.totalPrice || calculatedBaseRate || 0,
       extraKmPrice: 0,
       advance: 0,
       fuelLevel: '12/12',
