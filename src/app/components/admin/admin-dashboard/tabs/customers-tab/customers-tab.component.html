@@ -14,6 +14,9 @@
                     <option value="alpha">Alfabetico</option>
                 </select>
             </div>
+            <button class="btn btn-outline" (click)="refreshCustomers()" [disabled]="isRefreshing" title="Sincronizza e ricarica lista dal server">
+                <i class="fa-solid fa-rotate-right" [class.fa-spin]="isRefreshing"></i> Aggiorna
+            </button>
             <button class="btn btn-accent" (click)="openModal()">+ Nuovo Cliente</button>
         </div>
     </div>

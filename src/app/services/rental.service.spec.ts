@@ -67,4 +67,69 @@ describe('RentalService (Backend Contract Endpoints)', () => {
       }
     });
   });
+
+  describe('Reactive Customer State & Local Updates', () => {
+    it('should upsert, update and remove customer in the local observable stream immediately', (done) => {
+      const customerA: any = { id: 'cust-1', firstName: 'Mario', lastName: 'Rossi' };
+      const customerB: any = { id: 'cust-2', firstName: 'Luigi', lastName: 'Verdi' };
+
+      let emissionsCount = 0;
+      service.getCustomers().subscribe(customers => {
+        emissionsCount++;
+        if (emissionsCount === 1) {
+          // Dopo prima emissione (customerA inserito)
+          expect(customers.length).toBe(1);
+          expect(customers[0].firstName).toBe('Mario');
+        } else if (emissionsCount === 2) {
+          // Dopo secondo inserimento (customerB)
+          expect(customers.length).toBe(2);
+          expect(customers.some(c => c.id === 'cust-2')).toBeTrue();
+        } else if (emissionsCount === 3) {
+          // Dopo aggiornamento di customerA
+          const updatedA = customers.find(c => c.id === 'cust-1');
+          expect(updatedA?.firstName).toBe('Mario Modificato');
+        } else if (emissionsCount === 4) {
+          // Dopo rimozione di customerB
+          expect(customers.length).toBe(1);
+          expect(customers.find(c => c.id === 'cust-2')).toBeUndefined();
+          done();
+        }
+      });
+
+      // 1. Inserimento di customerA
+      service.upsertLocalCustomer(customerA);
+
+      // 2. Inserimento di customerB
+      service.upsertLocalCustomer(customerB);
+
+      // 3. Modifica di customerA
+      service.updateLocalCustomer('cust-1', { firstName: 'Mario Modificato' });
+
+      // 4. Rimozione di customerB
+      service.removeLocalCustomer('cust-2');
+    });
+
+    it('should immediately add customer to reactive stream upon successful addCustomer', async () => {
+      const newCust: any = { firstName: 'Anna', lastName: 'Bianchi', phone: '123' };
+
+      let capturedCustomers: any[] = [];
+      service.getCustomers().subscribe(custs => {
+        capturedCustomers = custs;
+      });
+
+      const addPromise = service.addCustomer(newCust);
+
+      const req = httpMock.expectOne(`${API_CONFIG.baseUrl}/api/v1/customers`);
+      expect(req.request.method).toBe('POST');
+      req.flush({ id: 'cust-auto-123', firstName: 'Anna', lastName: 'Bianchi', phone: '123' });
+
+      const result = await addPromise;
+      expect(result.id).toBe('cust-auto-123');
+
+      // Verifica aggiornamento ottimistico istantaneo dello stream
+      const found = capturedCustomers.find(c => c.id === 'cust-auto-123');
+      expect(found).toBeDefined();
+      expect(found?.firstName).toBe('Anna');
+    });
+  });
 });

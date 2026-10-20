@@ -13,6 +13,7 @@ describe('CustomersTabComponent', () => {
   beforeEach(async () => {
     mockRentalService = {
       getCustomers: jasmine.createSpy('getCustomers').and.returnValue(of([])),
+      refreshCustomers: jasmine.createSpy('refreshCustomers').and.returnValue(Promise.resolve([])),
       updateCustomer: jasmine.createSpy('updateCustomer').and.returnValue(Promise.resolve()),
       addCustomer: jasmine.createSpy('addCustomer').and.returnValue(Promise.resolve()),
       deleteCustomer: jasmine.createSpy('deleteCustomer').and.returnValue(Promise.resolve()),
@@ -168,6 +169,15 @@ describe('CustomersTabComponent', () => {
       expect(sorted[0].id).toBe('3'); // Date is 2026 (highest seconds)
       expect(sorted[1].id).toBe('2'); // 5000
       expect(sorted[2].id).toBe('1'); // 1000
+    });
+
+    it('should call rentalService.refreshCustomers and manage loading state', async () => {
+      await component.refreshCustomers();
+
+      expect(mockLoadingService.show).toHaveBeenCalled();
+      expect(mockRentalService.refreshCustomers).toHaveBeenCalled();
+      expect(mockLoadingService.hide).toHaveBeenCalled();
+      expect(component.isRefreshing).toBeFalse();
     });
   });
 });

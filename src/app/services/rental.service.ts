@@ -15,12 +15,13 @@ import {
   Timestamp,
   orderBy,
   getDocs,
+  getDocsFromServer,
   writeBatch,
   limit,
   runTransaction,
   docData
 } from '@angular/fire/firestore';
-import { Observable, map, shareReplay, combineLatest, firstValueFrom, catchError, of, timeout } from 'rxjs';
+import { Observable, map, shareReplay, combineLatest, firstValueFrom, catchError, of, timeout, ReplaySubject } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { API_CONFIG } from '../config/api.config';
 
@@ -267,7 +268,11 @@ export class RentalService {
   // --- IN-MEMORY FIRESTORE STREAM CACHES ---
   private vehicles$?: Observable<Vehicle[]>;
   private rentals$?: Observable<Rental[]>;
-  private customers$?: Observable<Customer[]>;
+  private customersSubject = new ReplaySubject<Customer[]>(1);
+  private currentCustomers: Customer[] = [];
+  private pendingUpserts = new Map<string, Customer>();
+  private pendingDeletes = new Set<string>();
+  private isCustomersSubscribed = false;
   private companies$?: Observable<Company[]>;
   private insurances$?: Observable<Insurance[]>;
   private inspections$?: Observable<Inspection[]>;
@@ -710,23 +715,135 @@ export class RentalService {
   // ==========================================
 
   getCustomers(): Observable<Customer[]> {
-    if (!this.customers$) {
-      const ref = collection(this.firestore, 'customers');
-      this.customers$ = (collectionData(ref, { idField: 'id' }) as Observable<Customer[]>).pipe(
-        shareReplay({ bufferSize: 1, refCount: false })
-      );
+    if (!this.isCustomersSubscribed) {
+      this.isCustomersSubscribed = true;
+      try {
+        const ref = collection(this.firestore, 'customers');
+        (collectionData(ref, { idField: 'id' }) as Observable<Customer[]>).subscribe({
+          next: (serverList) => {
+            this.syncWithServerCustomers(serverList || []);
+          },
+          error: (err) => {
+            console.error('Errore listener real-time clienti Firestore:', err);
+            if (this.currentCustomers.length > 0) {
+              this.customersSubject.next(this.currentCustomers);
+            }
+          }
+        });
+      } catch (e) {
+        console.warn('Inizializzazione collectionData clienti non riuscita:', e);
+      }
     }
-    return this.customers$;
+    return this.customersSubject.asObservable();
+  }
+
+  /**
+   * Sincronizza la lista server con le modifiche locali pendenti
+   */
+  private syncWithServerCustomers(serverList: Customer[]) {
+    const serverIdSet = new Set(serverList.map(c => c.id).filter(Boolean));
+
+    // Rimuove dai pending upsert quelli che il server ha ora confermato
+    for (const [id] of this.pendingUpserts.entries()) {
+      if (serverIdSet.has(id)) {
+        this.pendingUpserts.delete(id);
+      }
+    }
+
+    // Rimuove dai pending delete quelli che il server non ha più
+    for (const deletedId of this.pendingDeletes) {
+      if (!serverIdSet.has(deletedId)) {
+        this.pendingDeletes.delete(deletedId);
+      }
+    }
+
+    // Esclude i clienti in corso di cancellazione locale
+    let merged = serverList.filter(c => !this.pendingDeletes.has(c.id!));
+
+    // Mantiene visibili gli upsert locali non ancora sincronizzati dal push server
+    for (const [id, pendingCustomer] of this.pendingUpserts.entries()) {
+      if (!merged.some(c => c.id === id)) {
+        merged = [pendingCustomer, ...merged];
+      }
+    }
+
+    this.currentCustomers = merged;
+    this.customersSubject.next(this.currentCustomers);
+  }
+
+  /**
+   * Inserisce o aggiorna istantaneamente un cliente nella cache reattiva locale (UI ottimistica)
+   */
+  upsertLocalCustomer(customer: Customer) {
+    if (!customer || !customer.id) return;
+    this.pendingDeletes.delete(customer.id);
+    this.pendingUpserts.set(customer.id, customer);
+
+    const exists = this.currentCustomers.some(c => c.id === customer.id);
+    if (exists) {
+      this.currentCustomers = this.currentCustomers.map(c => c.id === customer.id ? { ...c, ...customer } : c);
+    } else {
+      this.currentCustomers = [customer, ...this.currentCustomers];
+    }
+    this.customersSubject.next(this.currentCustomers);
+  }
+
+  /**
+   * Aggiorna parzialmente un cliente nella cache locale
+   */
+  updateLocalCustomer(id: string, data: Partial<Customer>) {
+    if (!id) return;
+    const existing = this.currentCustomers.find(c => c.id === id);
+    const updated: Customer = { ...(existing || {}), ...data, id } as Customer;
+    this.upsertLocalCustomer(updated);
+  }
+
+  /**
+   * Rimuove istantaneamente un cliente dalla cache locale
+   */
+  removeLocalCustomer(id: string) {
+    if (!id) return;
+    this.pendingUpserts.delete(id);
+    this.pendingDeletes.add(id);
+    this.currentCustomers = this.currentCustomers.filter(c => c.id !== id);
+    this.customersSubject.next(this.currentCustomers);
+  }
+
+  /**
+   * Forza il ricaricamento diretto dal server Firestore, bypassando la cache IndexedDB locale
+   */
+  async refreshCustomers(): Promise<Customer[]> {
+    try {
+      const ref = collection(this.firestore, 'customers');
+      const snapshot = await getDocsFromServer(ref);
+      const serverList = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Customer));
+      this.syncWithServerCustomers(serverList);
+      return this.currentCustomers;
+    } catch (err) {
+      console.warn('Recupero getDocsFromServer non riuscito, fallback getDocs:', err);
+      try {
+        const ref = collection(this.firestore, 'customers');
+        const snapshot = await getDocs(ref);
+        const serverList = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Customer));
+        this.syncWithServerCustomers(serverList);
+        return this.currentCustomers;
+      } catch (innerErr) {
+        console.error('Impossibile forzare refresh clienti:', innerErr);
+        return this.currentCustomers;
+      }
+    }
   }
 
   async addCustomer(customer: Customer): Promise<{ id: string } & Partial<Customer>> {
     const url = `${API_CONFIG.baseUrl}/api/v1/customers`;
     const payload = this.serializeForBackend(this.cleanUndefined(customer));
+    let savedCustomer: { id: string } & Partial<Customer>;
+
     try {
       const response = await firstValueFrom(
         this.http.post<{ id: string } & Partial<Customer>>(url, payload).pipe(timeout(10000))
       );
-      return response;
+      savedCustomer = response;
     } catch (err) {
       console.warn('Salvataggio cliente su backend non riuscito, fallback locale Firestore:', err);
       const docRef = doc(collection(this.firestore, 'customers'));
@@ -737,34 +854,53 @@ export class RentalService {
           setTimeout(() => reject(new Error('Timeout durante il salvataggio cliente su Firestore. Verifica la connessione di rete.')), 10000)
         )
       ]);
-      return { ...data, id: docRef.id };
+      savedCustomer = { ...data, id: docRef.id };
     }
+
+    // Aggiornamento ottimistico immediato: garantisce visibilità istantanea sul client
+    const newCustomerObj: Customer = {
+      ...customer,
+      ...savedCustomer,
+      id: savedCustomer.id,
+      createdAt: savedCustomer.createdAt || customer.createdAt || Timestamp.now()
+    };
+    this.upsertLocalCustomer(newCustomerObj);
+
+    return savedCustomer;
   }
 
   async updateCustomer(id: string, data: Partial<Customer>): Promise<any> {
     const url = `${API_CONFIG.baseUrl}/api/v1/customers/${id}`;
     const payload = this.serializeForBackend(this.cleanUndefined(data));
     try {
-      return await firstValueFrom(
+      const res = await firstValueFrom(
         this.http.put<any>(url, payload).pipe(timeout(10000))
       );
+      this.updateLocalCustomer(id, data);
+      return res;
     } catch (err) {
       console.warn('Aggiornamento cliente su backend non riuscito, fallback locale Firestore:', err);
       const docRef = doc(this.firestore, `customers/${id}`);
-      return updateDoc(docRef, this.cleanUndefined(data));
+      await updateDoc(docRef, this.cleanUndefined(data));
+      this.updateLocalCustomer(id, data);
+      return { ...data, id };
     }
   }
 
   async deleteCustomer(id: string): Promise<any> {
     const url = `${API_CONFIG.baseUrl}/api/v1/customers/${id}`;
     try {
-      return await firstValueFrom(
+      const res = await firstValueFrom(
         this.http.delete<any>(url).pipe(timeout(10000))
       );
+      this.removeLocalCustomer(id);
+      return res;
     } catch (err) {
       console.warn('Eliminazione cliente su backend non riuscito, fallback locale Firestore:', err);
       const docRef = doc(this.firestore, `customers/${id}`);
-      return deleteDoc(docRef);
+      await deleteDoc(docRef);
+      this.removeLocalCustomer(id);
+      return true;
     }
   }
 
@@ -1408,6 +1544,20 @@ export class RentalService {
         const customerId = response.headers.get('X-Customer-Id') || (payload && payload.customerId) || '';
         const rawBlob = response.body as Blob;
         const pdfBlob = rawBlob.type === 'application/pdf' ? rawBlob : new Blob([rawBlob], { type: 'application/pdf' });
+
+        if (customerId && payload && payload.customerUpdates) {
+          const newCustomer: Customer = {
+            id: customerId,
+            firstName: payload.customerUpdates.firstName || '',
+            lastName: payload.customerUpdates.lastName || '',
+            phone: payload.customerUpdates.phone || '',
+            address: payload.customerUpdates.address || '',
+            ...payload.customerUpdates,
+            createdAt: Timestamp.now()
+          };
+          this.upsertLocalCustomer(newCustomer);
+        }
+
         return {
           pdfBlob,
           contractNumber,

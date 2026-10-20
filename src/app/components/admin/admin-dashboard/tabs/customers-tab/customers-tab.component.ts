@@ -25,6 +25,7 @@ export class CustomersTabComponent implements OnInit {
   isModalOpen = false;
   isEditMode = false;
   isSaving = false;
+  isRefreshing = false;
   editingCustomerId?: string;
   newCustomer: any = {};
   pendingAttachments: CustomerAttachment[] = [];
@@ -40,6 +41,20 @@ export class CustomersTabComponent implements OnInit {
         }
       })
     );
+  }
+
+  async refreshCustomers() {
+    if (this.isRefreshing) return;
+    try {
+      this.isRefreshing = true;
+      this.loadingService.show();
+      await this.rentalService.refreshCustomers();
+    } catch (e) {
+      console.error('Errore durante l\'aggiornamento manuale dei clienti:', e);
+    } finally {
+      this.isRefreshing = false;
+      this.loadingService.hide();
+    }
   }
 
   openModal(customer?: Customer) {
