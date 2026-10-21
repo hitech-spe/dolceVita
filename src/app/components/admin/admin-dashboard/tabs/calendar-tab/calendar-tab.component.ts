@@ -1417,7 +1417,7 @@ export class CalendarTabComponent implements OnInit {
       driverPhone: this.contractCustomer?.phone || (this.quickCustomer?.phone || ''),
       additionalDriver1Id: '',
       additionalDriver2Id: '',
-      baseRate: rental.totalPrice || calculatedBaseRate || 0,
+      baseRate: 0,
       extraKmPrice: 0,
       advance: 0,
       fuelLevel: '12/12',
