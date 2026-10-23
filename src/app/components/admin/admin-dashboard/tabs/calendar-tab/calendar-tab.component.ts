@@ -813,6 +813,9 @@ export class CalendarTabComponent implements OnInit {
       return `${startP}-${endP}`;
     }
     if (isStart) {
+      if (rental.notes && (rental.notes.includes('Sostituzione') || rental.notes.includes('RIF'))) {
+        return `RIF`;
+      }
       return startP;
     }
     if (isEnd) {
@@ -1218,7 +1221,9 @@ export class CalendarTabComponent implements OnInit {
       const days = this.calculateRentalDays(data.startDate, data.endDate);
       const daysLabel = days === 1 ? '1 giorno' : `${days} giorni`;
       const typeLabel = data.isServiceRental ? 'Noleggio per Servizi' : 'Noleggio Standard';
-      return `${typeLabel}: ${data.customerName}\nDal ${start} al ${end} (${daysLabel})\nSede: ${data.location} -> ${data.returnLocation || data.location}\n\nClicca su un giorno per terminare o allungare il noleggio`;
+      const statusLabel = data.status ? ` [${data.status}]` : '';
+      const notesLabel = data.notes ? `\nNote: ${data.notes}` : '';
+      return `${typeLabel}${statusLabel}: ${data.customerName}\nDal ${start} al ${end} (${daysLabel})\nSede: ${data.location} -> ${data.returnLocation || data.location}${notesLabel}\n\nClicca su un giorno per terminare o allungare il noleggio`;
     }
     if (type === 'maintenance') {
       return `In Manutenzione\nNote: ${data.notes || '-'}\n\nClicca su un giorno per terminare o allungare la manutenzione`;

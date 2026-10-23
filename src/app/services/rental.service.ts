@@ -207,6 +207,13 @@ export interface ContractDocument {
   pdfBase64?: string | null;
   pdfUrl?: string | null;
 
+  // Stato e tracciamento contratti di riferimento
+  status?: 'Attivo' | 'Chiuso' | 'Sostituito' | string;
+  parentContractNumber?: string;
+  replacedByContractNumber?: string;
+  closedAt?: Timestamp;
+  closeReason?: string;
+
   // Flat root fields for Cargos integration
   contratto_data?: string;
   contratto_checkout_data?: string;
@@ -1338,6 +1345,23 @@ export class RentalService {
 
   async updateContract(id: string, data: Partial<ContractDocument>) {
     const docRef = doc(this.firestore, `contracts/${id}`);
+    try {
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        return updateDoc(docRef, this.cleanUndefined(data));
+      }
+    } catch (_) {}
+
+    // Fallback: cerca per contractNumber se l'id non corrisponde alla chiave Firestore
+    try {
+      const contractsRef = collection(this.firestore, 'contracts');
+      const q = query(contractsRef, where('contractNumber', '==', id));
+      const qSnap = await getDocs(q);
+      if (!qSnap.empty) {
+        return updateDoc(qSnap.docs[0].ref, this.cleanUndefined(data));
+      }
+    } catch (_) {}
+
     return updateDoc(docRef, this.cleanUndefined(data));
   }
 

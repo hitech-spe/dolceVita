@@ -101,7 +101,20 @@
                      style="cursor: pointer; width: 17px; height: 18px;" />
             </td>
             <td>
-              <span class="badge-contract"><i class="fa-solid fa-file-invoice"></i> {{ contract.contractNumber }}</span>
+              <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                <span class="badge-contract" [class.badge-contract-closed]="contract.status === 'Chiuso'">
+                  <i class="fa-solid fa-file-invoice"></i> {{ contract.contractNumber }}
+                </span>
+                @if (contract.status === 'Chiuso' || contract.replacedByContractNumber) {
+                  <span class="badge-contract-sub badge-closed" [title]="'Contratto chiuso e sostituito da ' + (contract.replacedByContractNumber || 'RIF')">
+                    <i class="fa-solid fa-lock"></i> Chiuso (rif. {{ contract.replacedByContractNumber }})
+                  </span>
+                } @else if (contract.parentContractNumber || contract.contractNumber.startsWith('RIF')) {
+                  <span class="badge-contract-sub badge-rif" [title]="'Contratto di riferimento collegato a ' + (contract.parentContractNumber || 'contratto originario')">
+                    <i class="fa-solid fa-link"></i> Riferimento (orig. {{ contract.parentContractNumber || 'orig.' }})
+                  </span>
+                }
+              </div>
             </td>
             <td>
               <div class="customer-info">
@@ -548,12 +561,22 @@
               </div>
             </div>
 
-            <!-- CHECKBOX AGGIORNAMENTO CALENDARIO -->
-            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.8rem;">
-              <input type="checkbox" id="updateCalendarRental" [(ngModel)]="updateCalendarRental" name="updateCalendarRental" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent);" />
-              <label for="updateCalendarRental" style="font-size: 0.9rem; font-weight: 600; color: #1e40af; cursor: pointer; margin: 0;">
-                Registra a calendario il nuovo veicolo per questo noleggio
-              </label>
+            <!-- CHECKBOX AGGIORNAMENTO CALENDARIO E CHIUSURA PRECEDENTE -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.6rem;">
+              <div style="display: flex; align-items: center; gap: 0.8rem;">
+                <input type="checkbox" id="updateCalendarRental" [(ngModel)]="updateCalendarRental" name="updateCalendarRental" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent);" />
+                <label for="updateCalendarRental" style="font-size: 0.9rem; font-weight: 600; color: #1e40af; cursor: pointer; margin: 0;">
+                  Registra a calendario il passaggio veicolo (apri noleggio sul nuovo veicolo)
+                </label>
+              </div>
+              @if (updateCalendarRental) {
+                <div style="display: flex; align-items: center; gap: 0.8rem; padding-left: 1.8rem; border-top: 1px dashed #bfdbfe; padding-top: 0.5rem;">
+                  <input type="checkbox" id="closeSourceRental" [(ngModel)]="closeSourceRental" name="closeSourceRental" style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent);" />
+                  <label for="closeSourceRental" style="font-size: 0.83rem; font-weight: 500; color: #1e40af; cursor: pointer; margin: 0;">
+                    Chiudi e termina il noleggio precedente alla data di passaggio (libera il veicolo precedente a calendario)
+                  </label>
+                </div>
+              }
             </div>
 
             <!-- SECTION 2: DATI NOLEGGIO & TARIFFE -->

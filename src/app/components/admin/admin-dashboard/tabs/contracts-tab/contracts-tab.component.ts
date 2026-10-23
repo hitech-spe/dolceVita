@@ -68,6 +68,7 @@ export class ContractsTabComponent implements OnInit {
   rifCompanySearchTerm = '';
   isRifCompanyDropdownOpen = false;
   updateCalendarRental = true;
+  closeSourceRental = true;
   isGeneratingRif = false;
   rifRentalStartDateManuallyEdited = false;
 
@@ -686,6 +687,7 @@ export class ContractsTabComponent implements OnInit {
     this.rifCompanySearchTerm = this.rifDetails.isCompany ? (this.rifDetails.companyName || '') : '';
     this.isRifCompanyDropdownOpen = false;
     this.updateCalendarRental = true;
+    this.closeSourceRental = true;
     this.isReferenceModalOpen = true;
   }
 
@@ -715,6 +717,8 @@ export class ContractsTabComponent implements OnInit {
     this.rifRentalStartDateManuallyEdited = false;
     this.rifCompanySearchTerm = '';
     this.isRifCompanyDropdownOpen = false;
+    this.updateCalendarRental = true;
+    this.closeSourceRental = true;
     this.isGeneratingRif = false;
   }
 
@@ -838,13 +842,24 @@ export class ContractsTabComponent implements OnInit {
           startPeriod: associatedRental.startPeriod || 'Mat',
           endPeriod: associatedRental.endPeriod || 'Mat',
           totalPrice: this.rifDetails.baseRate ?? associatedRental.totalPrice,
-          notes: `Sostituzione veicolo per contratto ${this.rifContractNumber} (veicolo prec: ${this.sourceContractForReference.vehiclePlate})`,
+          notes: `Sostituzione veicolo per contratto ${this.rifContractNumber.trim()} (rif. contratto ${this.sourceContractForReference.contractNumber}, veicolo prec: ${this.sourceContractForReference.vehiclePlate})`,
           status: 'In Corso',
           createdAt: Timestamp.now()
         };
 
         const newRentalRef = await this.rentalService.createRental(replacementRental);
         rentalIdToLink = newRentalRef.id;
+
+        // Chiudi e termina il noleggio precedente sul vecchio veicolo alla data di passaggio
+        if (this.closeSourceRental && associatedRental.id) {
+          const prevNotes = associatedRental.notes ? `${associatedRental.notes}\n` : '';
+          const closeNote = `Chiuso anticipatamente per sostituzione veicolo con ${this.rifContractNumber.trim()} (nuovo veicolo: ${selectedVehicle.brand} ${selectedVehicle.model} ${selectedVehicle.plate}).`;
+          await this.rentalService.updateRental(associatedRental.id, {
+            endDate: refRentalStartDateTS,
+            status: 'Concluso',
+            notes: `${prevNotes}${closeNote}`
+          });
+        }
       }
 
       const newContractDoc: ContractDocument = {
@@ -855,7 +870,9 @@ export class ContractsTabComponent implements OnInit {
         vehicleId: selectedVehicle.id || '',
         vehiclePlate: `${selectedVehicle.brand} ${selectedVehicle.model} (${selectedVehicle.plate})`,
         date: stipulationDate,
-        details: this.rifDetails
+        details: this.rifDetails,
+        status: 'Attivo',
+        parentContractNumber: this.sourceContractForReference.contractNumber
       };
 
       const dummyRentalForCargos: Rental = {
@@ -904,8 +921,9 @@ export class ContractsTabComponent implements OnInit {
 
       return new Promise<void>((resolve) => {
         this.rentalService.stipulateContractOnBackend(payload).subscribe({
-          next: (res: { pdfBlob: Blob; contractNumber: string }) => {
+          next: async (res: { pdfBlob: Blob; contractNumber: string }) => {
             const finalNumber = res.contractNumber || this.rifContractNumber.trim();
+            await this.finalizeReferenceContractLink(finalNumber);
             const url = window.URL.createObjectURL(res.pdfBlob);
             window.open(url, '_blank');
             this.loadingService.hide();
@@ -919,6 +937,7 @@ export class ContractsTabComponent implements OnInit {
             try {
               const saveResult = await this.rentalService.createContract(newContractDoc, cargosData);
               const finalNumber = saveResult.contractNumber;
+              await this.finalizeReferenceContractLink(finalNumber);
 
               this.rentalService.downloadContractPdf(finalNumber, true).subscribe({
                 next: (pdfBlob: Blob) => {
@@ -954,6 +973,34 @@ export class ContractsTabComponent implements OnInit {
       this.isGeneratingRif = false;
       console.error('Errore creazione contratto di riferimento:', error);
       alert(error?.message || 'Si è verificato un errore durante la creazione del contratto di riferimento.');
+    }
+  }
+
+  private async finalizeReferenceContractLink(finalNumber: string) {
+    if (!this.sourceContractForReference) return;
+    const sourceContract = this.sourceContractForReference;
+    const sourceId = sourceContract.id || sourceContract.contractNumber;
+
+    try {
+      sourceContract.status = 'Chiuso';
+      sourceContract.replacedByContractNumber = finalNumber;
+      await this.rentalService.updateContract(sourceId, {
+        status: 'Chiuso',
+        replacedByContractNumber: finalNumber,
+        closedAt: Timestamp.now(),
+        closeReason: `Sostituito dal contratto di riferimento ${finalNumber}`
+      });
+    } catch (err) {
+      console.error('Errore durante la chiusura del contratto di origine:', err);
+    }
+
+    try {
+      await this.rentalService.updateContract(finalNumber, {
+        status: 'Attivo',
+        parentContractNumber: sourceContract.contractNumber
+      });
+    } catch (err) {
+      console.error('Errore durante l\'aggiornamento del contratto di riferimento:', err);
     }
   }
 

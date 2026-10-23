@@ -105,6 +105,39 @@ describe('CalendarTabComponent', () => {
     expect(status.data.id).toBe('r1');
   });
 
+  it('should format tooltip and labels correctly for reference/replacement rentals', () => {
+    const origRental: any = {
+      startDate: Timestamp.fromDate(new Date('2026-10-01T00:00:00')),
+      endDate: Timestamp.fromDate(new Date('2026-10-05T00:00:00')),
+      customerName: 'Mario Rossi',
+      location: 'Mottola',
+      status: 'Concluso',
+      notes: 'Chiuso anticipatamente per sostituzione veicolo con RIF 100'
+    };
+
+    const tooltipOrig = component.getFormattedTooltip('rental', origRental);
+    expect(tooltipOrig).toContain('[Concluso]');
+    expect(tooltipOrig).toContain('Chiuso anticipatamente per sostituzione');
+
+    const rifRental: any = {
+      startDate: Timestamp.fromDate(new Date('2026-10-05T00:00:00')),
+      endDate: Timestamp.fromDate(new Date('2026-10-10T00:00:00')),
+      customerName: 'Mario Rossi',
+      location: 'Mottola',
+      startPeriod: 'Mat',
+      endPeriod: 'Mat',
+      status: 'In Corso',
+      notes: 'Sostituzione veicolo per contratto RIF 100'
+    };
+
+    const labelStart = component.getRentalDayLabel(rifRental, new Date('2026-10-05T00:00:00'), [rifRental]);
+    expect(labelStart).toBe('RIF');
+
+    const tooltipRif = component.getFormattedTooltip('rental', rifRental);
+    expect(tooltipRif).toContain('[In Corso]');
+    expect(tooltipRif).toContain('Sostituzione veicolo per contratto RIF 100');
+  });
+
   describe('Contract generation and atomic numbering', () => {
     beforeEach(() => {
       spyOn(window, 'alert').and.stub();

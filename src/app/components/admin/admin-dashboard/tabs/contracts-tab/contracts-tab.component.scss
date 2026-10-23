@@ -159,6 +159,36 @@
   font-size: 0.78rem;
   font-weight: 700;
   font-family: var(--font-main);
+
+  &.badge-contract-closed {
+    background-color: #f1f5f9;
+    color: #64748b;
+    border-color: #cbd5e1;
+  }
+}
+
+.badge-contract-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+
+  &.badge-closed {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+
+  &.badge-rif {
+    background-color: #f5f3ff;
+    color: #7c3aed;
+    border: 1px solid #ddd6fe;
+  }
 }
 
 .customer-info {

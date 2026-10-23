@@ -443,6 +443,12 @@
               <div class="detail-row" *ngIf="selectedStatusForAction.type === 'rental'">
                 <strong>Cliente:</strong> <span>{{ selectedStatusForAction.data.customerName }}</span>
               </div>
+              <div class="detail-row" *ngIf="selectedStatusForAction.type === 'rental' && selectedStatusForAction.data.status">
+                <strong>Stato:</strong> <span>{{ selectedStatusForAction.data.status }}</span>
+              </div>
+              <div class="detail-row" *ngIf="selectedStatusForAction.data.notes">
+                <strong>Note:</strong> <span style="white-space: pre-line;">{{ selectedStatusForAction.data.notes }}</span>
+              </div>
               <div class="detail-row" *ngIf="selectedStatusForAction.type === 'transfer'">
                 <strong>Sede:</strong> <span>{{ selectedStatusForAction.data.location }}</span>
               </div>

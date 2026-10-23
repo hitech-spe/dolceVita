@@ -498,6 +498,30 @@ describe('ContractsTabComponent', () => {
           vehicleId: 'veh-new'
         })
       );
+      // Verifica chiusura noleggio precedente a calendario
+      expect(mockRentalService.updateRental).toHaveBeenCalledWith(
+        'rental-orig-1',
+        jasmine.objectContaining({
+          status: 'Concluso',
+          notes: jasmine.stringMatching(/Chiuso anticipatamente per sostituzione/)
+        })
+      );
+      // Verifica chiusura contratto di origine
+      expect(mockRentalService.updateContract).toHaveBeenCalledWith(
+        'c-100',
+        jasmine.objectContaining({
+          status: 'Chiuso',
+          replacedByContractNumber: 'RIF 1790'
+        })
+      );
+      // Verifica attivazione nuovo contratto RIF
+      expect(mockRentalService.updateContract).toHaveBeenCalledWith(
+        'RIF 1790',
+        jasmine.objectContaining({
+          status: 'Attivo',
+          parentContractNumber: '1790'
+        })
+      );
       expect(component.isReferenceModalOpen).toBeFalse();
     });
 
@@ -519,6 +543,19 @@ describe('ContractsTabComponent', () => {
           vehicleId: 'veh-new'
         }),
         jasmine.any(Object)
+      );
+      expect(mockRentalService.updateRental).toHaveBeenCalledWith(
+        'rental-orig-1',
+        jasmine.objectContaining({
+          status: 'Concluso'
+        })
+      );
+      expect(mockRentalService.updateContract).toHaveBeenCalledWith(
+        'c-100',
+        jasmine.objectContaining({
+          status: 'Chiuso',
+          replacedByContractNumber: 'RIF 1790'
+        })
       );
       expect(mockRentalService.downloadContractPdf).toHaveBeenCalledWith('RIF 1790', true);
       expect(component.isReferenceModalOpen).toBeFalse();
