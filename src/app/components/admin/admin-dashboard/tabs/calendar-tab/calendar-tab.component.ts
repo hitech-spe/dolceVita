@@ -1683,7 +1683,10 @@ export class CalendarTabComponent implements OnInit {
             const cachedDriver = this.availableCustomers.find(c => c.id === this.contractDetails.mainDriverId);
             if (cachedDriver) {
               if (customerUpdates['birthPlace']) cachedDriver.birthPlace = customerUpdates['birthPlace'];
+              if (customerUpdates['birthDate']) cachedDriver.birthDate = customerUpdates['birthDate'];
               if (customerUpdates['licenseNumber']) cachedDriver.licenseNumber = customerUpdates['licenseNumber'];
+              if (customerUpdates['licenseIssueDate']) cachedDriver.licenseIssueDate = customerUpdates['licenseIssueDate'];
+              if (customerUpdates['licenseExpiry']) cachedDriver.licenseExpiry = customerUpdates['licenseExpiry'];
               if (customerUpdates['licenseReleasedBy']) cachedDriver.licenseReleasedBy = customerUpdates['licenseReleasedBy'];
               if (customerUpdates['licenseCountry']) cachedDriver.licenseCountry = customerUpdates['licenseCountry'];
             }

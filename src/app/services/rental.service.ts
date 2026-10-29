@@ -866,10 +866,10 @@ export class RentalService {
 
     // Aggiornamento ottimistico immediato: garantisce visibilità istantanea sul client
     const newCustomerObj: Customer = {
-      ...customer,
       ...savedCustomer,
+      ...customer,
       id: savedCustomer.id,
-      createdAt: savedCustomer.createdAt || customer.createdAt || Timestamp.now()
+      createdAt: customer.createdAt || savedCustomer.createdAt || Timestamp.now()
     };
     this.upsertLocalCustomer(newCustomerObj);
 

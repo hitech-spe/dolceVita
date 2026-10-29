@@ -61,16 +61,11 @@ export class CustomersTabComponent implements OnInit {
     if (customer) {
       this.isEditMode = true;
       this.editingCustomerId = customer.id;
-      // Convertiamo i Timestamp in stringhe YYYY-MM-DD per l'input date
-      const birthDate = customer.birthDate && (customer.birthDate as any).toDate ? (customer.birthDate as any).toDate().toISOString().split('T')[0] : '';
-      const licenseExpiry = customer.licenseExpiry && (customer.licenseExpiry as any).toDate ? (customer.licenseExpiry as any).toDate().toISOString().split('T')[0] : '';
-      const licenseIssueDate = customer.licenseIssueDate && (customer.licenseIssueDate as any).toDate ? (customer.licenseIssueDate as any).toDate().toISOString().split('T')[0] : '';
-      
       this.newCustomer = { 
         ...customer,
-        birthDate: birthDate,
-        licenseExpiry: licenseExpiry,
-        licenseIssueDate: licenseIssueDate
+        birthDate: this.formatDateForInput(customer.birthDate),
+        licenseExpiry: this.formatDateForInput(customer.licenseExpiry),
+        licenseIssueDate: this.formatDateForInput(customer.licenseIssueDate)
       };
       this.pendingAttachments = [...(customer.attachments || [])];
     } else {
@@ -80,6 +75,42 @@ export class CustomersTabComponent implements OnInit {
       this.pendingAttachments = [];
     }
     this.isModalOpen = true;
+  }
+
+  formatDateForInput(val: any): string {
+    if (!val) return '';
+    try {
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+        if (trimmed.includes('/')) {
+          const parts = trimmed.split('/');
+          if (parts.length === 3) {
+            return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+          }
+        }
+      }
+      let d: Date;
+      if (typeof val?.toDate === 'function') {
+        d = val.toDate();
+      } else if (val instanceof Date) {
+        d = val;
+      } else if (typeof val?.seconds === 'number') {
+        d = new Date(val.seconds * 1000);
+      } else if (typeof val?._seconds === 'number') {
+        d = new Date(val._seconds * 1000);
+      } else {
+        d = new Date(val);
+      }
+      if (isNaN(d.getTime())) return '';
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    } catch (e) {
+      console.warn('Errore parsing data per input:', e);
+    }
+    return '';
   }
 
   closeModal() {
@@ -140,8 +171,15 @@ export class CustomersTabComponent implements OnInit {
     if (val instanceof Timestamp) return val;
     if (typeof val?.toDate === 'function') return Timestamp.fromDate(val.toDate());
     if (val instanceof Date && !isNaN(val.getTime())) return Timestamp.fromDate(val);
+    if (typeof val?.seconds === 'number') return Timestamp.fromMillis(val.seconds * 1000);
+    if (typeof val?._seconds === 'number') return Timestamp.fromMillis(val._seconds * 1000);
     if (typeof val === 'string' && val.trim()) {
-      const d = new Date(val);
+      const trimmed = val.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        const [y, m, d] = trimmed.split('-').map(Number);
+        return Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0));
+      }
+      const d = new Date(trimmed);
       if (!isNaN(d.getTime())) return Timestamp.fromDate(d);
     }
     return null;
@@ -239,8 +277,31 @@ export class CustomersTabComponent implements OnInit {
 
   formatDate(timestamp: any): string {
     if (!timestamp) return '-';
-    if (timestamp.toDate) return timestamp.toDate().toLocaleDateString('it-IT');
-    return new Date(timestamp).toLocaleDateString('it-IT');
+    try {
+      if (typeof timestamp === 'string') {
+        const trimmed = timestamp.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+          const [y, m, d] = trimmed.split('-');
+          return `${d}/${m}/${y}`;
+        }
+      }
+      if (typeof timestamp?.toDate === 'function') {
+        return timestamp.toDate().toLocaleDateString('it-IT');
+      }
+      if (timestamp instanceof Date) {
+        return isNaN(timestamp.getTime()) ? '-' : timestamp.toLocaleDateString('it-IT');
+      }
+      if (typeof timestamp?.seconds === 'number') {
+        return new Date(timestamp.seconds * 1000).toLocaleDateString('it-IT');
+      }
+      if (typeof timestamp?._seconds === 'number') {
+        return new Date(timestamp._seconds * 1000).toLocaleDateString('it-IT');
+      }
+      const d = new Date(timestamp);
+      return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('it-IT');
+    } catch {
+      return '-';
+    }
   }
 
   private getTimestampSeconds(val: any): number {

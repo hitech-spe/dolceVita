@@ -179,5 +179,56 @@ describe('CustomersTabComponent', () => {
       expect(mockLoadingService.hide).toHaveBeenCalled();
       expect(component.isRefreshing).toBeFalse();
     });
+
+    it('should correctly format dates for input across string, timestamp, and seconds formats', () => {
+      expect(component.formatDateForInput('1985-05-12')).toBe('1985-05-12');
+      expect(component.formatDateForInput('12/05/1985')).toBe('1985-05-12');
+      expect(component.formatDateForInput({ seconds: 484747200 })).toBe('1985-05-12');
+      expect(component.formatDateForInput({ toDate: () => new Date(1985, 4, 12) })).toBe('1985-05-12');
+      expect(component.formatDateForInput(null)).toBe('');
+      expect(component.formatDateForInput('')).toBe('');
+    });
+
+    it('should correctly open modal and preserve string/timestamp/seconds birthDate and license dates', () => {
+      const customerWithStringDates: any = {
+        id: 'c-str',
+        firstName: 'Mario',
+        lastName: 'Rossi',
+        birthDate: '1985-05-12',
+        licenseNumber: 'AB1234567',
+        licenseIssueDate: '2015-05-12',
+        licenseExpiry: '2025-05-12'
+      };
+
+      component.openModal(customerWithStringDates);
+
+      expect(component.isEditMode).toBeTrue();
+      expect(component.editingCustomerId).toBe('c-str');
+      expect(component.newCustomer.birthDate).toBe('1985-05-12');
+      expect(component.newCustomer.licenseNumber).toBe('AB1234567');
+      expect(component.newCustomer.licenseIssueDate).toBe('2015-05-12');
+      expect(component.newCustomer.licenseExpiry).toBe('2025-05-12');
+
+      const customerWithSecondsDates: any = {
+        id: 'c-sec',
+        firstName: 'Luigi',
+        lastName: 'Verdi',
+        birthDate: { seconds: 484747200 }, // 1985-05-12
+        licenseNumber: 'XY9876543',
+        licenseExpiry: { seconds: 1747051200 } // 2025-05-12
+      };
+
+      component.openModal(customerWithSecondsDates);
+
+      expect(component.newCustomer.birthDate).toBe('1985-05-12');
+      expect(component.newCustomer.licenseExpiry).toBe('2025-05-12');
+      expect(component.newCustomer.licenseNumber).toBe('XY9876543');
+    });
+
+    it('should format dates properly in formatDate helper', () => {
+      expect(component.formatDate('1985-05-12')).toBe('12/05/1985');
+      expect(component.formatDate({ seconds: 484747200 })).toBe('12/05/1985');
+      expect(component.formatDate(null)).toBe('-');
+    });
   });
 });
