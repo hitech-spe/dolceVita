@@ -83,4 +83,103 @@ describe('VerbaliTabComponent', () => {
     expect(filtered.length).toBe(1);
     expect(filtered[0].id).toBe('v1');
   });
+
+  it('should filter by UNMATCHED status and calculate getNonAssociatiCount', () => {
+    component.verbali = [
+      {
+        id: 'v1',
+        plate: 'AA123BB',
+        violationDate: {} as any,
+        ticketNumber: 'V-1111',
+        authorityName: 'Polizia Locale',
+        authorityPec: 'test1@pec.it',
+        status: 'Nuovo',
+        contractNumber: '101'
+      },
+      {
+        id: 'v2',
+        plate: 'CC456DD',
+        violationDate: {} as any,
+        ticketNumber: 'V-2222',
+        authorityName: 'Carabinieri',
+        authorityPec: 'test2@pec.it',
+        status: 'Nuovo'
+      }
+    ];
+
+    expect(component.getNonAssociatiCount()).toBe(1);
+
+    component.setStatusFilter('UNMATCHED');
+    const filtered = component.getFilteredVerbali();
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].id).toBe('v2');
+  });
+
+  it('should clear search and reset filters correctly', () => {
+    component.searchTerm = 'Query';
+    component.statusFilter = 'Nuovo';
+    component.sortField = 'fineAmount';
+    component.sortDirection = 'asc';
+
+    component.clearSearch();
+    expect(component.searchTerm).toBe('');
+
+    component.resetFilters();
+    expect(component.statusFilter).toBe('ALL');
+    expect(component.sortField).toBe('violationDate');
+    expect(component.sortDirection).toBe('desc');
+  });
+
+  it('should open and close PEC draft modal properly', () => {
+    const testVerbale = {
+      id: 'v10',
+      plate: 'EE789FF',
+      violationDate: '2026-10-15' as any,
+      violationTime: '14:30',
+      ticketNumber: 'TEST-1234',
+      authorityName: 'Polizia Locale',
+      authorityPec: 'polizia@pec.test.it',
+      status: 'Nuovo' as const,
+      customerName: 'Giuseppe Verdi',
+      contractNumber: '888'
+    };
+
+    expect(component.isPecModalOpen).toBeFalse();
+    component.openPecModal(testVerbale);
+
+    expect(component.isPecModalOpen).toBeTrue();
+    expect(component.selectedVerbaleForPec).toBe(testVerbale);
+    expect(component.emailDraft.to).toBe('polizia@pec.test.it');
+    expect(component.emailDraft.subject).toContain('TEST-1234');
+    expect(component.emailDraft.body).toContain('GIUSEPPE VERDI');
+
+    component.closePecModal();
+    expect(component.isPecModalOpen).toBeFalse();
+    expect(component.selectedVerbaleForPec).toBeNull();
+  });
+
+  it('should send PEC through confirmSendPec and update status', async () => {
+    const testVerbale = {
+      id: 'v20',
+      plate: 'GG000HH',
+      violationDate: '2026-10-15' as any,
+      ticketNumber: 'TEST-999',
+      authorityName: 'Polizia Locale',
+      authorityPec: 'polizia@pec.test.it',
+      status: 'Nuovo' as const
+    };
+
+    component.openPecModal(testVerbale);
+    component.confirmSendPec();
+    await fixture.whenStable();
+
+    expect(mockRentalService.sendVerbalePec).toHaveBeenCalledWith(jasmine.objectContaining({
+      verbaleId: 'v20',
+      authorityPec: 'polizia@pec.test.it'
+    }));
+    expect(mockRentalService.updateVerbale).toHaveBeenCalledWith('v20', jasmine.objectContaining({
+      status: 'Inviato'
+    }));
+    expect(component.isPecModalOpen).toBeFalse();
+  });
 });

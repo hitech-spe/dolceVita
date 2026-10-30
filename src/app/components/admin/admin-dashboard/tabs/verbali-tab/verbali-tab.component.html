@@ -49,22 +49,54 @@
         <div class="panel-header">
             <div class="header-title">
                 <h2>Archivio Verbali e Multe</h2>
-                <p class="subtitle">Associa i verbali cartacei ai conducenti effettivi e rinotifica le violazioni al conducente via PEC</p>
+                <p class="subtitle">Associa i verbali ai conducenti effettivi e trasmetti la dichiarazione via PEC</p>
             </div>
+            
+            <div class="header-cta">
+                <button class="btn btn-primary animate-hover" (click)="openUploadModal()">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Processa Verbale
+                </button>
+            </div>
+        </div>
+
+        <!-- BARRA STRUMENTI: FILTRI RAPIDI & RICERCA -->
+        <div class="toolbar-container">
+            <!-- Quick Filter Chips -->
+            <div class="quick-filter-tabs">
+                <button class="tab-chip" [class.active]="statusFilter === 'ALL'" (click)="setStatusFilter('ALL')">
+                    <span>Tutti</span>
+                    <span class="chip-count">{{ verbali.length }}</span>
+                </button>
+                <button class="tab-chip tab-chip-warning" [class.active]="statusFilter === 'Nuovo'" (click)="setStatusFilter('Nuovo')">
+                    <i class="fa-regular fa-clock"></i>
+                    <span>Da Inviare</span>
+                    <span class="chip-count">{{ getNuoveMulte() }}</span>
+                </button>
+                <button class="tab-chip tab-chip-success" [class.active]="statusFilter === 'Inviato'" (click)="setStatusFilter('Inviato')">
+                    <i class="fa-regular fa-circle-check"></i>
+                    <span>Inviati PEC</span>
+                    <span class="chip-count">{{ getInviateMulte() }}</span>
+                </button>
+                @if (getNonAssociatiCount() > 0) {
+                    <button class="tab-chip tab-chip-danger" [class.active]="statusFilter === 'UNMATCHED'" (click)="setStatusFilter('UNMATCHED')" title="Verbali senza contratto associato">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>Non Associati</span>
+                        <span class="chip-count alert-count">{{ getNonAssociatiCount() }}</span>
+                    </button>
+                }
+            </div>
+
+            <!-- Controlli Ricerca e Ordinamento -->
             <div class="panel-actions">
                 <!-- Search Input -->
                 <div class="search-bar">
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input type="text" class="search-input" placeholder="Cerca per targa, verbale, ente, cliente..." [(ngModel)]="searchTerm">
-                </div>
-
-                <!-- Filtro Stato PEC -->
-                <div class="filter-dropdown">
-                    <select [(ngModel)]="statusFilter" class="filter-select">
-                        <option value="ALL">Tutti i verbali</option>
-                        <option value="Nuovo">Da Inviare (Nuovo)</option>
-                        <option value="Inviato">Inviati (PEC)</option>
-                    </select>
+                    <input type="text" class="search-input" placeholder="Cerca targa, verbale, ente, cliente..." [(ngModel)]="searchTerm">
+                    @if (searchTerm) {
+                        <button class="btn-clear-search" (click)="clearSearch()" title="Cancella ricerca">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    }
                 </div>
 
                 <!-- Ordinamento Field -->
@@ -84,116 +116,183 @@
                         <i class="fa-solid fa-arrow-up-1-9"></i>
                     }
                 </button>
-
-                <button class="btn btn-primary animate-hover" (click)="openUploadModal()">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Processa Verbale
-                </button>
             </div>
         </div>
 
         <!-- TABELLA DATI VERBALI -->
-        <div class="table-responsive">
+        <div class="table-responsive shadow-sm">
             @if (getFilteredVerbali().length > 0) {
-                <table class="modern-table">
+                <table class="modern-table verbali-table">
                     <thead>
                         <tr>
                             <th>N. Verbale / Ente & PEC</th>
                             <th>Targa Mezzo</th>
                             <th>Data Infrazione</th>
-                            <th>Associazione Contratto</th>
+                            <th>Associazione Conducente</th>
                             <th>Importo Sanzione</th>
                             <th>Stato PEC</th>
-                            <th>Azioni</th>
+                            <th class="text-right">Azioni</th>
                         </tr>
                     </thead>
                     <tbody>
                         @for (v of getFilteredVerbali(); track v.id) {
                             <tr class="table-row-hover">
+                                <!-- N. Verbale & Ente Accertatore -->
                                 <td>
                                     <div class="ticket-info">
-                                        <span class="ticket-number"><i class="fa-solid fa-file-invoice"></i> {{ v.ticketNumber }}</span>
-                                        <span class="authority-name">{{ v.authorityName }}</span>
-                                        @if (v.authorityPec) {
-                                            <span class="authority-pec" style="font-size: 0.76rem; color: #2563eb; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;" [title]="'PEC Destinatario: ' + v.authorityPec">
-                                                <i class="fa-solid fa-envelope"></i> {{ v.authorityPec }}
+                                        <div class="ticket-header-line">
+                                            <span class="ticket-badge">
+                                                <i class="fa-solid fa-file-invoice"></i> {{ v.ticketNumber }}
                                             </span>
+                                        </div>
+                                        <span class="authority-name" [title]="v.authorityName">{{ v.authorityName }}</span>
+                                        @if (v.authorityPec) {
+                                            <a class="authority-pec-link" [href]="'mailto:' + v.authorityPec" [title]="'PEC: ' + v.authorityPec">
+                                                <i class="fa-solid fa-envelope"></i>
+                                                <span class="pec-text">{{ v.authorityPec }}</span>
+                                            </a>
                                         } @else {
-                                            <span style="font-size: 0.72rem; color: #ef4444; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;">
+                                            <span class="authority-pec-missing">
                                                 <i class="fa-solid fa-triangle-exclamation"></i> PEC Mancante
                                             </span>
                                         }
                                     </div>
                                 </td>
+
+                                <!-- Targa Stile Targa Automobilistica -->
                                 <td>
-                                    <span class="badge-plate"><i class="fa-solid fa-car-side"></i> {{ v.plate }}</span>
+                                    <div class="plate-container">
+                                        <span class="badge-plate-modern">
+                                            <span class="plate-eu-strip">
+                                                <span class="plate-eu-stars">★</span>
+                                                <span class="plate-eu-country">I</span>
+                                            </span>
+                                            <span class="plate-text">{{ v.plate }}</span>
+                                        </span>
+                                    </div>
                                 </td>
+
+                                <!-- Data e Ora Infrazione -->
                                 <td>
-                                    <div class="date-info">
-                                        <span class="date-val">{{ formatDate(v.violationDate) }}</span>
+                                    <div class="date-info-modern">
+                                        <span class="date-val">
+                                            <i class="fa-regular fa-calendar"></i>
+                                            {{ formatDate(v.violationDate) }}
+                                        </span>
                                         @if (v.violationTime) {
-                                            <span class="time-val"><i class="fa-regular fa-clock"></i> {{ v.violationTime }}</span>
+                                            <span class="time-val">
+                                                <i class="fa-regular fa-clock"></i> {{ v.violationTime }}
+                                            </span>
                                         }
                                     </div>
                                 </td>
+
+                                <!-- Associazione Contratto / Conducente -->
                                 <td>
                                     @if (v.contractNumber) {
-                                        <div class="customer-info">
+                                        <div class="customer-info-box">
                                             <span class="customer-name">{{ v.customerName }}</span>
-                                            <span class="contract-badge" style="background: #ecfdf5; color: #065f46;"><i class="fa-solid fa-file-contract"></i> Contr. {{ v.contractNumber }} @if (v.matchType === 'MANUAL') { (Manuale) } @else { (Auto) }</span>
+                                            <div class="contract-tag-wrapper">
+                                                <span class="contract-pill" [class.contract-pill-manual]="v.matchType === 'MANUAL'">
+                                                    <i class="fa-solid fa-file-contract"></i> Contr. {{ v.contractNumber }}
+                                                </span>
+                                                <span class="match-badge" [class.match-badge-manual]="v.matchType === 'MANUAL'">
+                                                    {{ v.matchType === 'MANUAL' ? 'Manuale' : 'Auto' }}
+                                                </span>
+                                            </div>
                                         </div>
                                     } @else {
                                         @let realTimeMatch = getMatchedDataForVerbale(v);
                                         @if (realTimeMatch.contract) {
-                                            <div class="customer-info">
-                                                <span class="customer-name">{{ realTimeMatch.customer ? realTimeMatch.customer.lastName + ' ' + realTimeMatch.customer.firstName : realTimeMatch.contract.customerName }}</span>
-                                                <span class="contract-badge" style="background: #eff6ff; color: #1e40af;"><i class="fa-solid fa-file-contract"></i> Contr. {{ realTimeMatch.contract.contractNumber }} (Auto)</span>
+                                            <div class="customer-info-box">
+                                                <span class="customer-name">
+                                                    {{ realTimeMatch.customer ? (realTimeMatch.customer.lastName + ' ' + realTimeMatch.customer.firstName) : realTimeMatch.contract.customerName }}
+                                                </span>
+                                                <div class="contract-tag-wrapper">
+                                                    <span class="contract-pill">
+                                                        <i class="fa-solid fa-file-contract"></i> Contr. {{ realTimeMatch.contract.contractNumber }}
+                                                    </span>
+                                                    <span class="match-badge">Auto</span>
+                                                </div>
                                             </div>
                                         } @else {
-                                            <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start;">
-                                                <span class="no-match-badge" style="background: #fef2f2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-                                                    <i class="fa-solid fa-triangle-exclamation" style="color: #dc2626;"></i> Non Associato
+                                            <div class="unmatched-box">
+                                                <span class="no-match-badge">
+                                                    <i class="fa-solid fa-triangle-exclamation"></i> Non Associato
                                                 </span>
-                                                <button class="btn-action btn-send-pec" (click)="openAssociateModal(v)" style="background: var(--primary); color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Abbina questo verbale ad un noleggio/cliente">
-                                                    <i class="fa-solid fa-link"></i> Associa Manuale
+                                                <button class="btn-associate-quick" (click)="openAssociateModal(v)" title="Abbina questo verbale a un noleggio o conducente">
+                                                    <i class="fa-solid fa-link"></i> Collega Contratto
                                                 </button>
                                             </div>
                                         }
                                     }
                                 </td>
-                                <td class="bold-text price-cell">
+
+                                <!-- Importo Sanzione -->
+                                <td>
                                     @if (v.fineAmount) {
-                                        € {{ v.fineAmount | number:'1.2-2' }}
+                                        <span class="amount-badge">
+                                            € {{ v.fineAmount | number:'1.2-2' }}
+                                        </span>
                                     } @else {
-                                        -
+                                        <span class="amount-empty">-</span>
                                     }
                                 </td>
+
+                                <!-- Stato Invio PEC -->
                                 <td>
                                     @if (v.status === 'Inviato') {
                                         <div class="status-wrapper">
-                                            <span class="status-pill status-sent"><i class="fa-solid fa-circle-check"></i> Inviato</span>
+                                            <span class="status-pill status-sent">
+                                                <i class="fa-solid fa-circle-check"></i> Inviato PEC
+                                            </span>
                                             @if (v.pecSentDate) {
-                                                <span class="sent-date">{{ formatDate(v.pecSentDate) }}</span>
+                                                <span class="sent-date" title="Data di trasmissione PEC">
+                                                    <i class="fa-regular fa-paper-plane"></i> {{ formatDate(v.pecSentDate) }}
+                                                </span>
                                             }
                                         </div>
                                     } @else {
-                                        <span class="status-pill status-new"><i class="fa-solid fa-clock"></i> Da Inviare</span>
+                                        <span class="status-pill status-new">
+                                            <i class="fa-regular fa-clock"></i> Da Inviare
+                                        </span>
                                     }
                                 </td>
+
+                                <!-- Azioni Uniformate -->
                                 <td>
-                                    <div class="action-buttons">
-                                        @if (v.status !== 'Inviato' && v.authorityPec) {
-                                            <button class="btn-action btn-send-pec" (click)="sendPec(v)" [disabled]="isSendingPec[v.id || '']" title="Invia dichiarazione dati conducente via PEC">
+                                    <div class="action-cluster">
+                                        @if (v.status !== 'Inviato') {
+                                            <button class="btn-cluster-action btn-action-send" 
+                                                    (click)="openPecModal(v)" 
+                                                    [disabled]="isSendingPec[v.id || '']" 
+                                                    title="Prepara e invia bozza PEC dichiarazione conducente">
                                                 @if (isSendingPec[v.id || '']) {
                                                     <i class="fa-solid fa-spinner fa-spin"></i>
                                                 } @else {
-                                                    <i class="fa-solid fa-paper-plane"></i> Trasmetti
+                                                    <i class="fa-solid fa-paper-plane"></i>
+                                                    <span class="hide-mobile">Trasmetti</span>
                                                 }
                                             </button>
                                         }
-                                        <button class="btn-action btn-edit" (click)="openEditModal(v)" title="Modifica tutti i dati del verbale" style="background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; font-size: 0.8rem;">
-                                            <i class="fa-solid fa-pen-to-square"></i> Modifica
+                                        
+                                        @if (v.pdfBase64) {
+                                            <button class="btn-cluster-action btn-action-pdf" 
+                                                    (click)="viewVerbalePdf(v)" 
+                                                    title="Visualizza / Scarica copia PDF verbale">
+                                                <i class="fa-regular fa-file-pdf"></i>
+                                            </button>
+                                        }
+
+                                        <button class="btn-cluster-action btn-action-edit" 
+                                                (click)="openEditModal(v)" 
+                                                title="Modifica dati del verbale">
+                                            <i class="fa-solid fa-pen-to-square"></i>
                                         </button>
-                                        <button class="btn-action btn-delete" (click)="deleteVerbale(v)" title="Elimina verbale">
+
+                                        <button class="btn-cluster-action btn-action-delete" 
+                                                (click)="deleteVerbale(v)" 
+                                                title="Elimina verbale">
                                             <i class="fa-regular fa-trash-can"></i>
                                         </button>
                                     </div>
@@ -202,11 +301,40 @@
                         }
                     </tbody>
                 </table>
+
+                <!-- FOOTER LISTA CON STATISTICHE E RESET -->
+                <div class="table-footer-bar">
+                    <div class="footer-count-info">
+                        Visualizzati <strong>{{ getFilteredVerbali().length }}</strong> di <strong>{{ verbali.length }}</strong> verbali
+                        @if (statusFilter !== 'ALL') {
+                            <span class="filter-active-tag">Filtro: <strong>{{ statusFilter === 'UNMATCHED' ? 'Non Associati' : statusFilter }}</strong></span>
+                        }
+                    </div>
+
+                    @if (searchTerm || statusFilter !== 'ALL') {
+                        <button class="btn-reset-filters" (click)="resetFilters()">
+                            <i class="fa-solid fa-rotate-left"></i> Mostra tutti i verbali
+                        </button>
+                    }
+                </div>
             } @else {
                 <div class="empty-state">
-                    <i class="fa-solid fa-file-invoice-dollar empty-icon animate-bounce"></i>
-                    <h3>Nessun verbale presente</h3>
-                    <p>Non abbiamo trovato verbali attivi nel database. Clicca su "Processa Verbale" per scansionare il tuo primo PDF.</p>
+                    <div class="empty-icon-box">
+                        <i class="fa-solid fa-file-invoice-dollar empty-icon"></i>
+                    </div>
+                    @if (verbali.length === 0) {
+                        <h3>Nessun verbale presente</h3>
+                        <p>Non ci sono ancora verbali memorizzati nel database. Clicca sul pulsante in alto per scansionare il tuo primo PDF.</p>
+                        <button class="btn btn-primary" (click)="openUploadModal()" style="margin-top: 1rem;">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Processa il Primo Verbale
+                        </button>
+                    } @else {
+                        <h3>Nessun verbale trovato</h3>
+                        <p>Nessun verbale corrisponde ai parametri di ricerca o ai filtri impostati.</p>
+                        <button class="btn btn-secondary" (click)="resetFilters()" style="margin-top: 1rem;">
+                            <i class="fa-solid fa-rotate-left"></i> Reimposta Filtri
+                        </button>
+                    }
                 </div>
             }
         </div>
@@ -327,54 +455,64 @@
 
             <!-- CONTENUTO DEL CORPO MODALE -->
             <div class="modal-body" style="padding: 1.5rem; max-height: 60vh; overflow-y: auto;">
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="modal-info-summary">
                     <div>
-                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600; display: block; text-transform: uppercase;">Targa</span>
-                        <strong style="font-size: 1rem; color: #1e293b;">{{ selectedVerbaleToAssociate.plate }}</strong>
+                        <span class="info-field-label">Targa</span>
+                        <div class="info-field-val">{{ selectedVerbaleToAssociate.plate }}</div>
                     </div>
                     <div>
-                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600; display: block; text-transform: uppercase;">Data Infrazione</span>
-                        <strong style="font-size: 1rem; color: #1e293b;">{{ formatDate(selectedVerbaleToAssociate.violationDate) }} @if (selectedVerbaleToAssociate.violationTime) { alle {{ selectedVerbaleToAssociate.violationTime }} }</strong>
+                        <span class="info-field-label">Data Infrazione</span>
+                        <div class="info-field-val">
+                            {{ formatDate(selectedVerbaleToAssociate.violationDate) }} 
+                            @if (selectedVerbaleToAssociate.violationTime) { alle {{ selectedVerbaleToAssociate.violationTime }} }
+                        </div>
                     </div>
-                    <div style="grid-column: span 2;">
-                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 600; display: block; text-transform: uppercase;">Ente Accertatore</span>
-                        <strong style="font-size: 0.95rem; color: #1e293b;">{{ selectedVerbaleToAssociate.authorityName }}</strong>
+                    <div class="full-span">
+                        <span class="info-field-label">Ente Accertatore</span>
+                        <div class="info-field-val">{{ selectedVerbaleToAssociate.authorityName }}</div>
                     </div>
                 </div>
 
-                <div class="search-rentals" style="margin-bottom: 1rem;">
-                    <label style="font-weight: 700; color: #334155; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Cerca Contratto / Cliente da associare</label>
-                    <div style="position: relative; display: flex; gap: 8px;">
-                        <input type="text" [(ngModel)]="associationSearchTerm" placeholder="Cerca per Nome Cliente, Targa o Numero Contratto..." style="width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.9rem;">
-                    </div>
+                <div class="search-rentals-box">
+                    <label style="font-weight: 700; color: #334155; font-size: 0.88rem; margin-bottom: 0.4rem; display: block;">
+                        Cerca Contratto o Conducente da associare
+                    </label>
+                    <input type="text" 
+                           [(ngModel)]="associationSearchTerm" 
+                           placeholder="Cerca per Nome Cliente, Targa o Numero Contratto..." 
+                           class="search-rentals-input">
                 </div>
 
-                <div class="rentals-list-box" style="border: 1px solid #cbd5e1; border-radius: 8px; max-height: 250px; overflow-y: auto;">
+                <div class="rentals-selectable-list">
                     @let matchingRentals = getRentalsForManualAssociation();
                     @if (matchingRentals.length > 0) {
-                        <div style="display: flex; flex-direction: column;">
+                        <div>
                             @for (item of matchingRentals; track item.rental.id) {
-                                <div (click)="selectRentalForAssociation(item)" [style.background]="selectedRentalForAssociationItem?.rental?.id === item.rental.id ? '#eff6ff' : 'transparent'" [style.border-left]="selectedRentalForAssociationItem?.rental?.id === item.rental.id ? '4px solid #2563eb' : '4px solid transparent'" style="padding: 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s;">
+                                <div class="rental-select-item"
+                                     [class.selected]="selectedRentalForAssociationItem?.rental?.id === item.rental.id"
+                                     (click)="selectRentalForAssociation(item)">
                                     <div>
-                                        <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem;">{{ item.rental.customerName }}</div>
-                                        <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
-                                            <i class="fa-solid fa-car"></i> {{ item.rental.vehiclePlate }} | 
-                                            <i class="fa-solid fa-calendar"></i> Dal {{ formatDate(item.rental.startDate) }} al {{ formatDate(item.rental.endDate) }}
+                                        <div class="item-customer-name">{{ item.rental.customerName }}</div>
+                                        <div class="item-details">
+                                            <span><i class="fa-solid fa-car"></i> {{ item.rental.vehiclePlate }}</span>
+                                            <span><i class="fa-regular fa-calendar"></i> {{ formatDate(item.rental.startDate) }} - {{ formatDate(item.rental.endDate) }}</span>
                                         </div>
                                     </div>
-                                    <div style="text-align: right; display: flex; flex-direction: column; gap: 4px; align-items: flex-end;">
+                                    <div class="item-badges">
                                         @if (item.contract) {
-                                            <span style="background: #ecfdf5; color: #065f46; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;"><i class="fa-solid fa-file-contract"></i> Contr. {{ item.contract.contractNumber }}</span>
+                                            <span class="item-contract-badge">
+                                                <i class="fa-solid fa-file-contract"></i> Contr. {{ item.contract.contractNumber }}
+                                            </span>
                                         }
-                                        <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Stato: {{ item.rental.status }}</span>
+                                        <span class="item-status-text">Stato: {{ item.rental.status }}</span>
                                     </div>
                                 </div>
                             }
                         </div>
                     } @else {
-                        <div style="padding: 2rem; text-align: center; color: #64748b;">
-                            <i class="fa-solid fa-magnifying-glass" style="font-size: 24px; margin-bottom: 8px; display: block; color: #94a3b8;"></i>
-                            Nessun noleggio o contratto trovato per la ricerca impostata o per la targa {{ selectedVerbaleToAssociate.plate }}.
+                        <div class="rentals-empty-search">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            Nessun noleggio trovato per i filtri impostati o per la targa {{ selectedVerbaleToAssociate.plate }}.
                         </div>
                     }
                 </div>
@@ -403,7 +541,7 @@
                     <i class="fa-solid fa-pen-to-square modal-icon-magic" style="color: var(--primary);"></i>
                     <div>
                         <h2>Modifica Verbale</h2>
-                        <p class="modal-subtitle">Modifica manualmente qualsiasi informazione del verbale n. {{ editingVerbale.ticketNumber }}</p>
+                        <p class="modal-subtitle">Modifica le informazioni del verbale n. {{ editingVerbale.ticketNumber }}</p>
                     </div>
                 </div>
                 <button class="btn-close" (click)="closeEditModal()"><i class="fa-solid fa-xmark"></i></button>
@@ -454,7 +592,7 @@
                     </div>
 
                     <div class="form-group" style="grid-column: span 2;">
-                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: block; display: flex; align-items: center; gap: 6px;">
+                        <label style="font-weight: 700; color: #334155; font-size: 0.85rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
                             <i class="fa-solid fa-envelope" style="color: #2563eb;"></i> Indirizzo PEC Destinatario
                         </label>
                         <input type="email" [(ngModel)]="editingVerbale.authorityPec" name="editAuthorityPec" placeholder="Es. polizialocale@pec.comune.mottola.ta.it">
@@ -485,6 +623,210 @@
                     </button>
                 </div>
             </form>
+
+        </div>
+    </div>
+}
+
+<!-- MODALE ANTEPRIMA & INVIO PEC (BOZZA) -->
+@if (isPecModalOpen && selectedVerbaleForPec) {
+    <div class="modal-overlay">
+        <div class="modal-card wide-modal animate-scale-up" style="max-width: 780px;">
+            
+            <!-- HEADER MODALE -->
+            <div class="modal-header pec-modal-header">
+                <div class="header-left">
+                    <div class="modal-header-icon-box">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </div>
+                    <div>
+                        <h2>Bozza PEC Rinotifica Conducente</h2>
+                        <p class="modal-subtitle">Verifica i dati, il messaggio formale e gli allegati prima della trasmissione ufficiale</p>
+                    </div>
+                </div>
+                <button class="btn-close" (click)="closePecModal()" [disabled]="isSendingPec[selectedVerbaleForPec.id || '']">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- CONTENUTO DEL CORPO MODALE -->
+            <div class="modal-body" style="padding: 1.5rem; max-height: 75vh; overflow-y: auto;">
+                
+                <!-- Metadata Chips Bar -->
+                <div class="pec-meta-bar">
+                    <div class="meta-chip">
+                        <span class="meta-chip-label">Verbale:</span>
+                        <strong class="meta-chip-val font-mono">N. {{ selectedVerbaleForPec.ticketNumber }}</strong>
+                    </div>
+                    <div class="meta-chip">
+                        <span class="meta-chip-label">Targa:</span>
+                        <strong class="meta-chip-val plate-mono">{{ selectedVerbaleForPec.plate }}</strong>
+                    </div>
+                    <div class="meta-chip">
+                        <span class="meta-chip-label">Data Infrazione:</span>
+                        <span class="meta-chip-val">
+                            <i class="fa-regular fa-calendar"></i> {{ formatDate(selectedVerbaleForPec.violationDate) }}
+                            @if (selectedVerbaleForPec.violationTime) { <span class="time-sub">{{ selectedVerbaleForPec.violationTime }}</span> }
+                        </span>
+                    </div>
+                    <div class="meta-chip full-width-chip">
+                        <span class="meta-chip-label">Ente Accertatore:</span>
+                        <span class="meta-chip-val">{{ selectedVerbaleForPec.authorityName || 'Polizia Locale / Stradale' }}</span>
+                    </div>
+                </div>
+
+                <!-- Form Composer PEC -->
+                <div class="pec-composer-container">
+                    
+                    <!-- Destinatario PEC -->
+                    <div class="composer-field-group">
+                        <label class="composer-label">
+                            <i class="fa-solid fa-envelope" style="color: #2563eb;"></i> Indirizzo PEC Destinatario (Ente Accertatore) *
+                        </label>
+                        <div class="composer-input-wrapper">
+                            <input type="email" 
+                                   [(ngModel)]="emailDraft.to" 
+                                   class="composer-input font-medium" 
+                                   placeholder="polizialocale@pec.ente.it" 
+                                   required>
+                        </div>
+                    </div>
+
+                    <!-- Oggetto Email -->
+                    <div class="composer-field-group">
+                        <label class="composer-label">
+                            <i class="fa-solid fa-heading" style="color: #64748b;"></i> Oggetto della PEC *
+                        </label>
+                        <div class="composer-input-wrapper">
+                            <input type="text" 
+                                   [(ngModel)]="emailDraft.subject" 
+                                   class="composer-input font-semibold" 
+                                   placeholder="Oggetto PEC..." 
+                                   required>
+                        </div>
+                    </div>
+
+                    <!-- Testo Messaggio -->
+                    <div class="composer-field-group">
+                        <div class="composer-field-header">
+                            <label class="composer-label">
+                                <i class="fa-solid fa-align-left" style="color: #64748b;"></i> Dichiarazione Sostitutiva (Corpo del Messaggio)
+                            </label>
+                            <span class="composer-help-tag">
+                                <i class="fa-solid fa-pen-fancy"></i> Modificabile a piacere
+                            </span>
+                        </div>
+                        <textarea [(ngModel)]="emailDraft.body" 
+                                  rows="10" 
+                                  class="composer-textarea"
+                                  placeholder="Inserisci il testo formale della dichiarazione..."></textarea>
+                    </div>
+
+                    <!-- Selezione & Gestione Allegati -->
+                    <div class="composer-attachments-section">
+                        <div class="attachments-header-row">
+                            <span class="attachments-title">
+                                <i class="fa-solid fa-paperclip"></i> Documenti Allegati alla PEC:
+                            </span>
+                            <span class="attachments-subtitle-hint">Seleziona quali file allegare alla trasmissione</span>
+                        </div>
+
+                        <div class="attachment-cards-column">
+                            
+                            <!-- 1. Verbale PDF Card -->
+                            <div class="attachment-custom-card" [class.active]="emailDraft.attachVerbale">
+                                <div class="attachment-left-content">
+                                    <label class="custom-checkbox-wrapper">
+                                        <input type="checkbox" 
+                                               [(ngModel)]="emailDraft.attachVerbale" 
+                                               [disabled]="!attachedVerbaleBase64 && !selectedVerbaleForPec.pdfBase64">
+                                        <span class="custom-checkbox-checkmark"></span>
+                                    </label>
+                                    <div class="attachment-icon-bubble pdf-bubble">
+                                        <i class="fa-solid fa-file-pdf"></i>
+                                    </div>
+                                    <div class="attachment-text-meta">
+                                        <span class="attachment-main-label">Copia Verbale di Contestazione</span>
+                                        @if (attachedVerbaleBase64 || selectedVerbaleForPec.pdfBase64) {
+                                            <span class="attachment-status-pill success">
+                                                <i class="fa-solid fa-circle-check"></i>
+                                                {{ attachedVerbaleFileName || 'File PDF Pronto per l\'invio' }}
+                                            </span>
+                                        } @else {
+                                            <span class="attachment-status-pill warning">
+                                                <i class="fa-solid fa-circle-info"></i> Nessun PDF in archivio (puoi allegarlo ora)
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="attachment-actions">
+                                    <input #pecPdfInput type="file" accept=".pdf" style="display: none;" (change)="onPecVerbalePdfSelected($event)">
+                                    <button type="button" class="btn-pec-action-file" (click)="pecPdfInput.click()">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                                        {{ (attachedVerbaleBase64 || selectedVerbaleForPec.pdfBase64) ? 'Sostituisci File' : 'Allega PDF' }}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 2. Contratto Noleggio Card -->
+                            <div class="attachment-custom-card" [class.active]="emailDraft.attachContract">
+                                <div class="attachment-left-content">
+                                    <label class="custom-checkbox-wrapper">
+                                        <input type="checkbox" [(ngModel)]="emailDraft.attachContract">
+                                        <span class="custom-checkbox-checkmark"></span>
+                                    </label>
+                                    <div class="attachment-icon-bubble contract-bubble">
+                                        <i class="fa-solid fa-file-contract"></i>
+                                    </div>
+                                    <div class="attachment-text-meta">
+                                        <span class="attachment-main-label">Copia Contratto di Locazione Sottoscritto</span>
+                                        <span class="attachment-status-pill info">
+                                            <i class="fa-solid fa-file-signature"></i>
+                                            {{ selectedVerbaleForPec.contractNumber ? ('Contratto N. ' + selectedVerbaleForPec.contractNumber) : 'Generato da archivio' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Documenti Conducente Card -->
+                            <div class="attachment-custom-card" [class.active]="emailDraft.attachCustomerDoc">
+                                <div class="attachment-left-content">
+                                    <label class="custom-checkbox-wrapper">
+                                        <input type="checkbox" [(ngModel)]="emailDraft.attachCustomerDoc">
+                                        <span class="custom-checkbox-checkmark"></span>
+                                    </label>
+                                    <div class="attachment-icon-bubble id-bubble">
+                                        <i class="fa-solid fa-id-card"></i>
+                                    </div>
+                                    <div class="attachment-text-meta">
+                                        <span class="attachment-main-label">Documento d'Identità e Patente del Locatario</span>
+                                        <span class="attachment-status-pill neutral">
+                                            <i class="fa-regular fa-address-card"></i>
+                                            {{ selectedVerbaleForPec.customerName ? ('Conducente: ' + selectedVerbaleForPec.customerName) : 'Documento conducente' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- FOOTER MODALE -->
+            <div class="modal-footer-wizard" style="padding: 1.1rem 1.6rem; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; background: #fafbfc; border-radius: 0 0 16px 16px;">
+                <button type="button" class="btn btn-secondary" (click)="closePecModal()" [disabled]="isSendingPec[selectedVerbaleForPec.id || '']">
+                    Annulla
+                </button>
+                <button type="button" class="btn btn-primary btn-send-pec-confirm" (click)="confirmSendPec()" [disabled]="!emailDraft.to || isSendingPec[selectedVerbaleForPec.id || '']">
+                    @if (isSendingPec[selectedVerbaleForPec.id || '']) {
+                        <i class="fa-solid fa-spinner fa-spin"></i> Invio PEC in corso...
+                    } @else {
+                        <i class="fa-solid fa-paper-plane"></i> Conferma e Invia PEC
+                    }
+                </button>
+            </div>
 
         </div>
     </div>

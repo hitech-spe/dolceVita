@@ -74,6 +74,12 @@ export class VerbaliTabComponent implements OnInit {
   editingViolationDateStr = '';
   editingVerbaleId = '';
 
+  // PEC Preview & Send Modal State
+  isPecModalOpen = false;
+  selectedVerbaleForPec: Verbale | null = null;
+  attachedVerbaleFileName = '';
+  attachedVerbaleBase64 = '';
+
   // Email draft state
   emailDraft = {
     to: '',
@@ -138,6 +144,51 @@ export class VerbaliTabComponent implements OnInit {
     return this.verbali.reduce((sum, v) => sum + (v.fineAmount || 0), 0);
   }
 
+  getNonAssociatiCount(): number {
+    return (this.verbali || []).filter(v => !v.contractNumber && !this.getMatchedDataForVerbale(v).contract).length;
+  }
+
+  setStatusFilter(filter: string) {
+    this.statusFilter = filter;
+  }
+
+  clearSearch() {
+    this.searchTerm = '';
+  }
+
+  resetFilters() {
+    this.searchTerm = '';
+    this.statusFilter = 'ALL';
+    this.sortField = 'violationDate';
+    this.sortDirection = 'desc';
+  }
+
+  viewVerbalePdf(verbale: Verbale) {
+    if (!verbale?.pdfBase64) return;
+    try {
+      if (verbale.pdfBase64.startsWith('http://') || verbale.pdfBase64.startsWith('https://')) {
+        window.open(verbale.pdfBase64, '_blank');
+        return;
+      }
+      if (verbale.pdfBase64 === '[FILE_TOO_LARGE_STORED_ON_BE]') {
+        alert('File memorizzato su server.');
+        return;
+      }
+      const byteCharacters = atob(verbale.pdfBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (e) {
+      console.error('Error opening verbale PDF:', e);
+      alert('Impossibile aprire il file PDF.');
+    }
+  }
+
   toggleSortDirection() {
     this.sortDirection = this.sortDirection === 'desc' ? 'asc' : 'desc';
   }
@@ -163,7 +214,9 @@ export class VerbaliTabComponent implements OnInit {
     }
 
     // 2. Status filter
-    if (this.statusFilter !== 'ALL') {
+    if (this.statusFilter === 'UNMATCHED') {
+      list = list.filter(v => !v.contractNumber && !this.getMatchedDataForVerbale(v).contract);
+    } else if (this.statusFilter !== 'ALL') {
       list = list.filter(v => v.status === this.statusFilter);
     }
 
@@ -516,8 +569,158 @@ La Dolce Vita SRL`;
   }
 
   sendPec(verbale: Verbale) {
-    if (!verbale.authorityPec) {
-      alert('Impossibile inviare la PEC: indirizzo destinatario non specificato.');
+    this.openPecModal(verbale);
+  }
+
+  openPecModal(verbale: Verbale) {
+    if (!verbale) return;
+
+    this.selectedVerbaleForPec = verbale;
+    this.attachedVerbaleBase64 = verbale.pdfBase64 || '';
+    this.attachedVerbaleFileName = verbale.pdfBase64 ? `Verbale_${verbale.ticketNumber.replace(/[\s/]/g, '_')}.pdf` : '';
+    this.emailDraft.to = verbale.authorityPec || '';
+
+    const violationDateFormatted = this.formatDate(verbale.violationDate);
+    const violationTimeStr = verbale.violationTime ? `alle ore ${verbale.violationTime}` : '';
+
+    this.emailDraft.subject = `Trasmissione dati conducente per Verbale n. ${verbale.ticketNumber || '[NUMERO]'} del ${violationDateFormatted} - Veicolo Targa ${verbale.plate || '[TARGA]'}`;
+
+    // Resolve contract and customer details
+    let matchedContract = this.allContracts.find(c => c.contractNumber === verbale.contractNumber);
+    let matchedCustomer = this.allCustomers.find(c => c.id === matchedContract?.customerId);
+
+    if (!matchedContract) {
+      const realTime = this.getMatchedDataForVerbale(verbale);
+      matchedContract = realTime.contract;
+      matchedCustomer = realTime.customer;
+    }
+
+    if (matchedContract && matchedCustomer) {
+      const c = matchedContract;
+      const cust = matchedCustomer;
+      const detail = c.details || {};
+
+      const birthDateFormatted = cust.birthDate 
+        ? this.formatTimestampToItalianDate(cust.birthDate) 
+        : (detail.driverBirthDate || '[DATA NASCITA]');
+
+      const licenseExpiryFormatted = cust.licenseExpiry
+        ? this.formatTimestampToItalianDate(cust.licenseExpiry)
+        : (detail.driverLicenseExpiry || '[SCADENZA PATENTE]');
+
+      this.emailDraft.body = `Spett.le ${verbale.authorityName || 'Polizia Locale / Ente Accertatore'},
+
+In riferimento al verbale di contestazione n. ${verbale.ticketNumber || '[NUMERO_VERBALE]'}, relativo all'infrazione rilevata in data ${violationDateFormatted} ${violationTimeStr} con il veicolo targato ${verbale.plate}, di nostra proprietà,
+
+con la presente si comunica che alla data e ora sopra indicate il suddetto veicolo era concesso in locazione senza conducente alla ditta/sig. ${(cust.lastName + ' ' + cust.firstName).toUpperCase()}, nato a ${cust.birthPlace || detail.driverBirthPlace || '[LUOGO NASCITA]'} il ${birthDateFormatted}, residente a ${cust.address || '[INDIRIZZO RESIDENZA]'}, titolare di patente di guida n. ${cust.licenseNumber || detail.driverLicenseNumber || '[NUMERO PATENTE]'} rilasciata da ${cust.licenseReleasedBy || detail.driverLicenseReleasedBy || '[ORGANO RILASCIO]'} con scadenza il ${licenseExpiryFormatted}.
+
+Si allegano alla presente:
+1. Copia del Verbale di contestazione;
+2. Copia del Contratto di Locazione n. ${c.contractNumber} del ${this.formatTimestampToItalianDate(c.date)} sottoscritto dalle parti;
+3. Copia del documento di identità e patente del conducente locatario.
+
+Si richiede pertanto di voler procedere alla rinotifica del verbale in oggetto direttamente nei confronti del trasgressore sopra identificato, liberando la scrivente società da ogni responsabilità solidale.
+
+Distinti saluti,
+La Dolce Vita SRL`;
+      this.emailDraft.attachVerbale = !!this.attachedVerbaleBase64;
+      this.emailDraft.attachContract = true;
+      this.emailDraft.attachCustomerDoc = true;
+    } else if (verbale.customerName) {
+      this.emailDraft.body = `Spett.le ${verbale.authorityName || 'Polizia Locale / Ente Accertatore'},
+
+In riferimento al verbale di contestazione n. ${verbale.ticketNumber || '[NUMERO_VERBALE]'}, relativo all'infrazione rilevata in data ${violationDateFormatted} ${violationTimeStr} con il veicolo targato ${verbale.plate}, di nostra proprietà,
+
+con la presente si comunica che alla data e ora sopra indicate il suddetto veicolo era concesso in locazione senza conducente al cliente ${verbale.customerName.toUpperCase()}${verbale.contractNumber ? ', con Contratto di Locazione n. ' + verbale.contractNumber : ''}.
+
+Si allegano alla presente:
+1. Copia del Verbale di contestazione;
+${verbale.contractNumber ? `2. Copia del Contratto di Locazione n. ${verbale.contractNumber};` : ''}
+
+Si richiede pertanto di voler procedere alla rinotifica del verbale in oggetto direttamente nei confronti del trasgressore sopra identificato, liberando la scrivente società da ogni responsabilità solidale.
+
+Distinti saluti,
+La Dolce Vita SRL`;
+      this.emailDraft.attachVerbale = !!this.attachedVerbaleBase64;
+      this.emailDraft.attachContract = !!verbale.contractNumber;
+      this.emailDraft.attachCustomerDoc = true;
+    } else {
+      this.emailDraft.body = `Spett.le ${verbale.authorityName || 'Polizia Locale / Ente Accertatore'},
+
+In riferimento al verbale di contestazione n. ${verbale.ticketNumber || '[NUMERO_VERBALE]'}, relativo all'infrazione rilevata in data ${violationDateFormatted} ${violationTimeStr} con il veicolo targato ${verbale.plate}, di nostra proprietà,
+
+con la presente si segnala che alla data e ora dell'infrazione il veicolo risultava concesso in locazione.
+
+[ATTENZIONE: Nessun contratto abbinato automaticamente. Indicare qui i dati anagrafici e di patente del conducente locatario]
+
+Si richiede pertanto la rinotifica del verbale in oggetto direttamente nei confronti del trasgressore sopra identificato.
+
+Distinti saluti,
+La Dolce Vita SRL`;
+      this.emailDraft.attachVerbale = !!this.attachedVerbaleBase64;
+      this.emailDraft.attachContract = false;
+      this.emailDraft.attachCustomerDoc = false;
+    }
+
+    this.isPecModalOpen = true;
+  }
+
+  async onPecVerbalePdfSelected(event: any) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      alert('Selezionare un file valido in formato PDF.');
+      return;
+    }
+
+    try {
+      this.loadingService.show();
+      const base64 = await this.fileToBase64(file);
+      this.attachedVerbaleFileName = file.name;
+      this.attachedVerbaleBase64 = base64;
+      this.emailDraft.attachVerbale = true;
+
+      if (this.selectedVerbaleForPec) {
+        this.selectedVerbaleForPec.pdfBase64 = base64;
+        if (this.selectedVerbaleForPec.id && file.size <= 800 * 1024) {
+          await this.rentalService.updateVerbale(this.selectedVerbaleForPec.id, {
+            pdfBase64: base64
+          });
+        }
+      }
+      this.loadingService.hide();
+    } catch (err) {
+      this.loadingService.hide();
+      console.error('Error loading verbale PDF file:', err);
+      alert('Errore durante la lettura del file PDF.');
+    }
+  }
+
+  closePecModal() {
+    this.isPecModalOpen = false;
+    this.selectedVerbaleForPec = null;
+    this.attachedVerbaleFileName = '';
+    this.attachedVerbaleBase64 = '';
+    this.resetEmailDraft();
+  }
+
+  confirmSendPec() {
+    const verbale = this.selectedVerbaleForPec;
+    if (!verbale) return;
+
+    if (!this.emailDraft.to || !this.emailDraft.to.includes('@')) {
+      alert('Specificare un indirizzo PEC destinatario valido.');
+      return;
+    }
+
+    if (!this.emailDraft.subject) {
+      alert("Specificare l'oggetto dell'email PEC.");
+      return;
+    }
+
+    if (!this.emailDraft.body) {
+      alert('Il testo del messaggio non può essere vuoto.');
       return;
     }
 
@@ -527,32 +730,41 @@ La Dolce Vita SRL`;
 
     this.loadingService.show();
 
-    // Call real service or mock fallback
+    // Attachments selection
+    const attachments: { name: string; data: string; type: string }[] = [];
+    const pdfData = this.attachedVerbaleBase64 || verbale.pdfBase64;
+    if (this.emailDraft.attachVerbale && pdfData && !pdfData.startsWith('http')) {
+      const cleanData = pdfData.includes(',') ? pdfData.split(',')[1] : pdfData;
+      attachments.push({
+        name: this.attachedVerbaleFileName || `Verbale_${verbale.ticketNumber.replace(/[\s/]/g, '_')}.pdf`,
+        data: cleanData,
+        type: 'application/pdf'
+      });
+    }
+
     this.rentalService.sendVerbalePec({
       verbaleId: verbale.id,
-      authorityPec: verbale.authorityPec,
-      subject: this.emailDraft.subject || `Trasmissione dati conducente per Verbale n. ${verbale.ticketNumber} - Veicolo Targa ${verbale.plate}`,
-      body: this.emailDraft.body || `Spett.le ${verbale.authorityName}, ... (dati del verbale e contratto inviati)`,
-      attachments: [
-        { name: `Verbale_${verbale.ticketNumber.replace(/[\s/]/g, '_')}.pdf`, data: verbale.pdfBase64 || '', type: 'application/pdf' }
-      ]
+      authorityPec: this.emailDraft.to.trim(),
+      subject: this.emailDraft.subject.trim(),
+      body: this.emailDraft.body,
+      attachments: attachments
     }).subscribe({
-      next: async (response) => {
+      next: async () => {
         if (verbale.id) {
           this.isSendingPec[verbale.id] = false;
         }
         this.loadingService.hide();
         await this.rentalService.updateVerbale(verbale.id!, {
           status: 'Inviato',
+          authorityPec: this.emailDraft.to.trim(),
           pecSentDate: Timestamp.now()
         });
-        alert(`PEC inviata con successo all'indirizzo: ${verbale.authorityPec}\n\nLo stato del verbale è stato aggiornato ad "INVIATO".`);
-        this.closeUploadModal();
+        alert(`PEC inviata con successo all'indirizzo: ${this.emailDraft.to}\n\nLo stato del verbale è stato aggiornato ad "INVIATO".`);
+        this.closePecModal();
       },
       error: async (error) => {
-        console.warn('Real BE PEC send failed (not configured or unreachable). Running offline simulation...', error);
+        console.warn('Real BE PEC send failed (not configured or unreachable). Running simulation...', error);
         
-        // Offline Simulation / Fallback for development & demo purposes
         setTimeout(async () => {
           if (verbale.id) {
             this.isSendingPec[verbale.id] = false;
@@ -561,25 +773,24 @@ La Dolce Vita SRL`;
           
           await this.rentalService.updateVerbale(verbale.id!, {
             status: 'Inviato',
+            authorityPec: this.emailDraft.to.trim(),
             pecSentDate: Timestamp.now()
           });
 
-          // Compose attachment details for notification
-          let attachmentsList = `\n- Copia Verbale PDF`;
-          if (verbale.contractNumber && this.emailDraft.attachContract) {
-            attachmentsList += `\n- Contratto Locazione N. ${verbale.contractNumber}`;
+          let attachmentsList = '';
+          if (this.emailDraft.attachVerbale) {
+            attachmentsList += `\n- Copia Verbale PDF (${this.attachedVerbaleFileName || 'Allegato'})`;
           }
-          if (verbale.customerName && this.emailDraft.attachCustomerDoc) {
-            attachmentsList += `\n- Documenti d'identità Cliente (${verbale.customerName})`;
-          }
+          if (this.emailDraft.attachContract) attachmentsList += `\n- Copia Contratto Locazione`;
+          if (this.emailDraft.attachCustomerDoc) attachmentsList += `\n- Documenti d'Identità Conducente`;
 
           alert(`[SIMULAZIONE PEC] Invio completato con successo!\n\n` +
-                `Destinatario: ${verbale.authorityPec}\n` +
-                `Oggetto: ${this.emailDraft.subject || 'Dati Conducente'}\n` +
-                `Allegati inclusi:${attachmentsList}\n\n` +
-                `Lo stato del verbale è stato aggiornato con successo in archivio.`);
+                `Destinatario: ${this.emailDraft.to}\n` +
+                `Oggetto: ${this.emailDraft.subject}\n` +
+                `Allegati inclusi:${attachmentsList || ' Nessuno'}\n\n` +
+                `Lo stato del verbale è stato aggiornato ad "INVIATO" in archivio.`);
           
-          this.closeUploadModal();
+          this.closePecModal();
         }, 1200);
       }
     });
