@@ -131,5 +131,80 @@ describe('RentalService (Backend Contract Endpoints)', () => {
       expect(found).toBeDefined();
       expect(found?.firstName).toBe('Anna');
     });
+
+    it('should preserve existing customer names when stipulating contract with driver updates', (done) => {
+      const existingCustomer: any = { id: 'cust-mario', firstName: 'Mario', lastName: 'Rossi', phone: '333111' };
+      service.upsertLocalCustomer(existingCustomer);
+
+      const dummyBlob = new Blob(['%PDF-1.4 test'], { type: 'application/pdf' });
+      const payload = {
+        rentalId: 'rent-123',
+        contractNumber: '1817',
+        customerId: 'cust-mario',
+        customerName: 'Mario Rossi',
+        customerUpdates: {
+          licenseNumber: 'U999999',
+          birthPlace: 'Mottola'
+        }
+      };
+
+      service.stipulateContractOnBackend(payload).subscribe(() => {
+        service.getCustomers().subscribe(customers => {
+          const mario = customers.find(c => c.id === 'cust-mario');
+          expect(mario).toBeDefined();
+          expect(mario?.firstName).toBe('Mario');
+          expect(mario?.lastName).toBe('Rossi');
+          expect(mario?.licenseNumber).toBe('U999999');
+          expect(mario?.birthPlace).toBe('Mottola');
+          done();
+        });
+      });
+
+      const req = httpMock.expectOne(`${API_CONFIG.baseUrl}/api/v1/contracts/stipulate`);
+      req.flush(dummyBlob, {
+        headers: {
+          'X-Contract-Number': '1817',
+          'X-Customer-Id': 'cust-mario',
+          'Content-Type': 'application/pdf'
+        }
+      });
+    });
+
+    it('should correctly upsert newly created quick customer upon stipulating contract', (done) => {
+      const dummyBlob = new Blob(['%PDF-1.4 test'], { type: 'application/pdf' });
+      const payload = {
+        rentalId: 'rent-new',
+        contractNumber: '1818',
+        customerId: '',
+        customerName: 'Gianna Nannini',
+        customerUpdates: {
+          firstName: 'Gianna',
+          lastName: 'Nannini',
+          phone: '333555777',
+          licenseNumber: 'G123456'
+        }
+      };
+
+      service.stipulateContractOnBackend(payload).subscribe(res => {
+        expect(res.customerId).toBe('cust-server-new');
+        service.getCustomers().subscribe(customers => {
+          const gianna = customers.find(c => c.id === 'cust-server-new');
+          expect(gianna).toBeDefined();
+          expect(gianna?.firstName).toBe('Gianna');
+          expect(gianna?.lastName).toBe('Nannini');
+          expect(gianna?.licenseNumber).toBe('G123456');
+          done();
+        });
+      });
+
+      const req = httpMock.expectOne(`${API_CONFIG.baseUrl}/api/v1/contracts/stipulate`);
+      req.flush(dummyBlob, {
+        headers: {
+          'X-Contract-Number': '1818',
+          'X-Customer-Id': 'cust-server-new',
+          'Content-Type': 'application/pdf'
+        }
+      });
+    });
   });
 });

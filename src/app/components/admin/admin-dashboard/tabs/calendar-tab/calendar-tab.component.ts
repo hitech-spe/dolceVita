@@ -1553,6 +1553,8 @@ export class CalendarTabComponent implements OnInit {
     this.contractRentalStartDate = '';
     this.contractRentalEndDate = '';
     this.contractDetails = {};
+    this.isQuickCustomer = false;
+    this.quickCustomer = { firstName: '', lastName: '', phone: '', address: '' };
   }
 
   async generateContract() {
@@ -1676,6 +1678,11 @@ export class CalendarTabComponent implements OnInit {
             if (idx >= 0) {
               this.availableCustomers[idx] = { ...this.availableCustomers[idx], id: res.customerId };
             }
+            this.rentalService.upsertLocalCustomer({
+              ...this.contractCustomer,
+              id: res.customerId,
+              ...customerUpdates
+            });
           }
 
           // Aggiorna lo stato dei riferimenti locali in memoria per la UI
@@ -1712,6 +1719,11 @@ export class CalendarTabComponent implements OnInit {
           this.closeContractModal();
           alert(`Contratto PDF generato con successo (N. ${finalContractNumber}), salvato in archivio ed aperto in una nuova scheda browser!`);
           this.isGeneratingContract = false;
+
+          // Sincronizzazione in background della lista clienti direttamente da Firestore server
+          this.rentalService.refreshCustomers().catch(err => {
+            console.warn('Sincronizzazione clienti Firestore post-stipula non riuscita:', err);
+          });
         },
         error: (error) => {
           console.error('Errore durante la stipula del contratto sul server:', error);

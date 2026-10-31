@@ -1569,17 +1569,35 @@ export class RentalService {
         const rawBlob = response.body as Blob;
         const pdfBlob = rawBlob.type === 'application/pdf' ? rawBlob : new Blob([rawBlob], { type: 'application/pdf' });
 
-        if (customerId && payload && payload.customerUpdates) {
-          const newCustomer: Customer = {
-            id: customerId,
-            firstName: payload.customerUpdates.firstName || '',
-            lastName: payload.customerUpdates.lastName || '',
-            phone: payload.customerUpdates.phone || '',
-            address: payload.customerUpdates.address || '',
-            ...payload.customerUpdates,
-            createdAt: Timestamp.now()
-          };
-          this.upsertLocalCustomer(newCustomer);
+        if (customerId) {
+          const existing = this.currentCustomers.find(c => c.id === customerId);
+          const updates = (payload && payload.customerUpdates) ? payload.customerUpdates : {};
+
+          // Ricava il nome dal payload come fallback se non è presente negli updates
+          let fallbackFirstName = '';
+          let fallbackLastName = '';
+          if (payload && payload.customerName) {
+            const parts = payload.customerName.trim().split(' ');
+            fallbackFirstName = parts[0] || '';
+            fallbackLastName = parts.slice(1).join(' ') || '';
+          }
+
+          const resolvedFirstName = updates.firstName || existing?.firstName || fallbackFirstName;
+          const resolvedLastName = updates.lastName || existing?.lastName || fallbackLastName;
+
+          if (existing || updates.firstName || fallbackFirstName) {
+            const mergedCustomer: Customer = {
+              ...(existing || {}),
+              ...updates,
+              id: customerId,
+              firstName: resolvedFirstName,
+              lastName: resolvedLastName,
+              phone: updates.phone !== undefined ? updates.phone : (existing?.phone || ''),
+              address: updates.address !== undefined ? updates.address : (existing?.address || ''),
+              createdAt: existing?.createdAt || Timestamp.now()
+            };
+            this.upsertLocalCustomer(mergedCustomer);
+          }
         }
 
         return {

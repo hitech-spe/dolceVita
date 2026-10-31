@@ -50,6 +50,10 @@ describe('CustomersTabComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should refresh customers in background on init', () => {
+    expect(mockRentalService.refreshCustomers).toHaveBeenCalled();
+  });
+
   describe('Storage attachments handling', () => {
     it('should open directly in a new tab when attachment has a Firebase Storage url', () => {
       spyOn(window, 'open');

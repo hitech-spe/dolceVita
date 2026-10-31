@@ -30,6 +30,8 @@ describe('CalendarTabComponent', () => {
       createContract: jasmine.createSpy('createContract').and.returnValue(Promise.resolve({ contractNumber: '731', id: '731' })),
       downloadContractPdf: jasmine.createSpy('downloadContractPdf').and.returnValue(of(new Blob())),
       stipulateContractOnBackend: jasmine.createSpy('stipulateContractOnBackend').and.returnValue(of({ pdfBlob: new Blob(), contractNumber: '732' })),
+      refreshCustomers: jasmine.createSpy('refreshCustomers').and.returnValue(Promise.resolve([])),
+      upsertLocalCustomer: jasmine.createSpy('upsertLocalCustomer'),
       mapToCargosFormat: jasmine.createSpy('mapToCargosFormat').and.returnValue({})
     };
 
@@ -209,6 +211,27 @@ describe('CalendarTabComponent', () => {
         jasmine.objectContaining({ contractNumber: '1850' })
       );
       expect(component.isContractModalOpen).toBeFalse();
+    });
+
+    it('should upsert local customer and trigger refreshCustomers when stipulate returns customerId', async () => {
+      component.contractRental = { id: 'rent-1', customerId: '' } as any;
+      component.contractVehicle = { id: 'v-1' } as any;
+      component.contractCustomer = { id: '', firstName: 'Luigi', lastName: 'Bianchi' } as any;
+      component.isQuickCustomer = true;
+      component.quickCustomer = { firstName: 'Luigi', lastName: 'Bianchi', phone: '333' };
+
+      mockRentalService.stipulateContractOnBackend.and.returnValue(of({
+        pdfBlob: new Blob(),
+        contractNumber: '1851',
+        customerId: 'cust-new-id'
+      }));
+
+      await component.generateContract();
+
+      expect(mockRentalService.upsertLocalCustomer).toHaveBeenCalledWith(
+        jasmine.objectContaining({ id: 'cust-new-id', firstName: 'Luigi', lastName: 'Bianchi' })
+      );
+      expect(mockRentalService.refreshCustomers).toHaveBeenCalled();
     });
 
     it('should catch error and alert user when stipulateContractOnBackend fails', async () => {

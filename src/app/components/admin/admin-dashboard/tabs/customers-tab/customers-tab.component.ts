@@ -41,6 +41,9 @@ export class CustomersTabComponent implements OnInit {
         }
       })
     );
+    this.rentalService.refreshCustomers().catch(err => {
+      console.warn('Sincronizzazione automatica clienti Firestore all\'apertura tab non riuscita:', err);
+    });
   }
 
   async refreshCustomers() {
