@@ -182,4 +182,74 @@ describe('VerbaliTabComponent', () => {
     }));
     expect(component.isPecModalOpen).toBeFalse();
   });
+
+  describe('Image to PDF conversion and attachment handling', () => {
+    let sampleImageFile: File;
+
+    beforeEach(async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 10;
+      canvas.height = 10;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#2563eb';
+        ctx.fillRect(0, 0, 10, 10);
+      }
+      const imageBlob = await new Promise<Blob>((resolve) => canvas.toBlob(b => resolve(b!), 'image/jpeg'));
+      sampleImageFile = new File([imageBlob], 'foto_verbale.jpg', { type: 'image/jpeg' });
+    });
+
+    it('should convert an image into a valid PDF document', async () => {
+      const result = await component.convertImageToPdf(sampleImageFile);
+      expect(result).toBeTruthy();
+      expect(result.pdfFile.name).toBe('foto_verbale.pdf');
+      expect(result.pdfFile.type).toBe('application/pdf');
+      expect(result.pdfBase64).toContain('data:application/pdf');
+    });
+
+    it('should reject non-PDF and non-image files in onPecVerbalePdfSelected', async () => {
+      spyOn(window, 'alert');
+      const invalidFile = new File(['text content'], 'documento.txt', { type: 'text/plain' });
+      const event = { target: { files: [invalidFile], value: 'fake' } };
+
+      await component.onPecVerbalePdfSelected(event);
+
+      expect(window.alert).toHaveBeenCalledWith(jasmine.stringMatching(/PDF o immagine/));
+      expect(component.attachedVerbaleBase64).toBe('');
+    });
+
+    it('should accept image file in onPecVerbalePdfSelected, convert to PDF, and update draft state', async () => {
+      const testVerbale = {
+        id: 'v30',
+        plate: 'ZZ999YY',
+        violationDate: '2026-10-15' as any,
+        ticketNumber: 'TEST-IMG-1',
+        authorityName: 'Polizia Locale',
+        authorityPec: 'polizia@pec.test.it',
+        status: 'Nuovo' as const
+      };
+      component.openPecModal(testVerbale);
+
+      const event = { target: { files: [sampleImageFile], value: 'fake' } };
+      await component.onPecVerbalePdfSelected(event);
+
+      expect(component.attachedVerbaleFileName).toBe('foto_verbale.pdf');
+      expect(component.attachedVerbaleBase64).toContain('data:application/pdf');
+      expect(component.emailDraft.attachVerbale).toBeTrue();
+      expect(mockRentalService.updateVerbale).toHaveBeenCalledWith('v30', jasmine.objectContaining({
+        pdfBase64: jasmine.stringMatching(/data:application\/pdf/)
+      }));
+    });
+
+    it('should accept image file in onFileSelected, convert to PDF, and add to selectedFiles', async () => {
+      expect(component.selectedFiles.length).toBe(0);
+      const event = { target: { files: [sampleImageFile], value: 'fake' } };
+
+      await component.onFileSelected(event);
+
+      expect(component.selectedFiles.length).toBe(1);
+      expect(component.selectedFiles[0].name).toBe('foto_verbale.pdf');
+      expect(component.selectedFiles[0].type).toBe('application/pdf');
+    });
+  });
 });

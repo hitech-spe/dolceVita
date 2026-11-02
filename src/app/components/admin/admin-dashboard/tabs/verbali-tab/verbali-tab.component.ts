@@ -5,6 +5,7 @@ import { Observable, Subscription } from 'rxjs';
 import { RentalService, Verbale, ContractDocument, Customer, Rental } from '../../../../../services/rental.service';
 import { Timestamp } from '@angular/fire/firestore';
 import { LoadingService } from '../../../../../services/loading.service';
+import { jsPDF } from 'jspdf';
 
 @Component({
   selector: 'app-verbali-tab',
@@ -174,7 +175,8 @@ export class VerbaliTabComponent implements OnInit {
         alert('File memorizzato su server.');
         return;
       }
-      const byteCharacters = atob(verbale.pdfBase64);
+      const rawBase64 = verbale.pdfBase64.includes(',') ? verbale.pdfBase64.split(',')[1] : verbale.pdfBase64;
+      const byteCharacters = atob(rawBase64);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
         byteNumbers[i] = byteCharacters.charCodeAt(i);
@@ -317,19 +319,47 @@ export class VerbaliTabComponent implements OnInit {
     };
   }
 
-  onFileSelected(event: any) {
+  async onFileSelected(event: any) {
     const fileList: FileList = event.target.files;
     if (!fileList || fileList.length === 0) return;
 
-    const newFiles = Array.from(fileList);
-    newFiles.forEach(file => {
-      const exists = this.selectedFiles.some(f => f.name === file.name && f.size === file.size);
-      if (!exists) {
-        this.selectedFiles.push(file);
-      }
-    });
+    const rawFiles = Array.from(fileList);
+    this.loadingService.show();
 
-    this.updateFilesMeta();
+    try {
+      for (const file of rawFiles) {
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp|bmp)$/i.test(file.name);
+
+        if (!isPdf && !isImage) {
+          alert(`Il file "${file.name}" non è supportato. Selezionare solo documenti PDF o immagini (JPG, PNG, WebP).`);
+          continue;
+        }
+
+        let readyFile: File = file;
+        if (isImage) {
+          try {
+            const { pdfFile } = await this.convertImageToPdf(file);
+            readyFile = pdfFile;
+          } catch (convErr) {
+            console.error(`Errore durante la conversione in PDF di "${file.name}":`, convErr);
+            alert(`Impossibile convertire l'immagine "${file.name}" in PDF.`);
+            continue;
+          }
+        }
+
+        const exists = this.selectedFiles.some(f => f.name === readyFile.name && f.size === readyFile.size);
+        if (!exists) {
+          this.selectedFiles.push(readyFile);
+        }
+      }
+    } finally {
+      this.loadingService.hide();
+      this.updateFilesMeta();
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
   }
 
   removeFile(index: number) {
@@ -669,21 +699,37 @@ La Dolce Vita SRL`;
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
-      alert('Selezionare un file valido in formato PDF.');
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp|bmp)$/i.test(file.name);
+
+    if (!isPdf && !isImage) {
+      alert('Selezionare un file valido in formato PDF o immagine (JPG, PNG, WebP).');
+      if (event.target) event.target.value = '';
       return;
     }
 
     try {
       this.loadingService.show();
-      const base64 = await this.fileToBase64(file);
-      this.attachedVerbaleFileName = file.name;
+      let base64: string;
+      let finalFileName: string;
+
+      if (isImage) {
+        const { pdfFile, pdfBase64 } = await this.convertImageToPdf(file);
+        base64 = pdfBase64;
+        finalFileName = pdfFile.name;
+      } else {
+        base64 = await this.fileToBase64(file);
+        finalFileName = file.name;
+      }
+
+      this.attachedVerbaleFileName = finalFileName;
       this.attachedVerbaleBase64 = base64;
       this.emailDraft.attachVerbale = true;
 
       if (this.selectedVerbaleForPec) {
         this.selectedVerbaleForPec.pdfBase64 = base64;
-        if (this.selectedVerbaleForPec.id && file.size <= 800 * 1024) {
+        const estimatedSize = Math.round((base64.length * 3) / 4);
+        if (this.selectedVerbaleForPec.id && estimatedSize <= 800 * 1024) {
           await this.rentalService.updateVerbale(this.selectedVerbaleForPec.id, {
             pdfBase64: base64
           });
@@ -692,8 +738,12 @@ La Dolce Vita SRL`;
       this.loadingService.hide();
     } catch (err) {
       this.loadingService.hide();
-      console.error('Error loading verbale PDF file:', err);
-      alert('Errore durante la lettura del file PDF.');
+      console.error('Error loading verbale file:', err);
+      alert('Errore durante l\'elaborazione del file.');
+    } finally {
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   }
 
@@ -1058,6 +1108,92 @@ La Dolce Vita SRL`;
       reader.readAsDataURL(file);
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = error => reject(error);
+    });
+  }
+
+  /**
+   * Converts an image file (JPG, JPEG, PNG, WebP) into an A4 PDF document on the fly.
+   * Compresses and scales the image maintaining its aspect ratio to ensure PDF compatibility
+   * and keep document size lightweight for email PEC transmission and Firestore storage.
+   */
+  convertImageToPdf(file: File): Promise<{ pdfFile: File; pdfBase64: string }> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Errore durante la lettura del file immagine.'));
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const img = new Image();
+        img.onerror = () => reject(new Error("Impossibile decodificare l'immagine."));
+        img.onload = () => {
+          try {
+            const maxDimension = 2480;
+            let width = img.naturalWidth || img.width;
+            let height = img.naturalHeight || img.height;
+
+            if (width > maxDimension || height > maxDimension) {
+              if (width > height) {
+                height = Math.round((height * maxDimension) / width);
+                width = maxDimension;
+              } else {
+                width = Math.round((width * maxDimension) / height);
+                height = maxDimension;
+              }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              throw new Error('Canvas 2D context non disponibile.');
+            }
+
+            // Fill white background for transparent PNG/WebP images
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const compressedJpgUrl = canvas.toDataURL('image/jpeg', 0.90);
+
+            const isLandscape = width > height;
+            const orientation = isLandscape ? 'l' : 'p';
+            const pdf = new jsPDF({
+              orientation,
+              unit: 'pt',
+              format: 'a4'
+            });
+
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+
+            const margin = 20;
+            const printableWidth = pageWidth - margin * 2;
+            const printableHeight = pageHeight - margin * 2;
+
+            const scale = Math.min(printableWidth / width, printableHeight / height);
+            const renderWidth = width * scale;
+            const renderHeight = height * scale;
+            const posX = margin + (printableWidth - renderWidth) / 2;
+            const posY = margin + (printableHeight - renderHeight) / 2;
+
+            pdf.addImage(compressedJpgUrl, 'JPEG', posX, posY, renderWidth, renderHeight);
+
+            const pdfBase64 = pdf.output('datauristring');
+            const pdfBlob = pdf.output('blob');
+
+            const lastDot = file.name.lastIndexOf('.');
+            const baseName = lastDot > 0 ? file.name.substring(0, lastDot) : file.name;
+            const pdfFileName = `${baseName}.pdf`;
+            const pdfFile = new File([pdfBlob], pdfFileName, { type: 'application/pdf' });
+
+            resolve({ pdfFile, pdfBase64 });
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.src = dataUrl;
+      };
+      reader.readAsDataURL(file);
     });
   }
 }
