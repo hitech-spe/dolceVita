@@ -436,6 +436,7 @@ export class ContractsTabComponent implements OnInit {
     try {
       this.loadingService.show();
       let datePostponed = false;
+      let rentalUpdatePromise: Promise<any> | null = null;
       const associatedRental = this.allRentals.find(r => r.id === this.editingContract!.rentalId);
       if (associatedRental) {
         const rentalUpdates: Partial<Rental> = {};
@@ -461,7 +462,7 @@ export class ContractsTabComponent implements OnInit {
         }
 
         if (Object.keys(rentalUpdates).length > 0) {
-          await this.rentalService.updateRental(associatedRental.id!, rentalUpdates);
+          rentalUpdatePromise = this.rentalService.updateRental(associatedRental.id!, rentalUpdates);
         }
       }
 
@@ -524,13 +525,11 @@ export class ContractsTabComponent implements OnInit {
         updatedContract.pdfBase64 = null as any;
         updatedContract.pdfUrl = null as any;
       } else {
-        // Mantieni lo stato corrente di invio
+        // Mantieni lo stato corrente di invio senza reinviare pdfBase64 e pdfUrl
         updatedContract.cargos_status = this.editingContract.cargos_status;
         updatedContract.cargos_transaction_id = this.editingContract.cargos_transaction_id;
         updatedContract.cargos_error = this.editingContract.cargos_error;
         updatedContract.cargos_sync_time = this.editingContract.cargos_sync_time;
-        updatedContract.pdfBase64 = this.editingContract.pdfBase64;
-        updatedContract.pdfUrl = this.editingContract.pdfUrl;
       }
 
       if (this.editedContractDate) {
@@ -545,66 +544,97 @@ export class ContractsTabComponent implements OnInit {
         updatedContract.contratto_data = `${dd}/${mm}/${yyyy} 12:00`;
       }
 
+      let customerUpdatePromise: Promise<any> | null = null;
       if (this.editedDetails.mainDriverId) {
         const driver = this.availableCustomers.find(c => c.id === this.editedDetails.mainDriverId);
         if (driver) {
           updatedContract.customerName = `${driver.firstName} ${driver.lastName}`;
         }
 
-        // AGGIORNA ANCHE L'ANAGRAFICA CLIENTE SU FIRESTORE CON I NUOVI DATI MODIFICATI
+        // AGGIORNA ANCHE L'ANAGRAFICA CLIENTE SU FIRESTORE CON I NUOVI DATI MODIFICATI SOLO SE CI SONO STATE MODIFICHE (DIRTY CHECK)
         const updateData: Partial<Customer> = {};
-        if (this.editedDetails.driverBirthPlace) {
-          updateData.birthPlace = this.editedDetails.driverBirthPlace;
+
+        const newBirthPlace = (this.editedDetails.driverBirthPlace || '').trim();
+        const oldBirthPlace = (driver?.birthPlace || '').trim();
+        if (newBirthPlace && newBirthPlace !== oldBirthPlace) {
+          updateData.birthPlace = newBirthPlace;
         }
-        if (this.editedDetails.driverBirthDate) {
-          updateData.birthDate = Timestamp.fromDate(new Date(this.editedDetails.driverBirthDate));
+
+        const newBirthDate = (this.editedDetails.driverBirthDate || '').trim();
+        const oldBirthDate = this.formatDateForInput(driver?.birthDate);
+        if (newBirthDate && newBirthDate !== oldBirthDate) {
+          updateData.birthDate = Timestamp.fromDate(new Date(newBirthDate));
         }
-        if (this.editedDetails.driverLicenseNumber) {
-          updateData.licenseNumber = this.editedDetails.driverLicenseNumber;
+
+        const newLicenseNumber = (this.editedDetails.driverLicenseNumber || '').trim();
+        const oldLicenseNumber = (driver?.licenseNumber || '').trim();
+        if (newLicenseNumber && newLicenseNumber !== oldLicenseNumber) {
+          updateData.licenseNumber = newLicenseNumber;
         }
-        if (this.editedDetails.driverLicenseIssueDate) {
-          updateData.licenseIssueDate = Timestamp.fromDate(new Date(this.editedDetails.driverLicenseIssueDate));
+
+        const newLicenseIssueDate = (this.editedDetails.driverLicenseIssueDate || '').trim();
+        const oldLicenseIssueDate = this.formatDateForInput(driver?.licenseIssueDate);
+        if (newLicenseIssueDate && newLicenseIssueDate !== oldLicenseIssueDate) {
+          updateData.licenseIssueDate = Timestamp.fromDate(new Date(newLicenseIssueDate));
         }
-        if (this.editedDetails.driverLicenseExpiry) {
-          updateData.licenseExpiry = Timestamp.fromDate(new Date(this.editedDetails.driverLicenseExpiry));
+
+        const newLicenseExpiry = (this.editedDetails.driverLicenseExpiry || '').trim();
+        const oldLicenseExpiry = this.formatDateForInput(driver?.licenseExpiry);
+        if (newLicenseExpiry && newLicenseExpiry !== oldLicenseExpiry) {
+          updateData.licenseExpiry = Timestamp.fromDate(new Date(newLicenseExpiry));
         }
-        if (this.editedDetails.driverLicenseReleasedBy) {
-          updateData.licenseReleasedBy = this.editedDetails.driverLicenseReleasedBy;
+
+        const newLicenseReleasedBy = (this.editedDetails.driverLicenseReleasedBy || '').trim();
+        const oldLicenseReleasedBy = (driver?.licenseReleasedBy || '').trim();
+        if (newLicenseReleasedBy && newLicenseReleasedBy !== oldLicenseReleasedBy) {
+          updateData.licenseReleasedBy = newLicenseReleasedBy;
         }
-        if (this.editedDetails.driverLicenseCountry) {
-          updateData.licenseCountry = this.editedDetails.driverLicenseCountry;
+
+        const newLicenseCountry = (this.editedDetails.driverLicenseCountry || '').trim();
+        const oldLicenseCountry = (driver?.licenseCountry || '').trim();
+        if (newLicenseCountry && newLicenseCountry !== oldLicenseCountry) {
+          updateData.licenseCountry = newLicenseCountry;
         }
-        if (this.editedDetails.driverAddress) {
-          updateData.address = this.editedDetails.driverAddress.trim();
+
+        const newAddress = (this.editedDetails.driverAddress || '').trim();
+        const oldAddress = (driver?.address || '').trim();
+        if (newAddress && newAddress !== oldAddress) {
+          updateData.address = newAddress;
         }
-        if (this.editedDetails.driverPhone) {
-          updateData.phone = this.editedDetails.driverPhone.trim();
+
+        const newPhone = (this.editedDetails.driverPhone || '').trim();
+        const oldPhone = (driver?.phone || '').trim();
+        if (newPhone && newPhone !== oldPhone) {
+          updateData.phone = newPhone;
         }
 
         if (Object.keys(updateData).length > 0) {
-          try {
-            await this.rentalService.updateCustomer(this.editedDetails.mainDriverId, updateData);
-            
-            // Sincronizza la cache locale
-            const cachedDriver = this.availableCustomers.find(c => c.id === this.editedDetails.mainDriverId);
-            if (cachedDriver) {
-              if (updateData.birthPlace) cachedDriver.birthPlace = updateData.birthPlace;
-              if (updateData.birthDate) cachedDriver.birthDate = updateData.birthDate;
-              if (updateData.licenseNumber) cachedDriver.licenseNumber = updateData.licenseNumber;
-              if (updateData.licenseIssueDate) cachedDriver.licenseIssueDate = updateData.licenseIssueDate;
-              if (updateData.licenseExpiry) cachedDriver.licenseExpiry = updateData.licenseExpiry;
-              if (updateData.licenseReleasedBy) cachedDriver.licenseReleasedBy = updateData.licenseReleasedBy;
-              if (updateData.licenseCountry) cachedDriver.licenseCountry = updateData.licenseCountry;
-              if (updateData.address) cachedDriver.address = updateData.address;
-              if (updateData.phone) cachedDriver.phone = updateData.phone;
+          customerUpdatePromise = (async () => {
+            try {
+              await this.rentalService.updateCustomer(this.editedDetails.mainDriverId!, updateData);
+              
+              // Sincronizza la cache locale
+              const cachedDriver = this.availableCustomers.find(c => c.id === this.editedDetails.mainDriverId);
+              if (cachedDriver) {
+                if (updateData.birthPlace) cachedDriver.birthPlace = updateData.birthPlace;
+                if (updateData.birthDate) cachedDriver.birthDate = updateData.birthDate;
+                if (updateData.licenseNumber) cachedDriver.licenseNumber = updateData.licenseNumber;
+                if (updateData.licenseIssueDate) cachedDriver.licenseIssueDate = updateData.licenseIssueDate;
+                if (updateData.licenseExpiry) cachedDriver.licenseExpiry = updateData.licenseExpiry;
+                if (updateData.licenseReleasedBy) cachedDriver.licenseReleasedBy = updateData.licenseReleasedBy;
+                if (updateData.licenseCountry) cachedDriver.licenseCountry = updateData.licenseCountry;
+                if (updateData.address) cachedDriver.address = updateData.address;
+                if (updateData.phone) cachedDriver.phone = updateData.phone;
+              }
+            } catch (custError) {
+              console.error("Errore nell'aggiornamento dell'anagrafica cliente da modifica contratto:", custError);
             }
-          } catch (custError) {
-            console.error("Errore nell'aggiornamento dell'anagrafica cliente da modifica contratto:", custError);
-          }
+          })();
         }
       }
 
       // Se l'utente ha inserito/modificato dettagli dell'azienda in modifica, la salviamo se non esiste già
+      let companyUpdatePromise: Promise<any> | null = null;
       if (this.editedDetails.isCompany && this.editedDetails.companyName && this.editedDetails.companyVat) {
         const nameUpper = this.editedDetails.companyName.trim().toUpperCase();
         const vatTrimmed = this.editedDetails.companyVat.trim().toUpperCase();
@@ -615,23 +645,33 @@ export class ContractsTabComponent implements OnInit {
         );
         
         if (!exists) {
-          try {
-            const newCompany: Company = {
-              name: this.editedDetails.companyName.trim(),
-              vat: this.editedDetails.companyVat.trim(),
-              address: this.editedDetails.companyAddress?.trim() || '',
-              phone: this.editedDetails.companyPhone?.trim() || '',
-              pec: this.editedDetails.companyPec?.trim() || ''
-            };
-            await this.rentalService.addCompany(newCompany);
-            console.log('Nuova azienda salvata con successo da modifica contratto!');
-          } catch (compError) {
-            console.error('Errore durante il salvataggio automatico dell\'azienda da modifica:', compError);
-          }
+          companyUpdatePromise = (async () => {
+            try {
+              const newCompany: Company = {
+                name: this.editedDetails.companyName.trim(),
+                vat: this.editedDetails.companyVat.trim(),
+                address: this.editedDetails.companyAddress?.trim() || '',
+                phone: this.editedDetails.companyPhone?.trim() || '',
+                pec: this.editedDetails.companyPec?.trim() || ''
+              };
+              await this.rentalService.addCompany(newCompany);
+              console.log('Nuova azienda salvata con successo da modifica contratto!');
+            } catch (compError) {
+              console.error('Errore durante il salvataggio automatico dell\'azienda da modifica:', compError);
+            }
+          })();
         }
       }
 
-      await this.rentalService.updateContract(this.editingContract.id, updatedContract);
+      const tasks: Promise<any>[] = [
+        this.rentalService.updateContract(this.editingContract.id, updatedContract)
+      ];
+      if (rentalUpdatePromise) tasks.push(rentalUpdatePromise);
+      if (customerUpdatePromise) tasks.push(customerUpdatePromise);
+      if (companyUpdatePromise) tasks.push(companyUpdatePromise);
+
+      await Promise.all(tasks);
+
       if (this.editingContract.contractNumber) {
         this.modifiedContractNumbers.add(this.editingContract.contractNumber);
       }

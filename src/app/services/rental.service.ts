@@ -1344,25 +1344,24 @@ export class RentalService {
   }
 
   async updateContract(id: string, data: Partial<ContractDocument>) {
+    const cleaned = this.cleanUndefined(data);
     const docRef = doc(this.firestore, `contracts/${id}`);
     try {
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        return updateDoc(docRef, this.cleanUndefined(data));
+      return await updateDoc(docRef, cleaned);
+    } catch (docErr) {
+      // Fallback: cerca per contractNumber se l'id non corrisponde alla chiave Firestore
+      try {
+        const contractsRef = collection(this.firestore, 'contracts');
+        const q = query(contractsRef, where('contractNumber', '==', id));
+        const qSnap = await getDocs(q);
+        if (!qSnap.empty) {
+          return await updateDoc(qSnap.docs[0].ref, cleaned);
+        }
+      } catch (fallbackErr) {
+        console.warn('Fallback updateContract con contractNumber non riuscito:', fallbackErr);
       }
-    } catch (_) {}
-
-    // Fallback: cerca per contractNumber se l'id non corrisponde alla chiave Firestore
-    try {
-      const contractsRef = collection(this.firestore, 'contracts');
-      const q = query(contractsRef, where('contractNumber', '==', id));
-      const qSnap = await getDocs(q);
-      if (!qSnap.empty) {
-        return updateDoc(qSnap.docs[0].ref, this.cleanUndefined(data));
-      }
-    } catch (_) {}
-
-    return updateDoc(docRef, this.cleanUndefined(data));
+      throw docErr;
+    }
   }
 
   // --- CARGOS INTEGRATION HELPER METHODS ---

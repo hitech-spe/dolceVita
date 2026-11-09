@@ -282,6 +282,74 @@ describe('ContractsTabComponent', () => {
     }));
   });
 
+  it('should skip updateCustomer call if driver details did not change during contract edit (dirty check)', async () => {
+    mockRentalService.updateCustomer.calls.reset();
+    mockRentalService.updateContract.calls.reset();
+
+    component.availableCustomers = [
+      {
+        id: 'c_xyz',
+        firstName: 'Luigi',
+        lastName: 'Bianchi',
+        address: 'VIA ROMA 10',
+        phone: '333111222',
+        birthPlace: 'Mottola',
+        licenseNumber: 'PAT12345'
+      } as any
+    ];
+
+    const mockContract = {
+      id: 'c_id_3',
+      contractNumber: '777',
+      details: {
+        baseRate: 100,
+        mainDriverId: 'c_xyz',
+        driverAddress: 'VIA ROMA 10',
+        driverPhone: '333111222',
+        driverBirthPlace: 'Mottola',
+        driverLicenseNumber: 'PAT12345'
+      }
+    } as any;
+
+    component.editingContract = mockContract;
+    // Modifica solo il prezzo base del contratto, lasciando i dati del conducente invariati
+    component.editedDetails = { ...mockContract.details, baseRate: 150 };
+    component.isEditModalOpen = true;
+
+    await component.saveContractEdit();
+
+    expect(mockRentalService.updateContract).toHaveBeenCalled();
+    expect(mockRentalService.updateCustomer).not.toHaveBeenCalled();
+    expect(component.isEditModalOpen).toBeFalse();
+  });
+
+  it('should not re-upload pdfBase64 when contract is already SENT and dates are not postponed', async () => {
+    mockRentalService.updateContract.calls.reset();
+
+    const mockContract = {
+      id: 'c_id_sent',
+      contractNumber: '888',
+      cargos_status: 'SENT',
+      cargos_transaction_id: 'tx_123',
+      pdfBase64: 'data:application/pdf;base64,JVBERi0xLjQK...',
+      pdfUrl: 'https://storage.googleapis.com/contract.pdf',
+      details: { baseRate: 200 }
+    } as any;
+
+    component.editingContract = mockContract;
+    component.editedDetails = { ...mockContract.details, baseRate: 220 };
+    component.isEditModalOpen = true;
+
+    await component.saveContractEdit();
+
+    const updateCall = mockRentalService.updateContract.calls.mostRecent();
+    expect(updateCall).toBeDefined();
+    const payload = updateCall.args[1];
+    expect(payload.cargos_status).toBe('SENT');
+    expect(payload.pdfBase64).toBeUndefined();
+    expect(payload.pdfUrl).toBeUndefined();
+  });
+
   it('should manage bulk selections and trigger bulk sending correctly', () => {
     const mockContracts = [
       { id: '1', contractNumber: '100', cargos_status: 'CHECK_SUCCESS' },
