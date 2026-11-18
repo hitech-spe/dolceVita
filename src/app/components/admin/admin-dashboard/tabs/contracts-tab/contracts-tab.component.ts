@@ -68,7 +68,9 @@ export class ContractsTabComponent implements OnInit {
   rifCompanySearchTerm = '';
   isRifCompanyDropdownOpen = false;
   updateCalendarRental = true;
-  closeSourceRental = true;
+  closeSourceRental = false;
+  rifReplacementType: 'maintenance' | 'permanent' = 'maintenance';
+  rifMaintenanceNotes = '';
   isGeneratingRif = false;
   rifRentalStartDateManuallyEdited = false;
 
@@ -699,11 +701,13 @@ export class ContractsTabComponent implements OnInit {
       this.rifDetails.mainDriverId = contract.customerId || '';
     }
 
-    this.rifVehicleId = contract.vehicleId || '';
+    this.rifVehicleId = '';
     this.rifCustomerId = contract.customerId || '';
 
     this.rifDate = this.formatDateForInput(new Date());
     this.rifRentalStartDateManuallyEdited = false;
+    this.rifReplacementType = 'maintenance';
+    this.rifMaintenanceNotes = '';
 
     const associatedRental = this.allRentals.find(r => r.id === contract.rentalId);
     if (associatedRental) {
@@ -713,22 +717,50 @@ export class ContractsTabComponent implements OnInit {
       } else {
         this.rifRentalStartDate = this.rifDate;
       }
-
-      if (associatedRental.endDate) {
-        this.rifRentalEndDate = this.formatDateForInput(associatedRental.endDate);
-      } else {
-        this.rifRentalEndDate = this.rifDate;
-      }
+      this.initRifDatesForMaintenance(associatedRental);
     } else {
       this.rifRentalStartDate = this.rifDate;
-      this.rifRentalEndDate = this.rifDate;
+      this.initRifDatesForMaintenance();
     }
 
     this.rifCompanySearchTerm = this.rifDetails.isCompany ? (this.rifDetails.companyName || '') : '';
     this.isRifCompanyDropdownOpen = false;
     this.updateCalendarRental = true;
-    this.closeSourceRental = true;
+    this.closeSourceRental = false;
     this.isReferenceModalOpen = true;
+  }
+
+  initRifDatesForMaintenance(associatedRental?: Rental) {
+    if (!this.rifRentalStartDate) {
+      this.rifRentalStartDate = this.rifDate || this.formatDateForInput(new Date());
+    }
+    const [y, m, d] = this.rifRentalStartDate.split('-').map(Number);
+    const startObj = new Date(y, m - 1, d);
+    startObj.setDate(startObj.getDate() + 2);
+    const calculatedEnd = this.formatDateForInput(startObj);
+
+    if (associatedRental && associatedRental.endDate) {
+      const origEnd = this.formatDateForInput(associatedRental.endDate);
+      this.rifRentalEndDate = (origEnd && origEnd >= this.rifRentalStartDate && origEnd < calculatedEnd) ? origEnd : calculatedEnd;
+    } else {
+      this.rifRentalEndDate = calculatedEnd;
+    }
+  }
+
+  onRifReplacementTypeChange(type: 'maintenance' | 'permanent') {
+    this.rifReplacementType = type;
+    const associatedRental = this.allRentals.find(r => r.id === this.sourceContractForReference?.rentalId);
+
+    if (type === 'maintenance') {
+      this.closeSourceRental = false;
+      this.initRifDatesForMaintenance(associatedRental);
+    } else {
+      this.closeSourceRental = true;
+      if (associatedRental && associatedRental.endDate) {
+        const origEnd = this.formatDateForInput(associatedRental.endDate);
+        this.rifRentalEndDate = (origEnd && origEnd >= this.rifRentalStartDate) ? origEnd : this.rifRentalStartDate;
+      }
+    }
   }
 
   onRifDateChange(newDate: string) {
@@ -736,12 +768,20 @@ export class ContractsTabComponent implements OnInit {
     // Se l'utente non ha impostato manualmente una data inizio noleggio differente, sincronizziamo con la data stipula
     if (!this.rifRentalStartDateManuallyEdited) {
       this.rifRentalStartDate = newDate;
+      if (this.rifReplacementType === 'maintenance') {
+        const associatedRental = this.allRentals.find(r => r.id === this.sourceContractForReference?.rentalId);
+        this.initRifDatesForMaintenance(associatedRental);
+      }
     }
   }
 
   onRifRentalStartDateChange(newDate: string) {
     this.rifRentalStartDate = newDate;
     this.rifRentalStartDateManuallyEdited = true;
+    if (this.rifReplacementType === 'maintenance') {
+      const associatedRental = this.allRentals.find(r => r.id === this.sourceContractForReference?.rentalId);
+      this.initRifDatesForMaintenance(associatedRental);
+    }
   }
 
   closeReferenceModal() {
@@ -758,7 +798,9 @@ export class ContractsTabComponent implements OnInit {
     this.rifCompanySearchTerm = '';
     this.isRifCompanyDropdownOpen = false;
     this.updateCalendarRental = true;
-    this.closeSourceRental = true;
+    this.closeSourceRental = false;
+    this.rifReplacementType = 'maintenance';
+    this.rifMaintenanceNotes = '';
     this.isGeneratingRif = false;
   }
 
@@ -857,6 +899,16 @@ export class ContractsTabComponent implements OnInit {
       return;
     }
 
+    if (this.rifReplacementType === 'maintenance' && selectedVehicle.id === this.sourceContractForReference.vehicleId) {
+      alert('Il veicolo sostitutivo deve essere diverso dal veicolo originale che va in manutenzione.');
+      return;
+    }
+
+    if (this.rifRentalStartDate && this.rifRentalEndDate && this.rifRentalStartDate > this.rifRentalEndDate) {
+      alert('La data di fine del noleggio sostitutivo non può essere antecedente alla data di inizio.');
+      return;
+    }
+
     try {
       this.isGeneratingRif = true;
       this.loadingService.show();
@@ -870,6 +922,10 @@ export class ContractsTabComponent implements OnInit {
 
       // Se richiesto, crea o aggiorna il noleggio a calendario per il veicolo sostitutivo
       if (this.updateCalendarRental && associatedRental) {
+        const replacementNotes = this.rifReplacementType === 'maintenance'
+          ? `Auto sostitutiva per manutenzione temporanea veicolo ${this.sourceContractForReference.vehiclePlate} (Rif. Contratto ${this.sourceContractForReference.contractNumber})`
+          : `Sostituzione veicolo per contratto ${this.rifContractNumber.trim()} (rif. contratto ${this.sourceContractForReference.contractNumber}, veicolo prec: ${this.sourceContractForReference.vehiclePlate})`;
+
         const replacementRental: Rental = {
           vehicleId: selectedVehicle.id!,
           vehiclePlate: `${selectedVehicle.brand} ${selectedVehicle.model} (${selectedVehicle.plate})`,
@@ -882,7 +938,7 @@ export class ContractsTabComponent implements OnInit {
           startPeriod: associatedRental.startPeriod || 'Mat',
           endPeriod: associatedRental.endPeriod || 'Mat',
           totalPrice: this.rifDetails.baseRate ?? associatedRental.totalPrice,
-          notes: `Sostituzione veicolo per contratto ${this.rifContractNumber.trim()} (rif. contratto ${this.sourceContractForReference.contractNumber}, veicolo prec: ${this.sourceContractForReference.vehiclePlate})`,
+          notes: replacementNotes,
           status: 'In Corso',
           createdAt: Timestamp.now()
         };
@@ -890,15 +946,28 @@ export class ContractsTabComponent implements OnInit {
         const newRentalRef = await this.rentalService.createRental(replacementRental);
         rentalIdToLink = newRentalRef.id;
 
-        // Chiudi e termina il noleggio precedente sul vecchio veicolo alla data di passaggio
-        if (this.closeSourceRental && associatedRental.id) {
-          const prevNotes = associatedRental.notes ? `${associatedRental.notes}\n` : '';
-          const closeNote = `Chiuso anticipatamente per sostituzione veicolo con ${this.rifContractNumber.trim()} (nuovo veicolo: ${selectedVehicle.brand} ${selectedVehicle.model} ${selectedVehicle.plate}).`;
-          await this.rentalService.updateRental(associatedRental.id, {
-            endDate: refRentalStartDateTS,
-            status: 'Concluso',
-            notes: `${prevNotes}${closeNote}`
+        if (this.rifReplacementType === 'maintenance') {
+          // Registra il periodo di manutenzione per il veicolo originale a calendario
+          const maintNotes = this.rifMaintenanceNotes?.trim() ||
+            `Manutenzione veicolo (Contratto orig. ${this.sourceContractForReference.contractNumber}, auto sost. ${this.rifContractNumber.trim()} - ${selectedVehicle.brand} ${selectedVehicle.model} ${selectedVehicle.plate})`;
+
+          await this.rentalService.addMaintenancePeriod({
+            vehicleId: this.sourceContractForReference.vehicleId,
+            startDate: refRentalStartDateTS,
+            endDate: refRentalEndDateTS,
+            notes: maintNotes
           });
+        } else {
+          // Sostituzione definitiva: chiudi e termina il noleggio precedente sul vecchio veicolo alla data di passaggio
+          if (this.closeSourceRental && associatedRental.id) {
+            const prevNotes = associatedRental.notes ? `${associatedRental.notes}\n` : '';
+            const closeNote = `Chiuso anticipatamente per sostituzione veicolo con ${this.rifContractNumber.trim()} (nuovo veicolo: ${selectedVehicle.brand} ${selectedVehicle.model} ${selectedVehicle.plate}).`;
+            await this.rentalService.updateRental(associatedRental.id, {
+              endDate: refRentalStartDateTS,
+              status: 'Concluso',
+              notes: `${prevNotes}${closeNote}`
+            });
+          }
         }
       }
 
@@ -912,7 +981,10 @@ export class ContractsTabComponent implements OnInit {
         date: stipulationDate,
         details: this.rifDetails,
         status: 'Attivo',
-        parentContractNumber: this.sourceContractForReference.contractNumber
+        parentContractNumber: this.sourceContractForReference.contractNumber,
+        isTemporaryMaintenance: this.rifReplacementType === 'maintenance',
+        maintenanceStartDate: this.rifReplacementType === 'maintenance' ? refRentalStartDateTS : undefined,
+        maintenanceEndDate: this.rifReplacementType === 'maintenance' ? refRentalEndDateTS : undefined
       };
 
       const dummyRentalForCargos: Rental = {
@@ -959,17 +1031,21 @@ export class ContractsTabComponent implements OnInit {
         cargosData
       };
 
+      const buildSuccessAlert = (finalNumber: string) => this.rifReplacementType === 'maintenance'
+        ? `Contratto di riferimento ${finalNumber} per manutenzione temporanea creato con successo ed aperto in una nuova scheda browser!\nIl veicolo originale è stato impostato in manutenzione a calendario dal ${this.rifRentalStartDate} al ${this.rifRentalEndDate}, mentre il contratto originale rimane attivo.`
+        : `Contratto di riferimento ${finalNumber} creato con successo ed aperto in una nuova scheda browser!`;
+
       return new Promise<void>((resolve) => {
         this.rentalService.stipulateContractOnBackend(payload).subscribe({
           next: async (res: { pdfBlob: Blob; contractNumber: string }) => {
             const finalNumber = res.contractNumber || this.rifContractNumber.trim();
-            await this.finalizeReferenceContractLink(finalNumber);
+            await this.finalizeReferenceContractLink(finalNumber, refRentalStartDateTS, refRentalEndDateTS);
             const url = window.URL.createObjectURL(res.pdfBlob);
             window.open(url, '_blank');
             this.loadingService.hide();
             this.isGeneratingRif = false;
             this.closeReferenceModal();
-            alert(`Contratto di riferimento ${finalNumber} creato con successo ed aperto in una nuova scheda browser!`);
+            alert(buildSuccessAlert(finalNumber));
             resolve();
           },
           error: async (err) => {
@@ -977,7 +1053,7 @@ export class ContractsTabComponent implements OnInit {
             try {
               const saveResult = await this.rentalService.createContract(newContractDoc, cargosData);
               const finalNumber = saveResult.contractNumber;
-              await this.finalizeReferenceContractLink(finalNumber);
+              await this.finalizeReferenceContractLink(finalNumber, refRentalStartDateTS, refRentalEndDateTS);
 
               this.rentalService.downloadContractPdf(finalNumber, true).subscribe({
                 next: (pdfBlob: Blob) => {
@@ -986,7 +1062,7 @@ export class ContractsTabComponent implements OnInit {
                   this.loadingService.hide();
                   this.isGeneratingRif = false;
                   this.closeReferenceModal();
-                  alert(`Contratto di riferimento ${finalNumber} creato con successo ed aperto in una nuova scheda browser!`);
+                  alert(buildSuccessAlert(finalNumber));
                   resolve();
                 },
                 error: (pdfErr) => {
@@ -1016,31 +1092,59 @@ export class ContractsTabComponent implements OnInit {
     }
   }
 
-  private async finalizeReferenceContractLink(finalNumber: string) {
+  private async finalizeReferenceContractLink(finalNumber: string, refStartDate?: Timestamp, refEndDate?: Timestamp) {
     if (!this.sourceContractForReference) return;
     const sourceContract = this.sourceContractForReference;
     const sourceId = sourceContract.id || sourceContract.contractNumber;
 
-    try {
-      sourceContract.status = 'Chiuso';
-      sourceContract.replacedByContractNumber = finalNumber;
-      await this.rentalService.updateContract(sourceId, {
-        status: 'Chiuso',
-        replacedByContractNumber: finalNumber,
-        closedAt: Timestamp.now(),
-        closeReason: `Sostituito dal contratto di riferimento ${finalNumber}`
-      });
-    } catch (err) {
-      console.error('Errore durante la chiusura del contratto di origine:', err);
-    }
+    if (this.rifReplacementType === 'maintenance') {
+      // Sostituzione temporanea per manutenzione: il contratto originale rimane ATTIVO!
+      try {
+        sourceContract.temporaryReplacementContractNumber = finalNumber;
+        sourceContract.hasTemporaryReplacement = true;
+        await this.rentalService.updateContract(sourceId, {
+          temporaryReplacementContractNumber: finalNumber,
+          hasTemporaryReplacement: true,
+          updatedAt: Timestamp.now()
+        });
+      } catch (err) {
+        console.error('Errore durante l\'aggiornamento del contratto di origine per manutenzione temporanea:', err);
+      }
 
-    try {
-      await this.rentalService.updateContract(finalNumber, {
-        status: 'Attivo',
-        parentContractNumber: sourceContract.contractNumber
-      });
-    } catch (err) {
-      console.error('Errore durante l\'aggiornamento del contratto di riferimento:', err);
+      try {
+        await this.rentalService.updateContract(finalNumber, {
+          status: 'Attivo',
+          parentContractNumber: sourceContract.contractNumber,
+          isTemporaryMaintenance: true,
+          ...(refStartDate ? { maintenanceStartDate: refStartDate } : {}),
+          ...(refEndDate ? { maintenanceEndDate: refEndDate } : {})
+        });
+      } catch (err) {
+        console.error('Errore durante l\'aggiornamento del contratto di riferimento:', err);
+      }
+    } else {
+      // Sostituzione definitiva: chiudi il contratto di origine
+      try {
+        sourceContract.status = 'Chiuso';
+        sourceContract.replacedByContractNumber = finalNumber;
+        await this.rentalService.updateContract(sourceId, {
+          status: 'Chiuso',
+          replacedByContractNumber: finalNumber,
+          closedAt: Timestamp.now(),
+          closeReason: `Sostituito dal contratto di riferimento ${finalNumber}`
+        });
+      } catch (err) {
+        console.error('Errore durante la chiusura del contratto di origine:', err);
+      }
+
+      try {
+        await this.rentalService.updateContract(finalNumber, {
+          status: 'Attivo',
+          parentContractNumber: sourceContract.contractNumber
+        });
+      } catch (err) {
+        console.error('Errore durante l\'aggiornamento del contratto di riferimento:', err);
+      }
     }
   }
 

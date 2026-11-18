@@ -109,9 +109,14 @@
                   <span class="badge-contract-sub badge-closed" [title]="'Contratto chiuso e sostituito da ' + (contract.replacedByContractNumber || 'RIF')">
                     <i class="fa-solid fa-lock"></i> Chiuso (rif. {{ contract.replacedByContractNumber }})
                   </span>
+                } @else if (contract.temporaryReplacementContractNumber || contract.hasTemporaryReplacement) {
+                  <span class="badge-contract-sub badge-maint" [title]="'Veicolo temporaneamente in manutenzione. Auto sostitutiva attiva: ' + contract.temporaryReplacementContractNumber">
+                    <i class="fa-solid fa-wrench"></i> In Manutenzione (sost. {{ contract.temporaryReplacementContractNumber }})
+                  </span>
                 } @else if (contract.parentContractNumber || contract.contractNumber.startsWith('RIF')) {
                   <span class="badge-contract-sub badge-rif" [title]="'Contratto di riferimento collegato a ' + (contract.parentContractNumber || 'contratto originario')">
-                    <i class="fa-solid fa-link"></i> Riferimento (orig. {{ contract.parentContractNumber || 'orig.' }})
+                    <i class="fa-solid" [class.fa-wrench]="contract.isTemporaryMaintenance" [class.fa-link]="!contract.isTemporaryMaintenance"></i>
+                    {{ contract.isTemporaryMaintenance ? 'Sost. Manutenzione' : 'Riferimento' }} (orig. {{ contract.parentContractNumber || 'orig.' }})
                   </span>
                 }
               </div>
@@ -536,7 +541,7 @@
           <form (submit)="saveAndGenerateReferenceContract()">
             
             <!-- ALERT INFO VEICOLO ORIGINALE -->
-            <div style="background: #f8fafc; border-left: 4px solid #8b5cf6; padding: 0.8rem 1rem; border-radius: 6px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="background: #f8fafc; border-left: 4px solid #8b5cf6; padding: 0.8rem 1rem; border-radius: 6px; margin-bottom: 1.2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
               <div>
                 <span style="font-size: 0.8rem; font-weight: 700; color: #8b5cf6; text-transform: uppercase; letter-spacing: 0.05em; display: block;">Contratto di Origine</span>
                 <span style="font-size: 0.95rem; font-weight: 700; color: #1e293b;">N. {{ sourceContractForReference.contractNumber }} — {{ sourceContractForReference.customerName }}</span>
@@ -544,6 +549,38 @@
               <div>
                 <span style="font-size: 0.8rem; color: #64748b; display: block;">Veicolo precedente:</span>
                 <span style="font-size: 0.9rem; font-weight: 600; color: #475569;"><i class="fa-solid fa-car"></i> {{ sourceContractForReference.vehiclePlate }}</span>
+              </div>
+            </div>
+
+            <!-- SELETTORE CAUSALE / MODALITÀ DI SOSTITUZIONE -->
+            <div class="rif-type-selector" style="margin-bottom: 1.3rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.9rem 1rem;">
+              <label style="font-size: 0.82rem; font-weight: 700; color: #1e293b; display: block; margin-bottom: 0.6rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                <i class="fa-solid fa-sliders text-gradient"></i> Tipologia di Contratto di Riferimento *
+              </label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                <label style="display: flex; gap: 0.7rem; padding: 0.75rem 0.9rem; border-radius: 8px; border: 2px solid; cursor: pointer; transition: all 0.2s;"
+                       [style.borderColor]="rifReplacementType === 'maintenance' ? '#8b5cf6' : '#cbd5e1'"
+                       [style.background]="rifReplacementType === 'maintenance' ? '#faf5ff' : '#ffffff'">
+                  <input type="radio" name="rifReplacementType" value="maintenance" [(ngModel)]="rifReplacementType" (ngModelChange)="onRifReplacementTypeChange('maintenance')" style="margin-top: 3px; accent-color: #8b5cf6;" />
+                  <div>
+                    <strong style="display: block; font-size: 0.9rem; color: #1e293b;"><i class="fa-solid fa-wrench" style="color: #8b5cf6;"></i> Sostituzione Temporanea (Manutenzione)</strong>
+                    <span style="font-size: 0.78rem; color: #64748b; line-height: 1.3; display: block; margin-top: 2px;">
+                      Il veicolo originale va in manutenzione per i giorni specificati. Il contratto originale <strong>resta attivo</strong> e il mezzo sostitutivo opera solo in questo intervallo.
+                    </span>
+                  </div>
+                </label>
+
+                <label style="display: flex; gap: 0.7rem; padding: 0.75rem 0.9rem; border-radius: 8px; border: 2px solid; cursor: pointer; transition: all 0.2s;"
+                       [style.borderColor]="rifReplacementType === 'permanent' ? '#8b5cf6' : '#cbd5e1'"
+                       [style.background]="rifReplacementType === 'permanent' ? '#faf5ff' : '#ffffff'">
+                  <input type="radio" name="rifReplacementType" value="permanent" [(ngModel)]="rifReplacementType" (ngModelChange)="onRifReplacementTypeChange('permanent')" style="margin-top: 3px; accent-color: #8b5cf6;" />
+                  <div>
+                    <strong style="display: block; font-size: 0.9rem; color: #1e293b;"><i class="fa-solid fa-arrows-rotate" style="color: #64748b;"></i> Sostituzione Definitiva</strong>
+                    <span style="font-size: 0.78rem; color: #64748b; line-height: 1.3; display: block; margin-top: 2px;">
+                      Sostituzione permanente fino a fine noleggio. Il contratto originale e il noleggio precedente vengono <strong>chiusi</strong>.
+                    </span>
+                  </div>
+                </label>
               </div>
             </div>
 
@@ -561,20 +598,36 @@
               </div>
             </div>
 
+            @if (rifReplacementType === 'maintenance') {
+              <div class="form-group" style="margin-bottom: 1.2rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #64748b;">Motivo / Lavorazione Manutenzione Veicolo Originale (a Calendario)</label>
+                <input type="text" [(ngModel)]="rifMaintenanceNotes" name="rifMaintenanceNotes" placeholder="Es. Tagliando / Guasto meccanico / Carrozzeria (2 giorni)" style="padding: 0.75rem 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 0.95rem; width: 100%; background: #f8fafc;" />
+              </div>
+            }
+
             <!-- CHECKBOX AGGIORNAMENTO CALENDARIO E CHIUSURA PRECEDENTE -->
             <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.8rem 1rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.6rem;">
               <div style="display: flex; align-items: center; gap: 0.8rem;">
                 <input type="checkbox" id="updateCalendarRental" [(ngModel)]="updateCalendarRental" name="updateCalendarRental" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent);" />
                 <label for="updateCalendarRental" style="font-size: 0.9rem; font-weight: 600; color: #1e40af; cursor: pointer; margin: 0;">
-                  Registra a calendario il passaggio veicolo (apri noleggio sul nuovo veicolo)
+                  @if (rifReplacementType === 'maintenance') {
+                    Registra a calendario: imposta Manutenzione sul veicolo originale e noleggio sull'auto sostitutiva
+                  } @else {
+                    Registra a calendario il passaggio veicolo (apri noleggio sul nuovo veicolo)
+                  }
                 </label>
               </div>
-              @if (updateCalendarRental) {
+              @if (updateCalendarRental && rifReplacementType === 'permanent') {
                 <div style="display: flex; align-items: center; gap: 0.8rem; padding-left: 1.8rem; border-top: 1px dashed #bfdbfe; padding-top: 0.5rem;">
                   <input type="checkbox" id="closeSourceRental" [(ngModel)]="closeSourceRental" name="closeSourceRental" style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent);" />
                   <label for="closeSourceRental" style="font-size: 0.83rem; font-weight: 500; color: #1e40af; cursor: pointer; margin: 0;">
                     Chiudi e termina il noleggio precedente alla data di passaggio (libera il veicolo precedente a calendario)
                   </label>
+                </div>
+              }
+              @if (updateCalendarRental && rifReplacementType === 'maintenance') {
+                <div style="font-size: 0.8rem; color: #1e40af; padding-left: 1.8rem; border-top: 1px dashed #bfdbfe; padding-top: 0.4rem;">
+                  <i class="fa-solid fa-circle-info"></i> Il veicolo originario apparirà in <strong>Manutenzione (grigio)</strong> solo per l'intervallo specificato. Il contratto originale N. <strong>{{ sourceContractForReference.contractNumber }}</strong> rimarrà attivo.
                 </div>
               }
             </div>

@@ -190,8 +190,10 @@
                   </div>
                 } @else if (status.type === 'maintenance') {
                   <div class="calendar-bar maintenance-bar" 
-                       title="In Manutenzione"
                        [title]="getFormattedTooltip('maintenance', status.data)">
+                    <span class="rental-day-label" style="color: white; font-size: 0.65rem; font-weight: 600; padding: 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; line-height: 16px;">
+                      <i class="fa-solid fa-wrench" style="font-size: 0.6rem;"></i> {{ status.data?.notes || 'Manutenzione' }}
+                    </span>
                   </div>
                 } @else if (status.type === 'transfer') {
                   <div class="calendar-bar transfer-bar" 

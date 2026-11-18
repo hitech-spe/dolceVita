@@ -24,6 +24,7 @@ describe('ContractsTabComponent', () => {
       mapToCargosFormat: jasmine.createSpy('mapToCargosFormat').and.returnValue({}),
       updateRental: jasmine.createSpy('updateRental').and.returnValue(Promise.resolve()),
       addCompany: jasmine.createSpy('addCompany').and.returnValue(Promise.resolve()),
+      addMaintenancePeriod: jasmine.createSpy('addMaintenancePeriod').and.returnValue(Promise.resolve({ id: 'maint-period-1' })),
       deleteContract: jasmine.createSpy('deleteContract').and.returnValue(Promise.resolve()),
       updateContract: jasmine.createSpy('updateContract').and.returnValue(Promise.resolve()),
       updateCustomer: jasmine.createSpy('updateCustomer').and.returnValue(Promise.resolve()),
@@ -535,11 +536,11 @@ describe('ContractsTabComponent', () => {
         { id: 'veh-new', brand: 'Jeep', model: 'Renegade', plate: 'XY987ZT', location: 'Mottola', category: 'SUV', status: 'Attivo', fuelType: 'Diesel' }
       ];
       component.allRentals = [
-        { id: 'rental-orig-1', vehicleId: 'veh-old', customerId: 'cust-1', customerName: 'Mario Rossi', startDate: { toDate: () => new Date('2026-09-01') } as any, endDate: { toDate: () => new Date('2026-09-10') } as any, location: 'Mottola', status: 'In Corso' }
+        { id: 'rental-orig-1', vehicleId: 'veh-old', customerId: 'cust-1', customerName: 'Mario Rossi', startDate: { toDate: () => new Date('2026-09-01') } as any, endDate: { toDate: () => new Date('2026-12-31') } as any, location: 'Mottola', status: 'In Corso' }
       ];
     });
 
-    it('should initialize reference modal with prefix RIF and prefilled details from original contract', () => {
+    it('should initialize reference modal with prefix RIF, maintenance mode and default 2-day period', () => {
       component.openReferenceModal(originalContract);
 
       expect(component.isReferenceModalOpen).toBeTrue();
@@ -547,15 +548,78 @@ describe('ContractsTabComponent', () => {
       expect(component.rifContractNumber).toBe('RIF 1790');
       expect(component.rifDetails.baseRate).toBe(50);
       expect(component.rifDetails.contractNumber).toBe('RIF 1790');
+      expect(component.rifReplacementType).toBe('maintenance');
+      expect(component.closeSourceRental).toBeFalse();
       expect(component.rifRentalStartDate).toBe(component.rifDate);
-      expect(component.rifRentalEndDate).toBe('2026-09-10');
+      // Data fine calcolata a 2 giorni dalla data inizio
+      const [y, m, d] = component.rifRentalStartDate.split('-').map(Number);
+      const expectedEnd = new Date(y, m - 1, d);
+      expectedEnd.setDate(expectedEnd.getDate() + 2);
+      expect(component.rifRentalEndDate).toBe(component.formatDateForInput(expectedEnd));
     });
 
-    it('should save and generate reference contract PDF successfully via backend stipulation', async () => {
+    it('should save reference contract for temporary maintenance without closing original contract', async () => {
       spyOn(window, 'alert');
       spyOn(window, 'open');
 
       component.openReferenceModal(originalContract);
+      component.rifVehicleId = 'veh-new';
+      component.rifMaintenanceNotes = 'Sostituzione pastiglie freni';
+
+      await component.saveAndGenerateReferenceContract();
+
+      expect(mockRentalService.stipulateContractOnBackend).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          contractNumber: 'RIF 1790',
+          vehicleId: 'veh-new'
+        })
+      );
+      // Registra manutenzione sul vecchio veicolo a calendario
+      expect(mockRentalService.addMaintenancePeriod).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          vehicleId: 'veh-old',
+          notes: 'Sostituzione pastiglie freni'
+        })
+      );
+      // Crea noleggio sostitutivo per il nuovo veicolo
+      expect(mockRentalService.createRental).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          vehicleId: 'veh-new',
+          notes: jasmine.stringMatching(/Auto sostitutiva per manutenzione temporanea/)
+        })
+      );
+      // NON deve chiudere il noleggio originario
+      expect(mockRentalService.updateRental).not.toHaveBeenCalled();
+      // Il contratto originale rimane ATTIVO e viene tracciata l'auto sostitutiva
+      expect(mockRentalService.updateContract).toHaveBeenCalledWith(
+        'c-100',
+        jasmine.objectContaining({
+          temporaryReplacementContractNumber: 'RIF 1790',
+          hasTemporaryReplacement: true
+        })
+      );
+      // Verifica che il contratto originale NON sia stato impostato a Chiuso
+      const origCalls = mockRentalService.updateContract.calls.allArgs().filter((arg: any[]) => arg[0] === 'c-100');
+      expect(origCalls.every((arg: any[]) => arg[1].status !== 'Chiuso')).toBeTrue();
+
+      // Verifica attivazione nuovo contratto RIF con flag isTemporaryMaintenance
+      expect(mockRentalService.updateContract).toHaveBeenCalledWith(
+        'RIF 1790',
+        jasmine.objectContaining({
+          status: 'Attivo',
+          parentContractNumber: '1790',
+          isTemporaryMaintenance: true
+        })
+      );
+      expect(component.isReferenceModalOpen).toBeFalse();
+    });
+
+    it('should save reference contract for permanent replacement and close original contract', async () => {
+      spyOn(window, 'alert');
+      spyOn(window, 'open');
+
+      component.openReferenceModal(originalContract);
+      component.onRifReplacementTypeChange('permanent');
       component.rifVehicleId = 'veh-new';
 
       await component.saveAndGenerateReferenceContract();
@@ -601,6 +665,7 @@ describe('ContractsTabComponent', () => {
       mockRentalService.createContract.and.callFake((doc: any) => Promise.resolve({ contractNumber: doc.contractNumber, id: doc.contractNumber }));
 
       component.openReferenceModal(originalContract);
+      component.onRifReplacementTypeChange('permanent');
       component.rifVehicleId = 'veh-new';
 
       await component.saveAndGenerateReferenceContract();

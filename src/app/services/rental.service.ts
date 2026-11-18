@@ -213,6 +213,12 @@ export interface ContractDocument {
   replacedByContractNumber?: string;
   closedAt?: Timestamp;
   closeReason?: string;
+  temporaryReplacementContractNumber?: string;
+  hasTemporaryReplacement?: boolean;
+  isTemporaryMaintenance?: boolean;
+  maintenanceStartDate?: Timestamp;
+  maintenanceEndDate?: Timestamp;
+  updatedAt?: Timestamp;
 
   // Flat root fields for Cargos integration
   contratto_data?: string;
